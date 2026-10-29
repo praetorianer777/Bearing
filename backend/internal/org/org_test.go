@@ -153,3 +153,62 @@ func TestPositionInputAndRefusals(t *testing.T) {
 		t.Error("livesOn")
 	}
 }
+
+func TestPeopleInputKindsAndPhotos(t *testing.T) {
+	s := &Service{}
+	for name, in := range map[string]PersonInput{
+		"no name":       {},
+		"an address":    {Name: ptr("Ann"), Email: ptr("not an address")},
+		"a long phone":  {Name: ptr("Ann"), Phone: ptr(strings.Repeat("1", 51))},
+		"long location": {Name: ptr("Ann"), Location: ptr(strings.Repeat("x", 201))},
+	} {
+		var invalid Invalid
+		if _, _, err := s.CreatePerson(t.Context(), in); !errors.As(err, &invalid) {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	if _, _, err := s.UpdatePerson(t.Context(), uuid.New(), PersonInput{Name: ptr("")}); err == nil {
+		t.Error("an empty name was taken")
+	}
+	if _, _, err := s.UpdateMe(t.Context(), PersonInput{}); !errors.Is(err, ErrNoEntry) {
+		t.Errorf("nobody's entry = %v", err)
+	}
+	if _, err := s.Me(t.Context()); !errors.Is(err, ErrNoEntry) {
+		t.Errorf("nobody's entry = %v", err)
+	}
+	cleared := PersonInput{Email: ptr("  ")}
+	if err := cleared.check(false); err != nil || *cleared.Email != "" {
+		t.Errorf("an empty address clears: %v", err)
+	}
+	if got := (PersonInput{Name: ptr("x"), Phone: ptr("1")}).Fields(); strings.Join(got, ",") != "name,phone" {
+		t.Errorf("fields %v", got)
+	}
+	sub, account := "s", uuid.New()
+	if (Person{Subject: &sub}).Kind() != Realm || (Person{AccountID: &account}).Kind() != Local || (Person{}).Kind() != External {
+		t.Error("kinds")
+	}
+	if kind, err := photoType([]byte("\x89PNG\r\n\x1a\n0000")); err != nil || kind != "image/png" {
+		t.Errorf("a PNG is %q, %v", kind, err)
+	}
+	for _, bad := range [][]byte{{}, []byte("<svg/>"), make([]byte, MaxPhotoBytes+1)} {
+		if _, err := photoType(bad); !errors.Is(err, ErrBadPhoto) {
+			t.Errorf("%d bytes = %v", len(bad), err)
+		}
+	}
+	if _, err := s.SetPhoto(t.Context(), nil, []byte("text")); !errors.Is(err, ErrBadPhoto) {
+		t.Errorf("text as a photo = %v", err)
+	}
+	if _, err := s.SetSelfEditableFields(t.Context(), []string{"salary"}); err == nil {
+		t.Error("a field that is none was allowed")
+	}
+	for constraint, want := range map[string]error{
+		"person_email": ErrEmailTaken, "person_account_id_key": ErrAccountLinked, "person_account_id_fkey": ErrAccountMissing,
+	} {
+		if got := personError(&pgconn.PgError{ConstraintName: constraint}); !errors.Is(got, want) {
+			t.Errorf("%s became %v", constraint, got)
+		}
+	}
+	if !errors.Is(personError(&pgconn.PgError{Code: "42501"}), ErrNotYours) || personError(nil) != nil {
+		t.Error("other refusals")
+	}
+}

@@ -28,6 +28,7 @@ func specBuilder() *openapi.Builder {
 		roles[i] = string(r)
 	}
 	b.Enums[reflect.TypeOf(auth.Role(""))] = roles
+	b.Enums[reflect.TypeOf(org.PersonKind(""))] = []string{string(org.Realm), string(org.Local), string(org.External)}
 	b.Enums[reflect.TypeOf(org.LineKind(""))] = []string{string(org.Solid), string(org.Dotted)}
 	b.Overrides[reflect.TypeOf(org.Day{})] = &openapi.Schema{Type: "string", Format: "date", Description: "A calendar day, written 2006-01-02."}
 	// The theme file's parts have names too plain to stand alone among the API's.

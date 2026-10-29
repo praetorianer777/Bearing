@@ -84,3 +84,14 @@ old one, so the holdings of each keep their meaning. Reporting lines are
 dated like placements. A position has at most one solid line on any day, and
 solid lines may not form a circle. Dotted lines may cross the tree, but a
 position never has two dotted lines to the same position at once.
+
+## A sign-in links an account to its person
+
+A person may be entered before they ever sign in, as external, by name and
+address. When an account signs in, Bearing links it to its entry: first the
+entry the realm knows by one of the account's identities, then an unlinked
+entry with the account's address, which then takes on the realm's issuer and
+`sub`. An address names one person, so the match is unambiguous. A failed
+link never keeps anybody out; the next sign-in tries again. Somebody signed
+in keeps the fields of their own entry that administrators allow, by default
+phone, location and photo. The database enforces this as well.
