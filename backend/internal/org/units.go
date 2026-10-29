@@ -448,7 +448,7 @@ func sameParent(a, b *uuid.UUID) bool {
 }
 
 // ArchiveUnit ends a unit from a day, as an editor. Its placements end there and those planned later go; the days
-// before keep it. A unit others are still part of on that day or after cannot be archived.
+// before keep it. A unit others are still part of, or with positions, on that day or after cannot be archived.
 func (s *Service) ArchiveUnit(ctx context.Context, id uuid.UUID, on Day) (Unit, db.LSN, error) {
 	var out Unit
 	lsn, err := s.DB.Write(ctx, func(ctx context.Context, q db.DBTX) error {
@@ -475,6 +475,14 @@ func (s *Service) ArchiveUnit(ctx context.Context, id uuid.UUID, on Day) (Unit, 
 		}
 		if held {
 			return ErrHasUnits
+		}
+		var staffed bool
+		if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM position WHERE unit_id = $1 AND (archived_on IS NULL OR archived_on > $2))`,
+			id, on.Time()).Scan(&staffed); err != nil {
+			return err
+		}
+		if staffed {
+			return ErrHasPositions
 		}
 		for _, stmt := range []string{
 			`DELETE FROM unit_placement WHERE unit_id = $1 AND valid_from >= $2`,

@@ -53,8 +53,9 @@ type moveUnitRequest struct {
 	From *org.Day `json:"from,omitempty"`
 }
 
-type archiveUnitRequest struct {
-	// On is the first day the unit no longer exists, today when left out.
+// endRequest names the first day something no longer holds.
+type endRequest struct {
+	// On is the first day it no longer holds, today when left out.
 	On *org.Day `json:"on,omitempty"`
 }
 
@@ -109,7 +110,7 @@ func orgError(err error) error {
 	for code, refusal := range map[string]error{
 		"type_in_use": org.ErrTypeInUse, "cycle": org.ErrCycle, "root_taken": org.ErrRootTaken, "not_there": org.ErrNotThere,
 		"parent_not_there": org.ErrParentNotThere, "parent_archived": org.ErrParentArchived, "has_units": org.ErrHasUnits,
-		"archived": org.ErrArchived, "not_archived": org.ErrNotArchived,
+		"archived": org.ErrArchived, "not_archived": org.ErrNotArchived, "has_positions": org.ErrHasPositions,
 	} {
 		if errors.Is(err, refusal) {
 			return ErrConflict(code, sentence(err.Error()))
@@ -315,7 +316,7 @@ func (s *Server) handleArchiveUnit(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var req archiveUnitRequest
+	var req endRequest
 	if err := decode(r, &req); err != nil {
 		respondError(w, r, s.Log, err)
 		return

@@ -70,6 +70,15 @@ var mayCall = map[string]auth.Role{
 	"moveUnit":             auth.RoleEditor,
 	"archiveUnit":          auth.RoleEditor,
 	"restoreUnit":          auth.RoleEditor,
+	"positions":            "",
+	"position":             "",
+	"createPosition":       auth.RoleEditor,
+	"updatePosition":       auth.RoleEditor,
+	"setReportsTo":         auth.RoleEditor,
+	"addDottedLine":        auth.RoleEditor,
+	"endDottedLine":        auth.RoleEditor,
+	"archivePosition":      auth.RoleEditor,
+	"restorePosition":      auth.RoleEditor,
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {
@@ -287,5 +296,49 @@ func TestUnitRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
 	}
 	if d := dayOr(nil); d != today() {
 		t.Errorf("no day is %s, want today", d)
+	}
+}
+
+func TestPositionRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
+	s := signedInServer()
+	s.Accounts.(fakeSessions)["eve"] = auth.Account{ID: uuid.New(), Name: "Eve", Role: auth.RoleEditor}
+	id := uuid.NewString()
+	for _, c := range []struct {
+		method, path, body string
+		want               int
+	}{
+		{http.MethodGet, "/positions?unitId=nope", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/positions?asOf=nope", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/positions/nope", "", http.StatusNotFound},
+		{http.MethodGet, "/positions/" + id + "?asOf=x", "", http.StatusUnprocessableEntity},
+		{http.MethodPatch, "/positions/nope", `{}`, http.StatusNotFound},
+		{http.MethodPut, "/positions/nope/reports-to", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/positions/nope/dotted-lines", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/positions/" + id + "/dotted-lines/nope/end", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/positions/nope/dotted-lines/" + id + "/end", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/positions/nope/archive", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/positions/nope/restore", ``, http.StatusNotFound},
+		{http.MethodPost, "/positions", `{"unit":"x"}`, http.StatusBadRequest},
+		{http.MethodPatch, "/positions/" + id, `{"head":true}`, http.StatusBadRequest},
+		{http.MethodPut, "/positions/" + id + "/reports-to", `{"to":"x"}`, http.StatusBadRequest},
+		{http.MethodPost, "/positions/" + id + "/dotted-lines", `{"from":"soon"}`, http.StatusBadRequest},
+		{http.MethodPost, "/positions/" + id + "/dotted-lines/" + id + "/end", `{"on":1}`, http.StatusBadRequest},
+		{http.MethodPost, "/positions/" + id + "/archive", `{"on":1}`, http.StatusBadRequest},
+	} {
+		if rec := call(s, c.method, APIPrefix+c.path, "eve", c.body, nil); rec.Code != c.want {
+			t.Errorf("%s %s %s: %d, want %d", c.method, c.path, c.body, rec.Code, c.want)
+		}
+	}
+	for err, want := range map[error]int{
+		org.ErrPositionNotFound: http.StatusNotFound,
+		org.ErrUnitNotThere:     http.StatusUnprocessableEntity,
+		org.ErrHasReports:       http.StatusConflict,
+		org.ErrReportsToItself:  http.StatusConflict,
+		org.ErrHasPositions:     http.StatusConflict,
+	} {
+		var apiErr *APIError
+		if !errors.As(positionError(err), &apiErr) || apiErr.Status != want {
+			t.Errorf("%v became %v, want status %d", err, positionError(err), want)
+		}
 	}
 }

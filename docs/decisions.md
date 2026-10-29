@@ -75,3 +75,12 @@ history belongs to the audit log. Archiving ends a unit's placements and keeps
 the days before it. A move that would put a unit inside itself is refused if
 the cycle would form on any day the new placement covers. The database checks
 this itself, under a lock, so two moves at once cannot together form a cycle.
+
+## A position stays in its unit
+
+A position belongs to one unit for as long as it exists. A reorganisation
+that moves the work makes a new position in the new unit and archives the
+old one, so the holdings of each keep their meaning. Reporting lines are
+dated like placements. A position has at most one solid line on any day, and
+solid lines may not form a circle. Dotted lines may cross the tree, but a
+position never has two dotted lines to the same position at once.

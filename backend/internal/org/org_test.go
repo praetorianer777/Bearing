@@ -109,3 +109,47 @@ func TestTheDatabasesRefusalsAreNamed(t *testing.T) {
 		t.Error("sameParent")
 	}
 }
+
+func TestPositionInputAndRefusals(t *testing.T) {
+	s := &Service{}
+	for name, in := range map[string]PositionInput{
+		"no title":         {},
+		"long title":       {Title: ptr(strings.Repeat("x", 201))},
+		"long description": {Title: ptr("Lead"), Description: ptr(strings.Repeat("x", 4001))},
+	} {
+		var invalid Invalid
+		if _, _, err := s.CreatePosition(t.Context(), uuid.New(), in, DayOf(time.Now())); !errors.As(err, &invalid) {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	if _, _, err := s.UpdatePosition(t.Context(), uuid.New(), PositionInput{Title: ptr(" ")}, DayOf(time.Now())); err == nil {
+		t.Error("an empty title was taken")
+	}
+	id := uuid.New()
+	if _, _, err := s.SetReportsTo(t.Context(), id, &id, DayOf(time.Now())); !errors.Is(err, ErrReportsToItself) {
+		t.Errorf("a solid line to itself = %v", err)
+	}
+	if _, _, err := s.AddDottedLine(t.Context(), id, id, DayOf(time.Now())); !errors.Is(err, ErrReportsToItself) {
+		t.Errorf("a dotted line to itself = %v", err)
+	}
+	for constraint, want := range map[string]error{
+		"reporting_line_no_cycle":           ErrReportsToItself,
+		"reporting_line_once":               ErrLineExists,
+		"position_one_head":                 ErrHeadTaken,
+		"position_unit_id_fkey":             ErrUnitNotThere,
+		"reporting_line_reports_to_id_fkey": ErrTargetNotThere,
+	} {
+		if got := positionError(&pgconn.PgError{ConstraintName: constraint}); !errors.Is(got, want) {
+			t.Errorf("%s became %v", constraint, got)
+		}
+	}
+	other := errors.New("boom")
+	if positionError(other) != other || positionError(&pgconn.PgError{ConstraintName: "x"}) == nil {
+		t.Error("other errors")
+	}
+	d := DayOf(time.Now())
+	next := DayOf(d.Time().AddDate(0, 0, 1))
+	if !livesOn(d, nil, next) || livesOn(next, nil, d) || livesOn(d, &next, next) || !livesOn(d, &next, d) {
+		t.Error("livesOn")
+	}
+}
