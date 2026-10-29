@@ -10,11 +10,12 @@ import {
   useMe,
   useRevokeInvitation,
   useSetAccountPassword,
+  useSetAccountRole,
   useSetDisabled,
 } from "@/api/auth";
 import { Button, Field, FormError, fieldError } from "@/components/ui";
 import { locale, t, useLanguage } from "@/i18n";
-import { GroupAdmissions, JoinRequests } from "./Admission";
+import { GroupGrants, JoinRequests } from "./Grants";
 
 function RoleSelect({ name, defaultValue = "member" }: { name: string; defaultValue?: Role }) {
   const id = useId();
@@ -70,6 +71,7 @@ function PasswordForm({ account, onDone }: { account: Account; onDone: (message:
 function AccountRow({ account, self, onMessage }: { account: Account; self: boolean; onMessage: (message: string) => void }) {
   const [settingPassword, setSettingPassword] = useState(false);
   const setDisabled = useSetDisabled();
+  const setRole = useSetAccountRole();
   return (
     <li className="border-b border-border py-3 last:border-b-0">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -85,7 +87,26 @@ function AccountRow({ account, self, onMessage }: { account: Account; self: bool
             </p>
           )}
         </div>
-        <span className="text-sm text-ink-muted">{t.roles[account.role]}</span>
+        <div className="flex flex-col items-end gap-0.5">
+          {self ? (
+            <span className="text-sm text-ink-muted">{t.roles[account.ownRole]}</span>
+          ) : (
+            <select
+              aria-label={t.accounts.ownRole(account.name)}
+              value={account.ownRole}
+              disabled={setRole.isPending}
+              onChange={(event) => setRole.mutate({ accountID: account.id, role: event.target.value as Role })}
+              className="h-8 rounded-md border border-border-strong bg-surface px-2 text-sm text-ink"
+            >
+              {ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {t.roles[role]}
+                </option>
+              ))}
+            </select>
+          )}
+          {account.role !== account.ownRole && <span className="text-xs text-ink-subtle">{t.accounts.throughGroup(t.roles[account.role])}</span>}
+        </div>
         <span className={`text-sm ${account.disabled ? "text-danger" : "text-ink-muted"}`}>
           {account.disabled ? t.accounts.disabled : account.hasPassword ? t.accounts.active : t.accounts.ssoOnly}
         </span>
@@ -266,7 +287,7 @@ export function AccountsPage() {
       <InviteForm />
       <OpenInvitations />
       <CreateForm />
-      <GroupAdmissions />
+      <GroupGrants />
     </div>
   );
 }

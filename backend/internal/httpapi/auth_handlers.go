@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -18,10 +19,13 @@ import (
 const maxBody = 1 << 20
 
 type accountResponse struct {
-	ID          uuid.UUID `json:"id"`
-	Email       string    `json:"email"`
-	Name        string    `json:"name"`
-	Role        auth.Role `json:"role"`
+	ID    uuid.UUID `json:"id"`
+	Email string    `json:"email"`
+	Name  string    `json:"name"`
+	// Role is what the account may do: the highest of OwnRole and the roles granted to its groups.
+	Role auth.Role `json:"role"`
+	// OwnRole is the role granted to the account itself.
+	OwnRole     auth.Role `json:"ownRole"`
 	Disabled    bool      `json:"disabled"`
 	HasPassword bool      `json:"hasPassword"`
 	// Groups are what the identity provider last said the person belongs to.
@@ -34,7 +38,7 @@ func toAccount(a auth.Account) accountResponse {
 	if groups == nil {
 		groups = []string{}
 	}
-	return accountResponse{ID: a.ID, Email: a.Email, Name: a.Name, Role: a.Role, Disabled: a.Disabled, HasPassword: a.HasPassword,
+	return accountResponse{ID: a.ID, Email: a.Email, Name: a.Name, Role: a.Role, OwnRole: a.OwnRole, Disabled: a.Disabled, HasPassword: a.HasPassword,
 		Groups: groups, CreatedAt: a.CreatedAt}
 }
 
@@ -97,6 +101,14 @@ type createAccountRequest struct {
 	Password string    `json:"password"`
 }
 
+type roleRequest struct {
+	Role auth.Role `json:"role"`
+}
+
+type profileRequest struct {
+	Name string `json:"name"`
+}
+
 type inviteRequest struct {
 	Email string    `json:"email"`
 	Role  auth.Role `json:"role"`
@@ -119,6 +131,14 @@ type fields map[string]string
 func (f fields) need(name, value, message string) {
 	if strings.TrimSpace(value) == "" {
 		f[name] = message
+	}
+}
+
+// name needs a name an account can hold.
+func (f fields) name(name, value string) {
+	f.need(name, value, "Give your name.")
+	if utf8.RuneCountInString(strings.TrimSpace(value)) > 200 {
+		f[name] = "Keep the name to 200 characters."
 	}
 }
 
@@ -165,6 +185,12 @@ func authError(err error) error {
 		return &APIError{Status: http.StatusGone, Code: "link_invalid", Message: "This link is unknown, used or expired. Ask for a new one."}
 	case errors.Is(err, auth.ErrNotFound):
 		return ErrNotFound()
+	case errors.Is(err, auth.ErrOwnRole):
+		return ErrConflict("own_role", "You cannot change your own role; another administrator can.")
+	case errors.Is(err, auth.ErrNotPermitted):
+		return ErrForbidden("Your role does not allow that.")
+	case errors.Is(err, auth.ErrInvalidRole):
+		return ErrValidation(map[string]string{"role": "Choose administrator, editor, member or reader."})
 	case errors.Is(err, auth.ErrSelf):
 		return ErrConflict("self", "You cannot switch off your own account.")
 	case errors.Is(err, auth.ErrNoPasswordToMail):
@@ -238,6 +264,27 @@ func (s *Server) handleSignOut(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, env{"account": toAccount(PrincipalFrom(r.Context()).Account)})
+}
+
+func (s *Server) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
+	var req profileRequest
+	if err := decode(r, &req); err != nil {
+		respondError(w, r, s.Log, err)
+		return
+	}
+	f := fields{}
+	f.name("name", req.Name)
+	if err := f.err(); err != nil {
+		respondError(w, r, s.Log, err)
+		return
+	}
+	a, lsn, err := s.Auth.Rename(r.Context(), req.Name)
+	noteWrite(r.Context(), lsn)
+	if err != nil {
+		respondError(w, r, s.Log, authError(err))
+		return
+	}
+	respondJSON(w, http.StatusOK, env{"account": toAccount(a)})
 }
 
 func (s *Server) handleRequestPasswordReset(w http.ResponseWriter, r *http.Request) {
@@ -354,6 +401,31 @@ func (s *Server) handleSetAccountPassword(w http.ResponseWriter, r *http.Request
 		return
 	}
 	lsn, err := s.Auth.SetPassword(r.Context(), id, req.Password)
+	noteWrite(r.Context(), lsn)
+	if err != nil {
+		respondError(w, r, s.Log, authError(err))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleSetAccountRole(w http.ResponseWriter, r *http.Request) {
+	id, ok := s.accountID(w, r)
+	if !ok {
+		return
+	}
+	var req roleRequest
+	if err := decode(r, &req); err != nil {
+		respondError(w, r, s.Log, err)
+		return
+	}
+	f := fields{}
+	f.role("role", req.Role)
+	if err := f.err(); err != nil {
+		respondError(w, r, s.Log, err)
+		return
+	}
+	lsn, err := s.Auth.SetRole(r.Context(), id, req.Role)
 	noteWrite(r.Context(), lsn)
 	if err != nil {
 		respondError(w, r, s.Log, authError(err))

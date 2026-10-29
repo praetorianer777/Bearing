@@ -59,7 +59,8 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       },
       "post": {
         "operationId": "createAccount",
@@ -106,7 +107,8 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       }
     },
     "/accounts/{accountID}/disable": {
@@ -141,7 +143,8 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       }
     },
     "/accounts/{accountID}/enable": {
@@ -176,7 +179,8 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       }
     },
     "/accounts/{accountID}/password": {
@@ -221,7 +225,54 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
+      }
+    },
+    "/accounts/{accountID}/role": {
+      "put": {
+        "operationId": "setAccountRole",
+        "summary": "Grant an account a role of its own. Its groups may grant it a higher one; nobody changes their own.",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "name": "accountID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
       }
     },
     "/auth/me": {
@@ -261,6 +312,54 @@
             }
           }
         }
+      },
+      "patch": {
+        "operationId": "updateMe",
+        "summary": "Change your own profile.",
+        "tags": [
+          "accounts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "account": {
+                      "$ref": "#/components/schemas/AccountResponse"
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "member"
       }
     },
     "/auth/oidc/callback": {
@@ -494,10 +593,10 @@
         }
       }
     },
-    "/group-admissions": {
+    "/group-grants": {
       "get": {
-        "operationId": "groupAdmissions",
-        "summary": "The identity provider's groups whose members come in at once, with a role.",
+        "operationId": "groupGrants",
+        "summary": "The identity provider's groups whose members hold a role.",
         "tags": [
           "accounts"
         ],
@@ -507,7 +606,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GroupAdmissionsBody"
+                  "$ref": "#/components/schemas/GroupGrantsBody"
                 }
               }
             }
@@ -522,11 +621,13 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       },
       "put": {
-        "operationId": "setGroupAdmissions",
-        "summary": "Replace the group admissions. Somebody in several admitted groups comes in with the highest role.",
+        "operationId": "setGroupGrants",
+        "summary": "Replace the group grants. Members of a granted group come in at once and hold its role while they are in it; somebody in several holds the highest.",
+        "description": "Groups are what the identity provider names at sign-in, so a change to somebody's groups there takes effect at their next sign-in.",
         "tags": [
           "accounts"
         ],
@@ -535,7 +636,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GroupAdmissionsBody"
+                "$ref": "#/components/schemas/GroupGrantsBody"
               }
             }
           }
@@ -546,7 +647,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GroupAdmissionsBody"
+                  "$ref": "#/components/schemas/GroupGrantsBody"
                 }
               }
             }
@@ -561,7 +662,8 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       }
     },
     "/healthz": {
@@ -818,7 +920,8 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       },
       "post": {
         "operationId": "invite",
@@ -869,7 +972,8 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       }
     },
     "/invitations/{invitationID}": {
@@ -904,7 +1008,8 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       }
     },
     "/join-requests": {
@@ -946,7 +1051,8 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       }
     },
     "/join-requests/{requestID}": {
@@ -981,7 +1087,8 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       }
     },
     "/join-requests/{requestID}/admit": {
@@ -1041,7 +1148,8 @@
               }
             }
           }
-        }
+        },
+        "x-bearing-role": "administrator"
       }
     },
     "/meta": {
@@ -1225,6 +1333,15 @@
           "name": {
             "type": "string"
           },
+          "ownRole": {
+            "type": "string",
+            "enum": [
+              "administrator",
+              "editor",
+              "member",
+              "reader"
+            ]
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -1240,6 +1357,7 @@
           "email",
           "name",
           "role",
+          "ownRole",
           "disabled",
           "hasPassword",
           "groups",
@@ -1303,7 +1421,7 @@
           "error"
         ]
       },
-      "GroupAdmission": {
+      "GroupGrant": {
         "type": "object",
         "properties": {
           "group": {
@@ -1324,18 +1442,18 @@
           "role"
         ]
       },
-      "GroupAdmissionsBody": {
+      "GroupGrantsBody": {
         "type": "object",
         "properties": {
-          "admissions": {
+          "grants": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GroupAdmission"
+              "$ref": "#/components/schemas/GroupGrant"
             }
           }
         },
         "required": [
-          "admissions"
+          "grants"
         ]
       },
       "Info": {
@@ -1544,6 +1662,17 @@
           "email"
         ]
       },
+      "ProfileRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
       "ReadinessResponse": {
         "type": "object",
         "properties": {
@@ -1578,6 +1707,23 @@
         "required": [
           "name",
           "healthy"
+        ]
+      },
+      "RoleRequest": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "administrator",
+              "editor",
+              "member",
+              "reader"
+            ]
+          }
+        },
+        "required": [
+          "role"
         ]
       },
       "SetUpRequest": {

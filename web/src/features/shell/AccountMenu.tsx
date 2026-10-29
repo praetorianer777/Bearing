@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
 import { useMe, useSignOut } from "@/api/auth";
 import { APP_VERSION } from "@/config";
@@ -72,6 +72,9 @@ export function AccountMenu() {
               <p className="truncate text-sm font-medium text-ink">{me.name}</p>
               <p className="truncate text-xs text-ink-muted">{me.email}</p>
               <p className="text-xs text-ink-subtle">{t.roles[me.role]}</p>
+              <Link to="/settings/profile" onClick={() => setOpen(false)} className="mt-1.5 inline-block text-sm text-accent hover:underline">
+                {t.account.profile}
+              </Link>
             </div>
           )}
           <fieldset>

@@ -58,8 +58,8 @@ func (s *Server) identify(next http.Handler) http.Handler {
 	})
 }
 
-// guard holds an operation to who may call it: public ones anybody, the rest somebody signed in, administrator
-// ones an administrator.
+// guard holds an operation to who may call it: public ones anybody, the rest somebody signed in with the role the
+// operation needs. The database's policies hold the same line again, for a handler that strays.
 func (s *Server) guard(op operation, h http.Handler) http.Handler {
 	if op.public {
 		return h
@@ -70,8 +70,8 @@ func (s *Server) guard(op operation, h http.Handler) http.Handler {
 			respondError(w, r, s.Log, ErrUnauthorized())
 			return
 		}
-		if op.administrator && p.Account.Role != auth.RoleAdministrator {
-			respondError(w, r, s.Log, ErrForbidden("Only an administrator may do that."))
+		if op.role != "" && !p.Account.Role.AtLeast(op.role) {
+			respondError(w, r, s.Log, ErrForbidden(roleNeeded(op.role)))
 			return
 		}
 		h.ServeHTTP(w, r)
@@ -117,4 +117,11 @@ func (s *Server) setSession(w http.ResponseWriter, token string) {
 func (s *Server) clearSession(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{Name: s.cookieName(), Value: "", Path: "/", HttpOnly: true, Secure: s.Secure,
 		SameSite: http.SameSiteLaxMode, MaxAge: -1})
+}
+
+func roleNeeded(role auth.Role) string {
+	if role == auth.RoleAdministrator {
+		return "Only an administrator may do that."
+	}
+	return "That needs the " + string(role) + " role or a higher one."
 }

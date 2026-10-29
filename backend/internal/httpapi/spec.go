@@ -73,6 +73,7 @@ func (op operation) describe(b *openapi.Builder, errorSchema *openapi.Schema) *o
 		OperationID: op.id,
 		Summary:     op.summary,
 		Description: op.description,
+		Role:        string(op.role),
 		Tags:        []string{op.tag},
 		Responses:   map[string]*openapi.Response{},
 	}

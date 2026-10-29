@@ -47,3 +47,12 @@ first release; an exchange can come later).
 Bearing runs without its siblings. Every partner feature is gated by the
 partner's `/api/v1/meta` capabilities and degrades with a sentence saying
 what is missing.
+
+## Roles follow realm groups while they are held
+
+An account holds the highest of the role granted to it and the roles granted
+to the realm groups the provider last named for it. A group's role lasts as
+long as the person is in the group, so access follows the realm without a
+second list to keep. Somebody let in through a group gets reader as their own
+role. The database decides with `current_actor_role()` and the policies, and
+the API's operation table says the same thing first, with a clearer refusal.

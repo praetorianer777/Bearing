@@ -132,7 +132,7 @@ describe("coming in", () => {
 });
 
 describe("the accounts page", () => {
-  const BERT = { ...ADMIN, id: "0190a000-0000-7000-8000-000000000002", email: "bert@acme.test", name: "Bert", role: "member" };
+  const BERT = { ...ADMIN, id: "0190a000-0000-7000-8000-000000000002", email: "bert@acme.test", name: "Bert", role: "member", ownRole: "member" };
 
   it("is for administrators only", async () => {
     fakeAPI(signedInAs(BERT));
@@ -234,6 +234,28 @@ describe("the accounts page", () => {
     expect(await within(list).findByText("Max")).toBeInTheDocument();
   });
 
+  it("grants an account a role of its own, and says when a group grants a higher one", async () => {
+    const granted: unknown[] = [];
+    const DORA = { ...BERT, id: "0190a000-0000-7000-8000-000000000003", name: "Dora", email: "dora@suite.test", role: "editor", ownRole: "reader" };
+    fakeAPI({
+      ...signedInAs(),
+      "GET /accounts": { body: { accounts: [ADMIN, BERT, DORA] } },
+      "GET /invitations": { body: { invitations: [] } },
+      [`PUT /accounts/${BERT.id}/role`]: (body) => {
+        granted.push(body);
+        return { status: 204 };
+      },
+    });
+    const user = userEvent.setup();
+    renderApp("/settings/accounts");
+    const list = await screen.findByRole("list", { name: "Accounts" });
+    expect(await within(list).findByText("holds Editor through a group")).toBeInTheDocument();
+    expect(within(list).queryByLabelText("Own role: Ada Admin")).not.toBeInTheDocument();
+    expect(within(list).getByLabelText("Own role: Dora")).toHaveValue("reader");
+    await user.selectOptions(within(list).getByLabelText("Own role: Bert"), "editor");
+    await waitFor(() => expect(granted).toEqual([{ role: "editor" }]));
+  });
+
   it("lets in who asked to join, declines another, and saves who comes in by group", async () => {
     let requests = [
       { id: "r1", email: "carol@suite.test", name: "Carol", groups: ["quality"], requestedAt: ADMIN.createdAt },
@@ -255,11 +277,11 @@ describe("the accounts page", () => {
         requests = requests.filter((r) => r.id !== "r2");
         return { status: 204 };
       },
-      "GET /group-admissions": { body: { admissions: [{ group: "marketing", role: "reader" }] } },
-      "PUT /group-admissions": (body) => {
-        const rows = (body as { admissions: { group: string; role: string }[] }).admissions;
+      "GET /group-grants": { body: { grants: [{ group: "marketing", role: "reader" }] } },
+      "PUT /group-grants": (body) => {
+        const rows = (body as { grants: { group: string; role: string }[] }).grants;
         if (rows.some((r) => !r.group.trim()))
-          return { status: 422, body: { error: { code: "validation_failed", message: "x", fields: { "admissions[1].group": "Name the group." } } } };
+          return { status: 422, body: { error: { code: "validation_failed", message: "x", fields: { "grants[1].group": "Name the group." } } } };
         saved = body;
         return { body };
       },
@@ -276,23 +298,23 @@ describe("the accounts page", () => {
     expect(admitted).toEqual([{ role: "editor" }]);
     await waitFor(() => expect(screen.queryByRole("region", { name: "Asked to join" })).not.toBeInTheDocument());
 
-    const admissions = screen.getByRole("region", { name: "Let in by group" });
-    expect(await within(admissions).findByDisplayValue("marketing")).toBeInTheDocument();
-    await user.click(within(admissions).getByRole("button", { name: "Add a group" }));
-    await user.click(within(admissions).getByRole("button", { name: "Save" }));
-    expect(await within(admissions).findByText("Name the group.")).toBeInTheDocument();
-    await user.type(within(admissions).getByLabelText("Group 2"), "quality");
-    await user.selectOptions(within(admissions).getByLabelText("Role 2"), "editor");
-    await user.click(within(admissions).getByRole("button", { name: "Save" }));
-    expect(await within(admissions).findByRole("status")).toHaveTextContent("Saved.");
+    const grants = screen.getByRole("region", { name: "Roles by group" });
+    expect(await within(grants).findByDisplayValue("marketing")).toBeInTheDocument();
+    await user.click(within(grants).getByRole("button", { name: "Add a group" }));
+    await user.click(within(grants).getByRole("button", { name: "Save" }));
+    expect(await within(grants).findByText("Name the group.")).toBeInTheDocument();
+    await user.type(within(grants).getByLabelText("Group 2"), "quality");
+    await user.selectOptions(within(grants).getByLabelText("Role 2"), "editor");
+    await user.click(within(grants).getByRole("button", { name: "Save" }));
+    expect(await within(grants).findByRole("status")).toHaveTextContent("Saved.");
     expect(saved).toEqual({
-      admissions: [
+      grants: [
         { group: "marketing", role: "reader" },
         { group: "quality", role: "editor" },
       ],
     });
-    await user.click(within(admissions).getAllByRole("button", { name: "Remove" })[0] as HTMLElement);
-    expect(within(admissions).queryByDisplayValue("marketing")).not.toBeInTheDocument();
+    await user.click(within(grants).getAllByRole("button", { name: "Remove" })[0] as HTMLElement);
+    expect(within(grants).queryByDisplayValue("marketing")).not.toBeInTheDocument();
   });
 });
 

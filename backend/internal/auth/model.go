@@ -26,12 +26,21 @@ var Roles = []Role{RoleAdministrator, RoleEditor, RoleMember, RoleReader}
 // Valid says whether r is a role.
 func (r Role) Valid() bool { return slices.Contains(Roles, r) }
 
+// AtLeast says whether r may do everything other may. Nothing is at least an unknown role.
+func (r Role) AtLeast(other Role) bool {
+	i, j := slices.Index(Roles, r), slices.Index(Roles, other)
+	return i >= 0 && j >= 0 && i <= j
+}
+
 // Account is somebody who signs in.
 type Account struct {
-	ID       uuid.UUID
-	Email    string
-	Name     string
-	Role     Role
+	ID    uuid.UUID
+	Email string
+	Name  string
+	// Role is what the account may do: the highest of OwnRole and the roles granted to its groups.
+	Role Role
+	// OwnRole is the role granted to the account itself.
+	OwnRole  Role
 	Disabled bool
 	// HasPassword is whether the account can sign in with a password, as opposed to only through single sign-on.
 	HasPassword bool
@@ -66,6 +75,8 @@ var (
 	ErrLinkInvalid      = errors.New("this link is unknown, used or expired; ask for a new one")
 	ErrNotFound         = errors.New("there is no such account")
 	ErrSelf             = errors.New("you cannot switch off your own account")
+	ErrNotPermitted     = errors.New("your role does not allow that")
+	ErrOwnRole          = errors.New("you cannot change your own role; another administrator can")
 	ErrInvalidRole      = errors.New("that is not a role")
 	ErrNoPasswordToMail = errors.New("this installation sends no mail")
 	// ErrAwaitingAdmission is somebody the provider vouches for whom nobody has let in yet; they have asked to join.
@@ -90,8 +101,8 @@ type JoinRequest struct {
 	RequestedAt time.Time
 }
 
-// GroupAdmission lets the members of a provider's group in at once, with a role.
-type GroupAdmission struct {
+// GroupGrant grants the members of a provider's group a role while they are in it, and lets them in at once.
+type GroupGrant struct {
 	Group string
 	Role  Role
 }

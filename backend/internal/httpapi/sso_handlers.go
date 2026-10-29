@@ -34,13 +34,13 @@ type admitRequest struct {
 	Role auth.Role `json:"role"`
 }
 
-type groupAdmission struct {
+type groupGrant struct {
 	Group string    `json:"group"`
 	Role  auth.Role `json:"role"`
 }
 
-type groupAdmissionsBody struct {
-	Admissions []groupAdmission `json:"admissions"`
+type groupGrantsBody struct {
+	Grants []groupGrant `json:"grants"`
 }
 
 // safeNext is where a sign-in may go back to: a path of the web client's own, never another site.
@@ -168,31 +168,31 @@ func (s *Server) handleDecline(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) handleGroupAdmissions(w http.ResponseWriter, r *http.Request) {
-	admissions, err := s.Auth.GroupAdmissions(r.Context())
+func (s *Server) handleGroupGrants(w http.ResponseWriter, r *http.Request) {
+	grants, err := s.Auth.GroupGrants(r.Context())
 	if err != nil {
 		respondError(w, r, s.Log, err)
 		return
 	}
-	out := make([]groupAdmission, len(admissions))
-	for i, a := range admissions {
-		out[i] = groupAdmission{Group: a.Group, Role: a.Role}
+	out := make([]groupGrant, len(grants))
+	for i, a := range grants {
+		out[i] = groupGrant{Group: a.Group, Role: a.Role}
 	}
-	respondJSON(w, http.StatusOK, groupAdmissionsBody{Admissions: out})
+	respondJSON(w, http.StatusOK, groupGrantsBody{Grants: out})
 }
 
-func (s *Server) handleSetGroupAdmissions(w http.ResponseWriter, r *http.Request) {
-	var req groupAdmissionsBody
+func (s *Server) handleSetGroupGrants(w http.ResponseWriter, r *http.Request) {
+	var req groupGrantsBody
 	if err := decode(r, &req); err != nil {
 		respondError(w, r, s.Log, err)
 		return
 	}
 	f := fields{}
-	admissions := make([]auth.GroupAdmission, 0, len(req.Admissions))
+	grants := make([]auth.GroupGrant, 0, len(req.Grants))
 	seen := map[string]bool{}
-	for i, a := range req.Admissions {
+	for i, a := range req.Grants {
 		group := strings.TrimSpace(a.Group)
-		key := "admissions[" + strconv.Itoa(i) + "]"
+		key := "grants[" + strconv.Itoa(i) + "]"
 		switch {
 		case group == "":
 			f[key+".group"] = "Name the group."
@@ -201,13 +201,13 @@ func (s *Server) handleSetGroupAdmissions(w http.ResponseWriter, r *http.Request
 		}
 		seen[group] = true
 		f.role(key+".role", a.Role)
-		admissions = append(admissions, auth.GroupAdmission{Group: group, Role: a.Role})
+		grants = append(grants, auth.GroupGrant{Group: group, Role: a.Role})
 	}
 	if err := f.err(); err != nil {
 		respondError(w, r, s.Log, err)
 		return
 	}
-	lsn, err := s.Auth.SetGroupAdmissions(r.Context(), admissions)
+	lsn, err := s.Auth.SetGroupGrants(r.Context(), grants)
 	noteWrite(r.Context(), lsn)
 	if err != nil {
 		respondError(w, r, s.Log, authError(err))

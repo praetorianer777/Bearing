@@ -7,7 +7,11 @@ export type Role = Account["role"];
 export type Invitation = components["schemas"]["InvitationResponse"];
 export type InstallationInfo = components["schemas"]["InstallationResponse"];
 
+/** Every role, from the most it may do to the least. */
 export const ROLES: Role[] = ["administrator", "editor", "member", "reader"];
+
+/** Whether role may do everything need may. */
+export const atLeast = (role: Role, need: Role) => ROLES.indexOf(role) <= ROLES.indexOf(need);
 
 export const installationQuery = {
   queryKey: ["installation"],
@@ -58,6 +62,14 @@ export function useSignOut() {
       client.clear();
       client.setQueryData(meQuery.queryKey, null);
     },
+  });
+}
+
+export function useUpdateMe() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { name: string }) => unwrap(await api.PATCH("/auth/me", { body })).account,
+    onSuccess: (account) => client.setQueryData(meQuery.queryKey, account),
   });
 }
 
@@ -112,21 +124,25 @@ export const useSetAccountPassword = () =>
     unwrap(await api.POST("/accounts/{accountID}/password", { params: { path: { accountID } }, body: { password } })),
   );
 
+export const useSetAccountRole = () =>
+  useAccountsMutation(async ({ accountID, role }: { accountID: string; role: Role }) =>
+    unwrap(await api.PUT("/accounts/{accountID}/role", { params: { path: { accountID } }, body: { role } })),
+  );
+
 export const useSetDisabled = () =>
   useAccountsMutation(async ({ accountID, disabled }: { accountID: string; disabled: boolean }) =>
     unwrap(await api.POST(disabled ? "/accounts/{accountID}/disable" : "/accounts/{accountID}/enable", { params: { path: { accountID } } })),
   );
 
 export type JoinRequest = components["schemas"]["JoinRequestResponse"];
-export type GroupAdmission = components["schemas"]["GroupAdmission"];
+export type GroupGrant = components["schemas"]["GroupGrant"];
 
 /** Where the browser goes to sign in through the identity provider, coming back to next. */
 export const ssoStartURL = (next = "/") => `/api/v1/auth/oidc/start?next=${encodeURIComponent(next)}`;
 
 export const useJoinRequests = () => useQuery({ queryKey: ["join-requests"], queryFn: async () => unwrap(await api.GET("/join-requests")).joinRequests });
 
-export const useGroupAdmissions = () =>
-  useQuery({ queryKey: ["group-admissions"], queryFn: async () => unwrap(await api.GET("/group-admissions")).admissions });
+export const useGroupGrants = () => useQuery({ queryKey: ["group-grants"], queryFn: async () => unwrap(await api.GET("/group-grants")).grants });
 
 export function useAdmit() {
   const client = useQueryClient();
@@ -145,10 +161,10 @@ export function useDecline() {
   });
 }
 
-export function useSetGroupAdmissions() {
+export function useSetGroupGrants() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (admissions: GroupAdmission[]) => unwrap(await api.PUT("/group-admissions", { body: { admissions } })).admissions,
-    onSuccess: (admissions) => client.setQueryData(["group-admissions"], admissions),
+    mutationFn: async (grants: GroupGrant[]) => unwrap(await api.PUT("/group-grants", { body: { grants } })).grants,
+    onSuccess: (grants) => client.setQueryData(["group-grants"], grants),
   });
 }

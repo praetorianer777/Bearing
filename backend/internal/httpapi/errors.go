@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // APIError is the single error shape every endpoint returns, so that clients have exactly one thing to parse.
@@ -91,10 +92,21 @@ func ErrInternal(cause error) *APIError {
 	return &APIError{Status: http.StatusInternalServerError, Code: "internal", Message: "Something went wrong on our side. Try again, and quote the request id if it keeps happening.", cause: cause}
 }
 
+// insufficientPrivilege is what Postgres answers a write its policies refuse.
+const insufficientPrivilege = "42501"
+
 // respondError writes err in the error envelope, logging what the caller is not told.
 func respondError(w http.ResponseWriter, r *http.Request, log *slog.Logger, err error) {
-	var apiErr *APIError
-	if !errors.As(err, &apiErr) {
+	var (
+		apiErr *APIError
+		pgErr  *pgconn.PgError
+	)
+	switch {
+	case errors.As(err, &apiErr):
+	case errors.As(err, &pgErr) && pgErr.Code == insufficientPrivilege:
+		apiErr = ErrForbidden("Your role does not allow that.")
+		apiErr.cause = err
+	default:
 		apiErr = ErrInternal(err)
 	}
 	out := *apiErr

@@ -86,6 +86,16 @@ export const de: Messages = {
     languageBrowser: "Wie der Browser",
     languages: { en: "English", de: "Deutsch" },
     about: (version: string) => `Bearing ${version}`,
+    profile: "Ihr Profil",
+  },
+  profile: {
+    title: "Ihr Profil",
+    intro: "Wie Sie für alle anderen in Bearing erscheinen.",
+    save: "Speichern",
+    saved: "Gespeichert.",
+    readOnly: "Lesende behalten den Namen, den sie bekommen haben. Die Administration kann ihn ändern.",
+    role: (role: string) => `Ihre Rolle: ${role}.`,
+    throughGroup: (role: string, own: string) => `Ihre Rolle: ${role}, über eine Gruppe beim Identitätsanbieter. Ihre eigene Rolle ist ${own}.`,
   },
   accounts: {
     title: "Konten",
@@ -116,14 +126,16 @@ export const de: Messages = {
     requestsIntro: "Personen, für die der Identitätsanbieter bürgt und die noch niemand hereingelassen hat.",
     admit: "Hereinlassen",
     decline: "Ablehnen",
-    admissions: "Aufnahme nach Gruppe",
-    admissionsIntro:
-      "Mitglieder dieser Gruppen beim Identitätsanbieter kommen sofort herein, mit der angegebenen Rolle. Wer in mehreren ist, bekommt die höchste.",
+    grants: "Rollen nach Gruppe",
+    grantsIntro:
+      "Mitglieder dieser Gruppen beim Identitätsanbieter haben die angegebene Rolle, solange sie in der Gruppe sind, und kommen sofort herein. Wer in mehreren ist, hat die höchste. Eine Änderung beim Anbieter gilt ab der nächsten Anmeldung der Person.",
+    ownRole: (name: string) => `Eigene Rolle: ${name}`,
+    throughGroup: (role: string) => `über eine Gruppe: ${role}`,
     group: "Gruppe",
     addGroup: "Gruppe hinzufügen",
     removeGroup: "Entfernen",
-    saveAdmissions: "Speichern",
-    admissionsSaved: "Gespeichert.",
+    saveGrants: "Speichern",
+    grantsSaved: "Gespeichert.",
   },
   comingSoon: {
     body: "Dieser Teil von Bearing ist geplant und noch nicht gebaut.",

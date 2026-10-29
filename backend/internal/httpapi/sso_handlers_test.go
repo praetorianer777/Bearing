@@ -62,15 +62,15 @@ func TestACallbackThatGoesWrongSaysSoOnTheSignInPage(t *testing.T) {
 	}
 }
 
-func TestGroupAdmissionsAreChecked(t *testing.T) {
-	rec := call(signedInServer(), http.MethodPut, APIPrefix+"/group-admissions", "ada",
-		`{"admissions":[{"group":"quality","role":"editor"},{"group":"quality","role":"reader"},{"group":" ","role":"boss"}]}`, nil)
+func TestGroupGrantsAreChecked(t *testing.T) {
+	rec := call(signedInServer(), http.MethodPut, APIPrefix+"/group-grants", "ada",
+		`{"grants":[{"group":"quality","role":"editor"},{"group":"quality","role":"reader"},{"group":" ","role":"boss"}]}`, nil)
 	var body errorEnvelope
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("%d %s", rec.Code, rec.Body)
 	}
 	_ = json.Unmarshal(rec.Body.Bytes(), &body)
-	for _, f := range []string{"admissions[1].group", "admissions[2].group", "admissions[2].role"} {
+	for _, f := range []string{"grants[1].group", "grants[2].group", "grants[2].role"} {
 		if body.Error.Fields[f] == "" {
 			t.Errorf("no word on %s in %v", f, body.Error.Fields)
 		}

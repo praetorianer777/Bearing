@@ -47,11 +47,11 @@ var decoyHash = func() string {
 }()
 
 // accountColumns read an account with the groups its provider last named.
-const accountColumns = `id, email, name, role, disabled_at IS NOT NULL, created_at,
+const accountColumns = `id, email, name, account_role_of(id, role), role, disabled_at IS NOT NULL, created_at,
 	coalesce((SELECT groups FROM account_identity i WHERE i.account_id = account.id ORDER BY last_sign_in DESC LIMIT 1), '{}')`
 
 func scanAccount(row pgx.Row, a *Account) error {
-	return row.Scan(&a.ID, &a.Email, &a.Name, &a.Role, &a.Disabled, &a.CreatedAt, &a.Groups)
+	return row.Scan(&a.ID, &a.Email, &a.Name, &a.Role, &a.OwnRole, &a.Disabled, &a.CreatedAt, &a.Groups)
 }
 
 // NormaliseEmail trims an address and refuses one that is not an address.
@@ -118,7 +118,7 @@ func (s *Service) SignIn(ctx context.Context, email, password string) (Account, 
 	)
 	err := s.DB.ReadAdmin(ctx, func(ctx context.Context, q db.DBTX) error {
 		return q.QueryRow(ctx, `SELECT `+accountColumns+`, password_hash FROM account WHERE email = $1`, strings.TrimSpace(email)).
-			Scan(&a.ID, &a.Email, &a.Name, &a.Role, &a.Disabled, &a.CreatedAt, &a.Groups, &hash)
+			Scan(&a.ID, &a.Email, &a.Name, &a.Role, &a.OwnRole, &a.Disabled, &a.CreatedAt, &a.Groups, &hash)
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return Account{}, "", err
@@ -279,6 +279,41 @@ func (s *Service) SetDisabled(ctx context.Context, id uuid.UUID, disabled bool) 
 		return lsn, err
 	}
 	return lsn, s.Sessions.EndAll(ctx, id)
+}
+
+// SetRole grants an account a role of its own, as an administrator. Its groups may still grant it a higher one.
+func (s *Service) SetRole(ctx context.Context, id uuid.UUID, role Role) (db.LSN, error) {
+	if !role.Valid() {
+		return 0, ErrInvalidRole
+	}
+	if actor, _ := db.UserFrom(ctx); actor == id {
+		return 0, ErrOwnRole
+	}
+	return s.DB.Write(ctx, func(ctx context.Context, q db.DBTX) error {
+		return affected(q.Exec(ctx, `UPDATE account SET role = $2 WHERE id = $1`, id, role))
+	})
+}
+
+// Rename changes the name of the person the context acts for; a reader keeps the name they were given.
+func (s *Service) Rename(ctx context.Context, name string) (Account, db.LSN, error) {
+	actor, ok := db.UserFrom(ctx)
+	if !ok {
+		return Account{}, 0, ErrNotFound
+	}
+	var a Account
+	lsn, err := s.DB.Write(ctx, func(ctx context.Context, q db.DBTX) error {
+		err := scanAccount(q.QueryRow(ctx, `UPDATE account SET name = $2 WHERE id = $1 RETURNING `+accountColumns,
+			actor, strings.TrimSpace(name)), &a)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotPermitted
+		}
+		return err
+	})
+	if err != nil {
+		return Account{}, 0, err
+	}
+	a.HasPassword, err = s.hasPassword(ctx, a.ID)
+	return a, lsn, err
 }
 
 func affected(tag pgconn.CommandTag, err error) error {

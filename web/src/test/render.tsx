@@ -26,6 +26,7 @@ export const ADMIN = {
   email: "ada@bearing.test",
   name: "Ada Admin",
   role: "administrator",
+  ownRole: "administrator",
   disabled: false,
   hasPassword: true,
   groups: [] as string[],
