@@ -93,6 +93,18 @@ export const de: Messages = {
     themeInstallation: "Das der Installation",
     themeBuiltIn: "Bearings eigenes",
   },
+  unitTypes: {
+    title: "Einheitentypen",
+    intro: "Die Arten von Einheiten, aus denen die Organisation besteht, etwa Bereiche, Abteilungen und Teams.",
+    none: "Noch keine Einheitentypen. Legen Sie einen vor der ersten Einheit an.",
+    add: "Einen Einheitentyp hinzufügen",
+    addSubmit: "Hinzufügen",
+    icon: "Symbol",
+    colour: "Farbe",
+    remove: "Entfernen",
+    inUse: (n: number) => (n === 0 ? "Keine Einheiten dieses Typs" : n === 1 ? "1 Einheit dieses Typs" : `${n} Einheiten dieses Typs`),
+    icons: { unit: "Einheit", organisation: "Organisation", division: "Bereich", department: "Abteilung", team: "Team", project: "Projekt" },
+  },
   themes: {
     title: "Themes",
     intro:

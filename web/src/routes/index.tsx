@@ -6,6 +6,7 @@ import { Home } from "@/features/home/Home";
 import { AccountsPage } from "@/features/settings/Accounts";
 import { ProfilePage } from "@/features/settings/Profile";
 import { ThemesPage } from "@/features/settings/Themes";
+import { UnitTypesPage } from "@/features/settings/UnitTypes";
 import { AppShell } from "@/features/shell/AppShell";
 import { ComingSoon, NotFound } from "@/features/shell/Placeholder";
 import { t } from "@/i18n";
@@ -99,6 +100,14 @@ const themesRoute = createRoute({
   },
   component: ThemesPage,
 });
+const unitTypesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/settings/unit-types",
+  beforeLoad: ({ context }) => {
+    if (context.me.role !== "administrator") throw redirect({ to: "/" });
+  },
+  component: UnitTypesPage,
+});
 const profileRoute = createRoute({ getParentRoute: () => appRoute, path: "/settings/profile", component: ProfilePage });
 
 const routeTree = rootRoute.addChildren([
@@ -107,7 +116,7 @@ const routeTree = rootRoute.addChildren([
   forgotRoute,
   resetRoute,
   invitationRoute,
-  appRoute.addChildren([homeRoute, organisationRoute, peopleRoute, processesRoute, accountsRoute, themesRoute, profileRoute]),
+  appRoute.addChildren([homeRoute, organisationRoute, peopleRoute, processesRoute, accountsRoute, themesRoute, unitTypesRoute, profileRoute]),
 ]);
 
 export function buildRouter(queryClient: QueryClient, history?: RouterHistory) {

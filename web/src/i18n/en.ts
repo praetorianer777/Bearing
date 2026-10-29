@@ -93,6 +93,18 @@ export const en = {
     themeInstallation: "The installation's",
     themeBuiltIn: "Bearing's own",
   },
+  unitTypes: {
+    title: "Unit types",
+    intro: "The kinds of unit the organisation is made of, such as divisions, departments and teams.",
+    none: "No unit types yet. Add one before the first unit.",
+    add: "Add a unit type",
+    addSubmit: "Add",
+    icon: "Icon",
+    colour: "Colour",
+    remove: "Remove",
+    inUse: (n: number) => (n === 0 ? "No units of this type" : n === 1 ? "1 unit of this type" : `${n} units of this type`),
+    icons: { unit: "Unit", organisation: "Organisation", division: "Division", department: "Department", team: "Team", project: "Project" },
+  },
   themes: {
     title: "Themes",
     intro:

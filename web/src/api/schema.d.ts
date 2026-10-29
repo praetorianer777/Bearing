@@ -542,6 +542,135 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/unit-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The kinds of unit, larger units first. */
+        get: operations["unitTypes"];
+        put?: never;
+        /** Add a kind of unit. */
+        post: operations["createUnitType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/unit-types/{unitTypeID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a kind of unit no unit has. */
+        delete: operations["deleteUnitType"];
+        options?: never;
+        head?: never;
+        /** Change a kind of unit; what is left out stays. */
+        patch: operations["updateUnitType"];
+        trace?: never;
+    };
+    "/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The units that exist on a day, each with the unit it is part of then; with archived=true, those archived by then.
+         * @description asOf is a day written 2006-01-02, today when left out. The tree is built from parentId; the root has none.
+         */
+        get: operations["units"];
+        put?: never;
+        /** Add a unit from a day, part of another or at the root. */
+        post: operations["createUnit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/units/{unitID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One unit as it stands on a day, with every placement it has had and will have. */
+        get: operations["unit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Rename, retype or redescribe a unit; what is left out stays, and an empty shortName takes it away. */
+        patch: operations["updateUnit"];
+        trace?: never;
+    };
+    "/units/{unitID}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End a unit from a day. The days before keep it; units still part of it then must move first. */
+        post: operations["archiveUnit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/units/{unitID}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make a unit part of another, or the root, from a day.
+         * @description The placement the day falls in ends there; moves planned after it stay. A move that would put a unit inside itself is refused.
+         */
+        post: operations["moveUnit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/units/{unitID}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bring an archived unit back where it last was, for good. */
+        post: operations["restoreUnit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -577,12 +706,33 @@ export interface components {
             /** @enum {string} */
             role: "administrator" | "editor" | "member" | "reader";
         };
+        ArchiveUnitRequest: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            on?: string;
+        };
         CreateAccountRequest: {
             email: string;
             name: string;
             password: string;
             /** @enum {string} */
             role: "administrator" | "editor" | "member" | "reader";
+        };
+        CreateUnitRequest: {
+            description?: string;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            name?: string;
+            /** Format: uuid */
+            parentId?: string;
+            shortName?: string;
+            /** Format: uuid */
+            typeId?: string;
         };
         DefaultThemeRequest: {
             /** Format: uuid */
@@ -648,11 +798,34 @@ export interface components {
             capabilities: string[];
             product: string;
         };
+        MoveUnitRequest: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            /** Format: uuid */
+            parentId?: string;
+        };
         PasswordRequest: {
             password: string;
         };
         PasswordResetRequest: {
             email: string;
+        };
+        PlacementResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            /** Format: uuid */
+            parentId: string | null;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            to: string | null;
         };
         ProfileRequest: {
             name: string;
@@ -765,6 +938,45 @@ export interface components {
                 [key: string]: string;
             };
             shape: components["schemas"]["ThemeShape"];
+        };
+        UnitRequest: {
+            description?: string;
+            name?: string;
+            shortName?: string;
+            /** Format: uuid */
+            typeId?: string;
+        };
+        UnitResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            archivedOn: string | null;
+            description: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            parentId: string | null;
+            placements?: components["schemas"]["PlacementResponse"][];
+            shortName: string | null;
+            /** Format: uuid */
+            typeId: string;
+        };
+        UnitTypeRequest: {
+            colour?: string;
+            icon?: string;
+            name?: string;
+            rank?: number;
+        };
+        UnitTypeResponse: {
+            colour: string;
+            icon: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            rank: number;
+            units: number;
         };
     };
     responses: never;
@@ -1903,6 +2115,396 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ThemePackage"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    unitTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        unitTypes: components["schemas"]["UnitTypeResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createUnitType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitTypeRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        unitType: components["schemas"]["UnitTypeResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    deleteUnitType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unitTypeID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    updateUnitType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unitTypeID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitTypeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        unitType: components["schemas"]["UnitTypeResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    units: {
+        parameters: {
+            query?: {
+                asOf?: string;
+                archived?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        units: components["schemas"]["UnitResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUnitRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        unit: components["schemas"]["UnitResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    unit: {
+        parameters: {
+            query?: {
+                asOf?: string;
+            };
+            header?: never;
+            path: {
+                unitID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        unit: components["schemas"]["UnitResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    updateUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unitID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnitRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        unit: components["schemas"]["UnitResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    archiveUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unitID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveUnitRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        unit: components["schemas"]["UnitResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    moveUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unitID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveUnitRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        unit: components["schemas"]["UnitResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    restoreUnit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unitID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        unit: components["schemas"]["UnitResponse"];
+                    };
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */

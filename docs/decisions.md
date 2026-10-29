@@ -65,3 +65,13 @@ in their account menu, and the browser keeps that choice. Theme files and
 their pictures are stored in PostgreSQL, so Bearing needs no object store.
 That is why files are smaller here (4 MB, 32 per theme) than in the
 siblings.
+
+## Where a unit sits is dated; what it is called is not
+
+A unit's place in the tree is a series of placements, each from a day until a
+day, so a move can be entered before it takes effect and the tree can be read
+as of any day. A unit's name, type and description are not dated; their
+history belongs to the audit log. Archiving ends a unit's placements and keeps
+the days before it. A move that would put a unit inside itself is refused if
+the cycle would form on any day the new placement covers. The database checks
+this itself, under a lock, so two moves at once cannot together form a cycle.

@@ -5,11 +5,13 @@ import (
 
 	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/openapi"
+	"github.com/praetorianer777/bearing/backend/internal/org"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
 )
 
 const (
 	administrator = auth.RoleAdministrator
+	editor        = auth.RoleEditor
 	member        = auth.RoleMember
 )
 
@@ -140,6 +142,39 @@ var operations = []operation{
 		summary: "A theme as one armature-theme/1 file, its files inline.", responses: map[int]any{http.StatusOK: theme.Package{}}},
 	{method: http.MethodGet, path: "/themes/{themeID}/assets/{assetID}", id: "themeFile", handle: (*Server).handleThemeFile, tag: "themes",
 		summary: "One of a theme's files, as a download that never changes.", responses: map[int]any{http.StatusOK: nil}},
+	{method: http.MethodGet, path: "/unit-types", id: "unitTypes", handle: (*Server).handleUnitTypes, tag: "units",
+		summary: "The kinds of unit, larger units first.", responses: map[int]any{http.StatusOK: env{"unitTypes": []unitTypeResponse{}}}},
+	{method: http.MethodPost, path: "/unit-types", id: "createUnitType", handle: (*Server).handleCreateUnitType, tag: "units",
+		summary: "Add a kind of unit.", role: administrator,
+		request: unitTypeRequest{}, responses: map[int]any{http.StatusCreated: env{"unitType": unitTypeResponse{}}}},
+	{method: http.MethodPatch, path: "/unit-types/{unitTypeID}", id: "updateUnitType", handle: (*Server).handleUpdateUnitType, tag: "units",
+		summary: "Change a kind of unit; what is left out stays.", role: administrator,
+		request: unitTypeRequest{}, responses: map[int]any{http.StatusOK: env{"unitType": unitTypeResponse{}}}},
+	{method: http.MethodDelete, path: "/unit-types/{unitTypeID}", id: "deleteUnitType", handle: (*Server).handleDeleteUnitType, tag: "units",
+		summary: "Remove a kind of unit no unit has.", role: administrator, responses: map[int]any{http.StatusNoContent: nil}},
+	{method: http.MethodGet, path: "/units", id: "units", handle: (*Server).handleUnits, tag: "units",
+		summary:     "The units that exist on a day, each with the unit it is part of then; with archived=true, those archived by then.",
+		description: "asOf is a day written 2006-01-02, today when left out. The tree is built from parentId; the root has none.",
+		query:       []string{"asOf", "archived"}, responses: map[int]any{http.StatusOK: env{"asOf": org.Day{}, "units": []unitResponse{}}}},
+	{method: http.MethodPost, path: "/units", id: "createUnit", handle: (*Server).handleCreateUnit, tag: "units",
+		summary: "Add a unit from a day, part of another or at the root.", role: editor,
+		request: createUnitRequest{}, responses: map[int]any{http.StatusCreated: env{"unit": unitResponse{}}}},
+	{method: http.MethodGet, path: "/units/{unitID}", id: "unit", handle: (*Server).handleUnit, tag: "units",
+		summary: "One unit as it stands on a day, with every placement it has had and will have.", query: []string{"asOf"},
+		responses: map[int]any{http.StatusOK: env{"asOf": org.Day{}, "unit": unitResponse{}}}},
+	{method: http.MethodPatch, path: "/units/{unitID}", id: "updateUnit", handle: (*Server).handleUpdateUnit, tag: "units",
+		summary: "Rename, retype or redescribe a unit; what is left out stays, and an empty shortName takes it away.", role: editor,
+		request: unitRequest{}, responses: map[int]any{http.StatusOK: env{"unit": unitResponse{}}}},
+	{method: http.MethodPost, path: "/units/{unitID}/move", id: "moveUnit", handle: (*Server).handleMoveUnit, tag: "units",
+		summary:     "Make a unit part of another, or the root, from a day.",
+		description: "The placement the day falls in ends there; moves planned after it stay. A move that would put a unit inside itself is refused.",
+		role:        editor, request: moveUnitRequest{}, responses: map[int]any{http.StatusOK: env{"unit": unitResponse{}}}},
+	{method: http.MethodPost, path: "/units/{unitID}/archive", id: "archiveUnit", handle: (*Server).handleArchiveUnit, tag: "units",
+		summary: "End a unit from a day. The days before keep it; units still part of it then must move first.", role: editor,
+		request: archiveUnitRequest{}, responses: map[int]any{http.StatusOK: env{"unit": unitResponse{}}}},
+	{method: http.MethodPost, path: "/units/{unitID}/restore", id: "restoreUnit", handle: (*Server).handleRestoreUnit, tag: "units",
+		summary: "Bring an archived unit back where it last was, for good.", role: editor,
+		responses: map[int]any{http.StatusOK: env{"unit": unitResponse{}}}},
 }
 
 // The document's own row joins at init: it is built from the table, so the table cannot name it in its initialiser.

@@ -75,3 +75,41 @@ export const SettingsIcon = (p: IconProps) => (
     <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" />
   </Icon>
 );
+
+export const UnitIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="4" width="16" height="16" rx="2" />
+  </Icon>
+);
+
+export const DivisionIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m12 3 9 5-9 5-9-5z" />
+    <path d="m3 13 9 5 9-5" />
+  </Icon>
+);
+
+export const DepartmentIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="5" y="3" width="14" height="18" rx="1" />
+    <path d="M9 7h2M13 7h2M9 11h2M13 11h2M10 21v-4h4v4" />
+  </Icon>
+);
+
+export const ProjectIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+  </Icon>
+);
+
+/** The icons a unit type may have, by the name the API keeps. */
+export const UNIT_ICONS = {
+  unit: UnitIcon,
+  organisation: OrgIcon,
+  division: DivisionIcon,
+  department: DepartmentIcon,
+  team: PeopleIcon,
+  project: ProjectIcon,
+} as const;
+
+export type UnitIconName = keyof typeof UNIT_ICONS;
