@@ -55,7 +55,8 @@ func (s *Server) Routes() http.Handler {
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrMethodNotAllowed()) })
 
 	api := chi.NewRouter()
-	api.Use(s.sameSite, s.identify, s.readYourWrites)
+	// Freshness before identity: the account a session signs in is read no older than the session's last write.
+	api.Use(s.sameSite, s.readYourWrites, s.identify)
 	api.NotFound(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrNotFound()) })
 	api.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrMethodNotAllowed()) })
 	for _, op := range operations {
