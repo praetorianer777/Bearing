@@ -7,6 +7,27 @@ x-db-env: &db-env
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bearing}
   POSTGRES_DB: bearing
 
+# The api and the worker connect as bearing_app, which row level security constrains, and as bearing_admin for what
+# runs before anybody acts.
+x-app-env: &app-env
+  BEARING_ENV: development
+  BEARING_DB_PRIMARY_URL: postgres://bearing_app:${APP_DB_PASSWORD:-bearing_app}@postgres-primary:5432/bearing?sslmode=disable
+  BEARING_DB_REPLICA_URLS: postgres://bearing_app:${APP_DB_PASSWORD:-bearing_app}@postgres-replica:5432/bearing?sslmode=disable
+  BEARING_DB_ADMIN_URL: postgres://bearing_admin:${ADMIN_DB_PASSWORD:-bearing_admin}@postgres-primary:5432/bearing?sslmode=disable
+  BEARING_VALKEY_URL: redis://:${VALKEY_PASSWORD:-bearing_valkey}@valkey:6379/0
+
+# Every Go service runs the same image, which migrate alone builds: two builds racing to tag one name would fail the
+# stack's start.
+x-backend: &backend
+  image: ${COMPOSE_PROJECT_NAME:-bearing}-backend
+  pull_policy: never
+
+# What the images say they are; the Makefile sets both from scripts/build-stamp.sh, and a build without them calls
+# itself VERSION+dev.
+x-build-stamp: &build-stamp
+  VERSION: ${BEARING_BUILD_VERSION:-}
+  COMMIT: ${BEARING_BUILD_COMMIT:-}
+
 services:
   postgres-primary:
     image: postgres:18-alpine
@@ -126,6 +147,56 @@ services:
       retries: 30
       start_period: 90s
       start_interval: 2s
+
+  # Migrations run as the database owner, which is what lets them create the runtime roles' default privileges.
+  migrate:
+    <<: *backend
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+      args: *build-stamp
+    command: ["/app/migrate", "up"]
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    environment:
+      BEARING_DB_PRIMARY_URL: postgres://bearing:${POSTGRES_PASSWORD:-bearing}@postgres-primary:5432/bearing?sslmode=disable
+    restart: "no"
+
+  api:
+    <<: *backend
+    command: ["/app/api"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres-replica:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+    ports:
+      - "127.0.0.1:${API_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    restart: unless-stopped
+
+  worker:
+    <<: *backend
+    command: ["/app/worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+    restart: unless-stopped
 
 volumes:
   primary-data:

@@ -6,6 +6,10 @@ This product contains code adapted from Exciter (https://github.com/Cloudster1/E
 
 - deploy/postgres/replica-entrypoint.sh and deploy/postgres/init-roles.sh, the development stack's
   streaming replica and database roles, from Exciter
+- backend/internal/db, the primary and replica routing with read-your-writes, backend/internal/freshness,
+  backend/internal/version, backend/cmd/migrate and backend/migrations/owner.go, from Exciter
+- parts of backend/internal/httpapi (the error envelope, /meta and the freshness middleware) and
+  deploy/Dockerfile.backend, from Exciter
 - scripts/stack-ports.sh, scripts/build-stamp.sh and tests/test-ports.sh, from Rotor
 - deploy/keycloak/realm-check.mjs, from Rotor
 - deploy/keycloak/realm.json, the suite's realm dynamo from Dynamo

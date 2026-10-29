@@ -1,0 +1,89 @@
+package httpapi
+
+import (
+	"context"
+	"log/slog"
+	"net/http"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/praetorianer777/bearing/backend/internal/db"
+)
+
+// APIPrefix is where every operation but the probes is served.
+const APIPrefix = "/api/v1"
+
+// Database is what the handlers need of the cluster, so tests can stand in for it.
+type Database interface {
+	Ping(ctx context.Context) error
+	Stats() db.Stats
+}
+
+// Server holds what the handlers share.
+type Server struct {
+	DB    Database
+	Fresh Freshness
+	Log   *slog.Logger
+	// Secure marks the cookies the api sets Secure.
+	Secure         bool
+	RequestTimeout time.Duration
+}
+
+// Routes is the whole HTTP surface, built from the operations table.
+func (s *Server) Routes() http.Handler {
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID, s.logRequests, s.recoverPanics)
+	if s.RequestTimeout > 0 {
+		r.Use(middleware.Timeout(s.RequestTimeout))
+	}
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrNotFound()) })
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrMethodNotAllowed()) })
+
+	api := chi.NewRouter()
+	api.Use(s.readYourWrites)
+	api.NotFound(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrNotFound()) })
+	api.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrMethodNotAllowed()) })
+	for _, op := range operations {
+		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { op.handle(s, w, r) })
+		if op.root {
+			r.Method(op.method, op.path, h)
+		} else {
+			api.Method(op.method, op.path, h)
+		}
+	}
+	r.Mount(APIPrefix, api)
+	return r
+}
+
+// logRequests logs each request once it is answered, at debug for the probes so they do not drown the log.
+func (s *Server) logRequests(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		next.ServeHTTP(ww, r)
+		level := slog.LevelInfo
+		if r.URL.Path == "/healthz" || r.URL.Path == "/readyz" {
+			level = slog.LevelDebug
+		}
+		s.Log.Log(r.Context(), level, "request", "method", r.Method, "path", r.URL.Path, "status", ww.Status(),
+			"duration_ms", time.Since(start).Milliseconds(), "request_id", middleware.GetReqID(r.Context()))
+	})
+}
+
+// recoverPanics turns a handler's panic into the error envelope, so a bug answers 500 and not a dropped connection.
+func (s *Server) recoverPanics(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if v := recover(); v != nil {
+				if v == http.ErrAbortHandler {
+					panic(v)
+				}
+				s.Log.Error("handler panicked", "panic", v, "path", r.URL.Path, "request_id", middleware.GetReqID(r.Context()))
+				respondError(w, r, s.Log, ErrInternal(nil))
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}

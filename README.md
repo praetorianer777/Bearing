@@ -38,10 +38,12 @@ Docker, make, `jq` and `python3` are all the host needs; every toolchain runs
 in a container.
 
 ```sh
-make up          # Postgres with a streaming replica, Valkey, Mailpit, Keycloak
+make up          # Postgres with a streaming replica, Valkey, Mailpit, Keycloak, the api and the worker
 make ports       # this checkout's compose project and its twenty ports
 make down        # stop (make clean also drops the volumes)
 make realm-check # compare the realm with Dynamo's canonical copy
+make check-go    # the backend's formatting, vet and unit tests
+make test-integration  # the integration suite against the running stack
 make help        # every target
 ```
 

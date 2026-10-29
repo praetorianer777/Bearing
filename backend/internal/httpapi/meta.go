@@ -1,0 +1,53 @@
+package httpapi
+
+import (
+	"net/http"
+	"slices"
+
+	"github.com/praetorianer777/bearing/backend/internal/version"
+)
+
+// Product is how Bearing names itself to partners at /meta.
+const Product = "bearing"
+
+// APIVersion is info.version of the OpenAPI document; it rises only when something breaks clients.
+const APIVersion = "1"
+
+// capability is one integration feature a partner checks for by name at /meta, with the operations it promises;
+// docs/integration.md lists them.
+type capability struct {
+	name, promise string
+	// operations are "METHOD /path" as the operations table spells them.
+	operations []string
+}
+
+// integrationCapabilities are what this build promises partners. A capability is listed only once every
+// operation it names is served.
+var integrationCapabilities = []capability{}
+
+// capabilities is what this build announces beyond its API version, sorted; a client checks for a name here
+// rather than comparing versions.
+func capabilities() []string {
+	names := make([]string, 0, len(integrationCapabilities))
+	for _, c := range integrationCapabilities {
+		names = append(names, c.name)
+	}
+	slices.Sort(names)
+	return names
+}
+
+type metaResponse struct {
+	Product      string       `json:"product"`
+	Build        version.Info `json:"build"`
+	APIVersion   string       `json:"apiVersion"`
+	Capabilities []string     `json:"capabilities"`
+}
+
+func (s *Server) handleMeta(w http.ResponseWriter, _ *http.Request) {
+	respondJSON(w, http.StatusOK, metaResponse{
+		Product:      Product,
+		Build:        version.Current(),
+		APIVersion:   APIVersion,
+		Capabilities: capabilities(),
+	})
+}
