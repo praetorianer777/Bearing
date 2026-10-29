@@ -3,9 +3,11 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/praetorianer777/bearing/backend/internal/auth"
@@ -21,6 +23,7 @@ import (
 
 // NewServer is the api's HTTP server over cluster and valkey, as cfg sets it up.
 func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log *slog.Logger) (*httpapi.Server, error) {
+	people := &org.Service{DB: cluster}
 	accounts := &auth.Service{
 		DB:            cluster,
 		Sessions:      auth.NewSessions(valkey, cfg.Auth.SessionTTL),
@@ -28,6 +31,12 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 		Params:        auth.DefaultPasswordParams(),
 		InvitationTTL: cfg.Auth.InvitationTTL,
 		ResetTTL:      cfg.Auth.ResetTTL,
+	}
+	// Linking somebody to their entry cannot keep them out: a failure is logged and the next sign-in tries again.
+	accounts.OnSignIn = func(ctx context.Context, id uuid.UUID) {
+		if _, err := people.LinkPerson(ctx, id); err != nil {
+			log.Error("linking an account to its person failed", "account", id, "error", err)
+		}
 	}
 	if cfg.Mail.SMTPAddr != "" {
 		accounts.Mail = jobs.NewQueue(valkey, cfg.Valkey.JobStream)
@@ -45,7 +54,7 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 		RequestTimeout: cfg.HTTP.RequestTimeout,
 		AppURL:         cfg.Auth.AppURL,
 		Themes:         &theme.Service{DB: cluster},
-		Org:            &org.Service{DB: cluster},
+		Org:            people,
 	}
 	if cfg.OIDC.Enabled() {
 		backchannel, err := sso.ParseBackchannel(cfg.OIDC.Backchannel)

@@ -34,6 +34,15 @@ type Service struct {
 	Params        PasswordParams
 	InvitationTTL time.Duration
 	ResetTTL      time.Duration
+	// OnSignIn runs as somebody signs in, before their session starts, so the organisation model can link them to
+	// their entry. It cannot refuse the sign-in; nil does nothing.
+	OnSignIn func(ctx context.Context, accountID uuid.UUID)
+}
+
+func (s *Service) signedIn(ctx context.Context, id uuid.UUID) {
+	if s.OnSignIn != nil {
+		s.OnSignIn(ctx, id)
+	}
 }
 
 // decoyHash is verified against when an email names no account, so a wrong address takes as long as a wrong
@@ -143,6 +152,7 @@ func (s *Service) SignIn(ctx context.Context, email, password string) (Account, 
 			})
 		}
 	}
+	s.signedIn(ctx, a.ID)
 	token, err := s.Sessions.Start(ctx, a.ID)
 	return a, token, err
 }
@@ -460,6 +470,7 @@ func (s *Service) AcceptInvitation(ctx context.Context, token, name, password st
 		return Account{}, "", err
 	}
 	a.HasPassword = true
+	s.signedIn(ctx, a.ID)
 	session, err := s.Sessions.Start(ctx, a.ID)
 	return a, session, err
 }

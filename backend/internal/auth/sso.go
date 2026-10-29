@@ -75,6 +75,7 @@ func (s *Service) SignInWithIdentity(ctx context.Context, id Identity) (Account,
 	if a.Disabled {
 		return Account{}, "", 0, ErrDisabled
 	}
+	s.signedIn(ctx, a.ID)
 	token, err := s.Sessions.Start(ctx, a.ID)
 	return a, token, lsn, err
 }

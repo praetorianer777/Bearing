@@ -79,6 +79,22 @@ var mayCall = map[string]auth.Role{
 	"endDottedLine":        auth.RoleEditor,
 	"archivePosition":      auth.RoleEditor,
 	"restorePosition":      auth.RoleEditor,
+	"people":               "",
+	"person":               "",
+	"myEntry":              "",
+	"photo":                "",
+	"selfEditable":         "",
+	"createPerson":         auth.RoleEditor,
+	"updatePerson":         auth.RoleEditor,
+	"leave":                auth.RoleEditor,
+	"return":               auth.RoleEditor,
+	"setPhoto":             auth.RoleEditor,
+	"deletePhoto":          auth.RoleEditor,
+	"updateMyEntry":        auth.RoleMember,
+	"setMyPhoto":           auth.RoleMember,
+	"deleteMyPhoto":        auth.RoleMember,
+	"linkAccount":          auth.RoleAdministrator,
+	"setSelfEditable":      auth.RoleAdministrator,
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {
@@ -339,6 +355,51 @@ func TestPositionRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
 		var apiErr *APIError
 		if !errors.As(positionError(err), &apiErr) || apiErr.Status != want {
 			t.Errorf("%v became %v, want status %d", err, positionError(err), want)
+		}
+	}
+}
+
+func TestPeopleRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
+	s := signedInServer()
+	s.Accounts.(fakeSessions)["eve"] = auth.Account{ID: uuid.New(), Name: "Eve", Role: auth.RoleEditor}
+	for _, c := range []struct {
+		method, path, cookie, body string
+		want                       int
+	}{
+		{http.MethodGet, "/people?asOf=x", "bert", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/people/nope", "bert", "", http.StatusNotFound},
+		{http.MethodGet, "/people/nope/photo", "bert", "", http.StatusNotFound},
+		{http.MethodPatch, "/people/nope", "eve", `{}`, http.StatusNotFound},
+		{http.MethodPut, "/people/nope/account", "ada", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/people/nope/leave", "eve", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/people/nope/return", "eve", ``, http.StatusNotFound},
+		{http.MethodPut, "/people/nope/photo", "eve", `{}`, http.StatusNotFound},
+		{http.MethodDelete, "/people/nope/photo", "eve", ``, http.StatusNotFound},
+		{http.MethodPost, "/people", "eve", `{"nme":"x"}`, http.StatusBadRequest},
+		{http.MethodPatch, "/people/me", "bert", `{"left":true}`, http.StatusBadRequest},
+		{http.MethodPatch, "/people/" + uuid.NewString(), "eve", `[]`, http.StatusBadRequest},
+		{http.MethodPut, "/people/" + uuid.NewString() + "/account", "ada", `{"account":"x"}`, http.StatusBadRequest},
+		{http.MethodPost, "/people/" + uuid.NewString() + "/leave", "eve", `{"on":"x"}`, http.StatusBadRequest},
+		{http.MethodPut, "/people/me/photo", "bert", `{"data":"not base64!"}`, http.StatusBadRequest},
+		{http.MethodPut, "/people/self-editable", "ada", `{"field":[]}`, http.StatusBadRequest},
+	} {
+		if rec := call(s, c.method, APIPrefix+c.path, c.cookie, c.body, nil); rec.Code != c.want {
+			t.Errorf("%s %s %s: %d, want %d", c.method, c.path, c.body, rec.Code, c.want)
+		}
+	}
+	for err, want := range map[error]int{
+		org.ErrPersonNotFound: http.StatusNotFound,
+		org.ErrNoEntry:        http.StatusNotFound,
+		org.ErrNotYours:       http.StatusForbidden,
+		org.ErrEmailTaken:     http.StatusConflict,
+		org.ErrBadPhoto:       http.StatusUnprocessableEntity,
+		org.ErrAccountMissing: http.StatusUnprocessableEntity,
+		org.ErrAccountLinked:  http.StatusConflict,
+		org.ErrLeft:           http.StatusConflict,
+	} {
+		var apiErr *APIError
+		if !errors.As(personError(err), &apiErr) || apiErr.Status != want {
+			t.Errorf("%v became %v, want status %d", err, personError(err), want)
 		}
 	}
 }
