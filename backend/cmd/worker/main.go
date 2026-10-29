@@ -11,10 +11,12 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/config"
 	"github.com/praetorianer777/bearing/backend/internal/db"
 	"github.com/praetorianer777/bearing/backend/internal/jobs"
 	"github.com/praetorianer777/bearing/backend/internal/logging"
+	"github.com/praetorianer777/bearing/backend/internal/mail"
 	"github.com/praetorianer777/bearing/backend/internal/version"
 )
 
@@ -58,6 +60,9 @@ func run() error {
 
 	host, _ := os.Hostname()
 	worker := jobs.NewWorker(valkey, cfg.Valkey.JobStream, fmt.Sprintf("%s-%d", host, os.Getpid()), log)
+	if cfg.Mail.SMTPAddr != "" {
+		worker.Handle(auth.MailJob, mail.Handler(mail.SMTPMailer{Addr: cfg.Mail.SMTPAddr, From: cfg.Mail.From}))
+	}
 	log.Info("reading jobs", "stream", cfg.Valkey.JobStream)
 	return worker.Run(ctx)
 }

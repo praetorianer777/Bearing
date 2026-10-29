@@ -64,7 +64,7 @@ stack-env:
 .PHONY: up
 up: stack-env ## Build and start the whole stack in the background, and say where it is
 	docker compose up -d --build --wait
-	@echo "Bearing    http://localhost:$(WEB_PORT)"
+	@echo "Bearing    http://localhost:$(WEB_PORT) (admin@bearing.test / bearing admin password)"
 	@echo "API        http://localhost:$(API_PORT)/api/v1/meta (also under /api/ on the web port)"
 	@echo "Keycloak   http://localhost:$(KEYCLOAK_PORT) (admin / admin; realm $(KEYCLOAK_REALM); people alice, bob, carol, dave with password '<name> password')"
 	@echo "Mailpit    http://localhost:$(MAILPIT_PORT)"
@@ -88,6 +88,10 @@ logs: ## Follow the stack's logs: make logs S=keycloak for one service
 .PHONY: ports
 ports: ## Print this checkout's compose project and ports
 	@echo "project $(STACK_PROJECT), ports $(STACK_PORT_BASE) to $(shell echo $$(($(STACK_PORT_BASE) + 19)))"
+
+.PHONY: seed
+seed: ## Run the seed again against the running stack
+	docker compose run --rm seed
 
 .PHONY: stack-up
 stack-up: stack-env ## The gate's stack: build and start it, and wait until every service is healthy

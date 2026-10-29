@@ -4,9 +4,7 @@ import axe from "axe-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SIDEBAR_STORAGE_KEY } from "@/config";
 import { applyLanguage } from "@/i18n";
-import { answerFetch, renderApp } from "@/test/render";
-
-const META = { product: "bearing", build: { version: "0.1.0+dev" }, apiVersion: "1", capabilities: [] };
+import { fakeAPI, renderApp, signedInAs } from "@/test/render";
 
 afterEach(() => {
   // Unmounted first: a language reset with the app still mounted re-renders it outside act.
@@ -18,7 +16,7 @@ afterEach(() => {
 
 describe("the shell", () => {
   it("leads to every place and marks the current one", async () => {
-    answerFetch(META);
+    fakeAPI(signedInAs());
     const user = userEvent.setup();
     renderApp("/");
     const nav = await screen.findByRole("navigation", { name: "Main" });
@@ -30,7 +28,7 @@ describe("the shell", () => {
   });
 
   it("folds the sidebar to a rail and remembers it", async () => {
-    answerFetch(META);
+    fakeAPI(signedInAs());
     const user = userEvent.setup();
     renderApp("/");
     await user.click(await screen.findByRole("button", { name: "Fold the sidebar" }));
@@ -40,7 +38,7 @@ describe("the shell", () => {
   });
 
   it("switches the language from the account menu", async () => {
-    answerFetch(META);
+    fakeAPI(signedInAs());
     const user = userEvent.setup();
     renderApp("/");
     await user.click(await screen.findByRole("button", { name: "Account and settings" }));
@@ -52,14 +50,14 @@ describe("the shell", () => {
   });
 
   it("answers an unknown address with a way back", async () => {
-    answerFetch(META);
+    fakeAPI(signedInAs());
     renderApp("/nowhere");
     expect(await screen.findByRole("heading", { level: 1, name: "Nothing here" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to the overview" })).toHaveAttribute("href", "/");
   });
 
   it("has no accessibility violations", async () => {
-    answerFetch(META);
+    fakeAPI(signedInAs());
     const { container } = renderApp("/");
     await screen.findByText("API 0.1.0+dev");
     const results = await axe.run(container, { rules: { region: { enabled: false } } });
@@ -69,15 +67,13 @@ describe("the shell", () => {
 
 describe("the overview", () => {
   it("names the API's build", async () => {
-    const fetch = answerFetch(META);
+    fakeAPI(signedInAs());
     renderApp("/");
     expect(await screen.findByText("API 0.1.0+dev")).toBeInTheDocument();
-    const asked = fetch.mock.calls[0]?.[0];
-    expect(asked instanceof Request ? new URL(asked.url).pathname : asked).toBe("/api/v1/meta");
   });
 
   it("says when the API does not answer", async () => {
-    answerFetch({ error: { code: "unavailable", message: "down" } }, 503);
+    fakeAPI({ ...signedInAs(), "GET /meta": { status: 503, body: { error: { code: "unavailable", message: "down" } } } });
     renderApp("/");
     await waitFor(() => expect(screen.getByTestId("api-status")).toHaveTextContent("The API does not answer."));
   });

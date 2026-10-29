@@ -76,6 +76,10 @@ DOCKER_GO_STACK = $(call go_run,--network $(STACK_NET) \
 	-e BEARING_TEST_SUPERUSER_URL='$(call STACK_PG_URL,bearing,$(POSTGRES_PASSWORD),postgres-primary)' \
 	-e BEARING_TEST_REPLICA_SUPERUSER_URL='$(call STACK_PG_URL,bearing,$(POSTGRES_PASSWORD),postgres-replica)' \
 	-e BEARING_TEST_API_URL=http://api:8080 \
+	-e BEARING_TEST_MAILPIT_URL=http://mailpit:8025 \
+	-e BEARING_SMTP_ADDR=mailpit:1025 \
+	-e BEARING_APP_URL=http://localhost:$(WEB_PORT) \
+	-e BEARING_ENV=development \
 	$(1))
 
 INTEGRATION_TIMEOUT ?= 10m

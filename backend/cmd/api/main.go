@@ -14,10 +14,9 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/praetorianer777/bearing/backend/internal/app"
 	"github.com/praetorianer777/bearing/backend/internal/config"
 	"github.com/praetorianer777/bearing/backend/internal/db"
-	"github.com/praetorianer777/bearing/backend/internal/freshness"
-	"github.com/praetorianer777/bearing/backend/internal/httpapi"
 	"github.com/praetorianer777/bearing/backend/internal/logging"
 	"github.com/praetorianer777/bearing/backend/internal/version"
 )
@@ -63,18 +62,11 @@ func run() error {
 	}
 	valkey := redis.NewClient(valkeyOpts)
 	defer valkey.Close()
-	fresh := freshness.NewValkeyTracker(valkey, cfg.DB.ReadYourWritesTTL, freshness.Prefix)
-	if err := fresh.Ping(ctx); err != nil {
+	if err := valkey.Ping(ctx).Err(); err != nil {
 		return fmt.Errorf("reach Valkey: %w", err)
 	}
 
-	srv := &httpapi.Server{
-		DB:             cluster,
-		Fresh:          fresh,
-		Log:            log,
-		Secure:         cfg.HTTP.SecureCookies,
-		RequestTimeout: cfg.HTTP.RequestTimeout,
-	}
+	srv := app.NewServer(cfg, cluster, valkey, log)
 	httpServer := &http.Server{
 		Addr:              cfg.HTTP.Addr,
 		Handler:           srv.Routes(),

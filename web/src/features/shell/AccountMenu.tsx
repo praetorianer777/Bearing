@@ -1,4 +1,6 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
+import { useMe, useSignOut } from "@/api/auth";
 import { APP_VERSION } from "@/config";
 import { applyLanguage, LANGUAGES, type LanguageChoice, t, useLanguage } from "@/i18n";
 import { LANGUAGE_STORAGE_KEY } from "@/config";
@@ -12,9 +14,21 @@ function storedChoice(): LanguageChoice {
   }
 }
 
-/** The avatar button and its menu. Until people sign in it holds the language and what this build is. */
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+/** The avatar button and its menu: who is signed in, the language, signing out, and what this build is. */
 export function AccountMenu() {
   useLanguage();
+  const me = useMe().data;
+  const signOut = useSignOut();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState<LanguageChoice>(storedChoice);
   const menuId = useId();
@@ -49,10 +63,17 @@ export function AccountMenu() {
         onClick={() => setOpen((was) => !was)}
         className="flex size-8 items-center justify-center rounded-full bg-surface-sunken text-xs font-semibold text-ink-muted hover:text-ink"
       >
-        ?
+        {me ? initials(me.name) : "?"}
       </button>
       {open && (
         <div id={menuId} className="absolute right-0 top-10 z-20 w-60 rounded-lg border border-border bg-surface-overlay p-3 shadow-2">
+          {me && (
+            <div className="mb-3 border-b border-border pb-3">
+              <p className="truncate text-sm font-medium text-ink">{me.name}</p>
+              <p className="truncate text-xs text-ink-muted">{me.email}</p>
+              <p className="text-xs text-ink-subtle">{t.roles[me.role]}</p>
+            </div>
+          )}
           <fieldset>
             <legend className="mb-1.5 text-xs font-medium text-ink-subtle">{t.account.language}</legend>
             {(["", ...LANGUAGES] as LanguageChoice[]).map((each) => (
@@ -62,6 +83,13 @@ export function AccountMenu() {
               </label>
             ))}
           </fieldset>
+          <button
+            type="button"
+            onClick={() => signOut.mutate(undefined, { onSuccess: () => navigate({ to: "/sign-in" }) })}
+            className="mt-3 w-full rounded-md border border-border px-2 py-1.5 text-left text-sm text-ink hover:bg-surface-raised"
+          >
+            {t.account.signOut}
+          </button>
           <p className="mt-3 border-t border-border pt-2 text-xs text-ink-subtle">{t.account.about(APP_VERSION)}</p>
         </div>
       )}

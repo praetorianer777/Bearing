@@ -58,3 +58,13 @@ func valkey(t *testing.T) *redis.Client {
 	t.Cleanup(func() { _ = client.Close() })
 	return client
 }
+
+// valkeyFor is a client that lives as long as the suite, for what the suite shares between its tests.
+func valkeyFor(t *testing.T, cfg config.Config) *redis.Client {
+	t.Helper()
+	opts, err := redis.ParseURL(cfg.Valkey.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return redis.NewClient(opts)
+}

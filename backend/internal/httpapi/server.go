@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/db"
 )
 
@@ -26,6 +27,14 @@ type Server struct {
 	DB    Database
 	Fresh Freshness
 	Log   *slog.Logger
+	// Accounts says who a session signs in; Auth is the rest of signing in. Both are the one auth.Service, apart in
+	// tests that need only the first.
+	Accounts      Authenticator
+	Auth          *auth.Service
+	SessionCookie string
+	SessionTTL    time.Duration
+	// MailOn says whether the installation sends mail, which decides whether a forgotten password can be reset.
+	MailOn bool
 	// Secure marks the cookies the api sets Secure.
 	Secure         bool
 	RequestTimeout time.Duration
@@ -42,11 +51,11 @@ func (s *Server) Routes() http.Handler {
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrMethodNotAllowed()) })
 
 	api := chi.NewRouter()
-	api.Use(s.readYourWrites)
+	api.Use(s.sameSite, s.identify, s.readYourWrites)
 	api.NotFound(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrNotFound()) })
 	api.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrMethodNotAllowed()) })
 	for _, op := range operations {
-		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { op.handle(s, w, r) })
+		h := s.guard(op, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { op.handle(s, w, r) }))
 		if op.root {
 			r.Method(op.method, op.path, h)
 		} else {

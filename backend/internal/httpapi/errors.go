@@ -46,6 +46,36 @@ func ErrNotFound() *APIError {
 	return &APIError{Status: http.StatusNotFound, Code: "not_found", Message: "There is nothing here, or you may not see it."}
 }
 
+// ErrBadRequest is a request that cannot be read.
+func ErrBadRequest(message string) *APIError {
+	return &APIError{Status: http.StatusBadRequest, Code: "bad_request", Message: message}
+}
+
+// ErrValidation names the fields that need attention.
+func ErrValidation(fields map[string]string) *APIError {
+	return &APIError{Status: http.StatusUnprocessableEntity, Code: "validation_failed", Message: "Some fields need attention.", Fields: fields}
+}
+
+// ErrUnauthorized is a request that needs somebody signed in.
+func ErrUnauthorized() *APIError {
+	return &APIError{Status: http.StatusUnauthorized, Code: "unauthorized", Message: "Sign in to continue."}
+}
+
+// ErrForbidden is somebody signed in who may not do this.
+func ErrForbidden(message string) *APIError {
+	return &APIError{Status: http.StatusForbidden, Code: "forbidden", Message: message}
+}
+
+// ErrCrossSite is a write a browser sent from another site.
+func ErrCrossSite() *APIError {
+	return &APIError{Status: http.StatusForbidden, Code: "cross_site", Message: "This request came from another site, so it was refused."}
+}
+
+// ErrConflict is a request the current state does not allow.
+func ErrConflict(code, message string) *APIError {
+	return &APIError{Status: http.StatusConflict, Code: code, Message: message}
+}
+
 // ErrMethodNotAllowed answers a path that exists with a method it does not take.
 func ErrMethodNotAllowed() *APIError {
 	return &APIError{Status: http.StatusMethodNotAllowed, Code: "method_not_allowed", Message: "This address does not take that method."}

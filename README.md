@@ -52,6 +52,11 @@ make help        # every target
 ./run-tests.sh   # the whole gate, as CI and the push hook run it (--list names its layers)
 ```
 
+The stack's seed sets the installation up as "Demo organisation" with the
+administrator `admin@bearing.test` / `bearing admin password`; mail goes to
+Mailpit. Without `BEARING_BOOTSTRAP_ADMIN_EMAIL` nothing is seeded, and whoever
+opens the web client first sets the installation up.
+
 Every port is bound to `127.0.0.1` and derived from the checkout's path, in
 61000 to 65499, clear of the siblings' ranges, so worktrees and sibling stacks
 run side by side; the ports are also written to `.cache/stack.env`.
