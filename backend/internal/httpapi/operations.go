@@ -5,6 +5,7 @@ import (
 
 	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/openapi"
+	"github.com/praetorianer777/bearing/backend/internal/theme"
 )
 
 const (
@@ -122,6 +123,23 @@ var operations = []operation{
 		request: inviteRequest{}, responses: map[int]any{http.StatusCreated: env{"invitation": invitationResponse{}, "link": ""}}},
 	{method: http.MethodDelete, path: "/invitations/{invitationID}", id: "revokeInvitation", handle: (*Server).handleRevokeInvitation, tag: "accounts",
 		summary: "Take back an open invitation.", role: administrator, responses: map[int]any{http.StatusNoContent: nil}},
+	{method: http.MethodGet, path: "/themes", id: "themes", handle: (*Server).handleThemes, tag: "themes",
+		summary:   "The installation's themes, to choose from, with the one everybody starts from marked.",
+		responses: map[int]any{http.StatusOK: env{"themes": []themeResponse{}}}},
+	{method: http.MethodPost, path: "/themes/import", id: "importTheme", handle: (*Server).handleImportTheme, tag: "themes",
+		summary:     "Add a theme from an armature-theme/1 file, as Armature, Exciter, Stator and Bearing export it.",
+		description: "The files get new ids, which the theme is rewritten to name. What each file is comes from its bytes. A taken name gets a number.",
+		role:        administrator, request: theme.Package{}, responses: map[int]any{http.StatusCreated: env{"theme": themeResponse{}}}},
+	{method: http.MethodPut, path: "/themes/default", id: "setDefaultTheme", handle: (*Server).handleSetDefaultTheme, tag: "themes",
+		summary: "Name the theme everybody starts from; null is the built-in look.", role: administrator,
+		request: defaultThemeRequest{}, responses: map[int]any{http.StatusNoContent: nil}},
+	{method: http.MethodDelete, path: "/themes/{themeID}", id: "deleteTheme", handle: (*Server).handleDeleteTheme, tag: "themes",
+		summary: "Remove a theme and its files. Whoever had chosen it falls back to the installation's.", role: administrator,
+		responses: map[int]any{http.StatusNoContent: nil}},
+	{method: http.MethodGet, path: "/themes/{themeID}/export", id: "exportTheme", handle: (*Server).handleExportTheme, tag: "themes",
+		summary: "A theme as one armature-theme/1 file, its files inline.", responses: map[int]any{http.StatusOK: theme.Package{}}},
+	{method: http.MethodGet, path: "/themes/{themeID}/assets/{assetID}", id: "themeFile", handle: (*Server).handleThemeFile, tag: "themes",
+		summary: "One of a theme's files, as a download that never changes.", responses: map[int]any{http.StatusOK: nil}},
 }
 
 // The document's own row joins at init: it is built from the table, so the table cannot name it in its initialiser.

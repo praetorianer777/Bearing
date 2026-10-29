@@ -116,8 +116,11 @@ type inviteRequest struct {
 
 // decode reads a JSON body into v, refusing fields v does not have, so a misspelt field is an error and not a
 // silent default.
-func decode(r *http.Request, v any) error {
-	dec := json.NewDecoder(io.LimitReader(r.Body, maxBody))
+func decode(r *http.Request, v any) error { return decodeUpTo(r, v, maxBody) }
+
+// decodeUpTo is decode for a body that may be larger, such as a theme file with its pictures.
+func decodeUpTo(r *http.Request, v any, limit int64) error {
+	dec := json.NewDecoder(io.LimitReader(r.Body, limit))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
 		return ErrBadRequest("The request body is not the JSON this address takes: " + err.Error())

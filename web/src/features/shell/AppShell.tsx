@@ -4,6 +4,7 @@ import { SearchIcon } from "@/components/icons";
 import { t, useLanguage } from "@/i18n";
 import { AccountMenu } from "./AccountMenu";
 import { Sidebar } from "./Sidebar";
+import { ThemeStyle } from "./ThemeStyle";
 import { readFolded, writeFolded } from "./sidebar";
 
 /** The frame every page sits in: the sidebar, the strip along the top, and the page. */
@@ -18,6 +19,7 @@ export function AppShell() {
 
   return (
     <div className="flex h-full bg-canvas text-ink">
+      <ThemeStyle />
       <Sidebar folded={folded} onToggle={toggle} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">

@@ -5,6 +5,7 @@ import { AcceptInvitationPage, ForgotPasswordPage, ResetPasswordPage, SetUpPage,
 import { Home } from "@/features/home/Home";
 import { AccountsPage } from "@/features/settings/Accounts";
 import { ProfilePage } from "@/features/settings/Profile";
+import { ThemesPage } from "@/features/settings/Themes";
 import { AppShell } from "@/features/shell/AppShell";
 import { ComingSoon, NotFound } from "@/features/shell/Placeholder";
 import { t } from "@/i18n";
@@ -90,6 +91,14 @@ const accountsRoute = createRoute({
   },
   component: AccountsPage,
 });
+const themesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/settings/themes",
+  beforeLoad: ({ context }) => {
+    if (context.me.role !== "administrator") throw redirect({ to: "/" });
+  },
+  component: ThemesPage,
+});
 const profileRoute = createRoute({ getParentRoute: () => appRoute, path: "/settings/profile", component: ProfilePage });
 
 const routeTree = rootRoute.addChildren([
@@ -98,7 +107,7 @@ const routeTree = rootRoute.addChildren([
   forgotRoute,
   resetRoute,
   invitationRoute,
-  appRoute.addChildren([homeRoute, organisationRoute, peopleRoute, processesRoute, accountsRoute, profileRoute]),
+  appRoute.addChildren([homeRoute, organisationRoute, peopleRoute, processesRoute, accountsRoute, themesRoute, profileRoute]),
 ]);
 
 export function buildRouter(queryClient: QueryClient, history?: RouterHistory) {

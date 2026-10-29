@@ -1,7 +1,9 @@
 # Integration capabilities
 
 Proposed. None of these names is in Dynamo's `docs/compatibility.md` yet;
-each is added there by pull request before Bearing reports it.
+each is added there by pull request before Bearing reports it. Bearing serves
+`theme-export@1` already, in the shape the siblings serve it, and lists it at
+`/meta`.
 
 `GET /api/v1/meta` lists, under `capabilities`, the integration features this
 build offers, as stable names with a version, in the scheme the suite uses. A

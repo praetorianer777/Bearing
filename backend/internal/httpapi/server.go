@@ -11,6 +11,7 @@ import (
 
 	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/db"
+	"github.com/praetorianer777/bearing/backend/internal/theme"
 )
 
 // APIPrefix is where every operation but the probes is served.
@@ -42,6 +43,8 @@ type Server struct {
 	// Secure marks the cookies the api sets Secure.
 	Secure         bool
 	RequestTimeout time.Duration
+	// Themes keeps the installation's themes.
+	Themes *theme.Service
 }
 
 // Routes is the whole HTTP surface, built from the operations table.

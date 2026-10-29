@@ -15,6 +15,7 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/httpapi"
 	"github.com/praetorianer777/bearing/backend/internal/jobs"
 	"github.com/praetorianer777/bearing/backend/internal/sso"
+	"github.com/praetorianer777/bearing/backend/internal/theme"
 )
 
 // NewServer is the api's HTTP server over cluster and valkey, as cfg sets it up.
@@ -42,6 +43,7 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 		Secure:         cfg.HTTP.SecureCookies,
 		RequestTimeout: cfg.HTTP.RequestTimeout,
 		AppURL:         cfg.Auth.AppURL,
+		Themes:         &theme.Service{DB: cluster},
 	}
 	if cfg.OIDC.Enabled() {
 		backchannel, err := sso.ParseBackchannel(cfg.OIDC.Backchannel)
