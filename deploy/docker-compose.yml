@@ -198,6 +198,26 @@ services:
       <<: *app-env
     restart: unless-stopped
 
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    image: ${COMPOSE_PROJECT_NAME:-bearing}-web
+    pull_policy: never
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${WEB_PORT:-5173}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+      start_interval: 1s
+    restart: unless-stopped
+
 volumes:
   primary-data:
   replica-data:

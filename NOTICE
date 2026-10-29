@@ -10,6 +10,9 @@ This product contains code adapted from Exciter (https://github.com/Cloudster1/E
   backend/internal/version, backend/cmd/migrate and backend/migrations/owner.go, from Exciter
 - parts of backend/internal/httpapi (the error envelope, /meta and the freshness middleware) and
   deploy/Dockerfile.backend, from Exciter
+- web/src/styles/index.css, the suite's design tokens and themes as Armature defines them, web/src/i18n/index.ts,
+  web/src/test/setup.ts and web/src/test/layout.ts, the web client's and the browser suite's configuration,
+  deploy/Dockerfile.web and deploy/nginx.conf, from Exciter
 - scripts/stack-ports.sh, scripts/build-stamp.sh and tests/test-ports.sh, from Rotor
 - deploy/keycloak/realm-check.mjs, from Rotor
 - deploy/keycloak/realm.json, the suite's realm dynamo from Dynamo
