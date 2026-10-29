@@ -5,9 +5,7 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("getJSON", () => {
   it("turns the error envelope into an ApiError", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ error: { code: "not_found", message: "Nothing here." } }), { status: 404 }),
-    );
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ error: { code: "not_found", message: "Nothing here." } }), { status: 404 }));
     const err = await getJSON("/x").catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err).toMatchObject({ status: 404, code: "not_found", message: "Nothing here." });

@@ -28,10 +28,14 @@ npm: | $(NPM_CACHE) ## Run an npm command in the web container: make npm ARGS="i
 web-install: | $(NPM_CACHE) ## Install the web client's dependencies from the lock file
 	$(DOCKER_NODE) npm ci
 
+# The usual output, and the timings as JSON for the run's summary.
+VITEST_REPORT = --reporter=default --reporter=json --outputFile.json=/src/reports/vitest.json --coverage
+
 .PHONY: check-web
 check-web: | $(NPM_CACHE) ## Lint, type-check and unit-test the web client
 	@mkdir -p $(REPORTS)
-	$(DOCKER_NODE) sh -c 'npm ci --no-audit --no-fund && npm run lint && npm run typecheck && npm test -- --coverage'
+	$(DOCKER_NODE) sh -c 'npm ci --no-audit --no-fund && npm run lint && npm run typecheck && npm test -- $(VITEST_REPORT)'
+	$(ROOT)/scripts/coverage.sh web web-lines $(REPORTS)/vitest-coverage/coverage-summary.json
 
 .PHONY: test-web
 test-web: | $(NPM_CACHE) ## Run the web client's unit tests
@@ -58,9 +62,5 @@ web-dev: | $(NPM_CACHE) ## Vite dev server on a port derived from this checkout'
 		--name bearing-web-dev-$(WEB_DEV_PORT) \
 		-p 127.0.0.1:$(WEB_DEV_PORT):5173 \
 		-w /src/web $(NODE_IMAGE) npm run dev
-
-.PHONY: format
-format: | $(NPM_CACHE) ## Format the web client and the browser suite with Biome
-	docker run --rm -u $(UID_GID) -v $(ROOT):/src -v $(NPM_CACHE):/npmcache -e npm_config_cache=/npmcache -e HOME=/tmp -w /src $(NODE_IMAGE) npx --yes @biomejs/biome@2 format --write web/src
 
 endif

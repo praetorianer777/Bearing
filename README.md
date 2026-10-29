@@ -48,6 +48,7 @@ make check-web   # the web client's lint, type check and unit tests
 make web-dev     # the web client with hot reload, against the running stack's api
 make test-e2e    # the browser suite against the running stack (ONLY=<grep> for some of it)
 make help        # every target
+./run-tests.sh   # the whole gate, as CI and the push hook run it (--list names its layers)
 ```
 
 Every port is bound to `127.0.0.1` and derived from the checkout's path, in
@@ -57,6 +58,12 @@ Keycloak's realm `dynamo` (admin console `admin` / `admin`) is the suite's
 realm with a client `bearing` (secret `bearing-dev-secret`, PKCE) and a group
 `bearing-administrators` added; alice, bob, carol and dave sign in with
 `<name> password`. The secrets and passwords are for development only.
+
+Every change hangs off an issue and a branch named `<type>/<issue>-<slug>`
+and lands by pull request; `.claude/skills/gh/SKILL.md` says how, and
+`.claude/hooks/branch-guard.sh` holds an agent to it, running the quick gate
+before a push (`BEARING_GATE=full` for all of it). Coverage may not fall below
+the floors in `coverage/`, each the measured total rounded down.
 
 ## License
 
