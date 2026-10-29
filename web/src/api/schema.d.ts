@@ -420,6 +420,133 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The positions that exist on a day, in one unit or in all, heads first, each with its lines then.
+         * @description asOf is a day written 2006-01-02, today when left out; unitId keeps to one unit.
+         */
+        get: operations["positions"];
+        put?: never;
+        /** Add a position to a unit from a day. */
+        post: operations["createPosition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/positions/{positionID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One position as it stands on a day, with every line it has had and will have. */
+        get: operations["position"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Retitle or redescribe a position, or make it its unit's head; what is left out stays. */
+        patch: operations["updatePosition"];
+        trace?: never;
+    };
+    "/positions/{positionID}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End a position from a day. Its lines end there; positions still reporting to it must be given another line first. */
+        post: operations["archivePosition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/positions/{positionID}/dotted-lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Have a position report to another by a dotted line from a day. */
+        post: operations["addDottedLine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/positions/{positionID}/dotted-lines/{reportsToID}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End a dotted line from a day. */
+        post: operations["endDottedLine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/positions/{positionID}/reports-to": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Give a position its solid line from a day, or none.
+         * @description The solid line the day falls in ends there; one planned later stays, and the new line runs until it. A line that would have a position report to itself, through others or directly, is refused.
+         */
+        put: operations["setReportsTo"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/positions/{positionID}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bring an archived position back for good, with the lines that ended with it whose other end still exists. */
+        post: operations["restorePosition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/readyz": {
         parameters: {
             query?: never;
@@ -706,19 +833,24 @@ export interface components {
             /** @enum {string} */
             role: "administrator" | "editor" | "member" | "reader";
         };
-        ArchiveUnitRequest: {
-            /**
-             * Format: date
-             * @description A calendar day, written 2006-01-02.
-             */
-            on?: string;
-        };
         CreateAccountRequest: {
             email: string;
             name: string;
             password: string;
             /** @enum {string} */
             role: "administrator" | "editor" | "member" | "reader";
+        };
+        CreatePositionRequest: {
+            description?: string;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            headOfUnit?: boolean;
+            title?: string;
+            /** Format: uuid */
+            unitId: string;
         };
         CreateUnitRequest: {
             description?: string;
@@ -737,6 +869,22 @@ export interface components {
         DefaultThemeRequest: {
             /** Format: uuid */
             themeId: string | null;
+        };
+        DottedLineRequest: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            /** Format: uuid */
+            reportsToId: string;
+        };
+        EndRequest: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            on?: string;
         };
         ErrorEnvelope: {
             error: components["schemas"]["APIError"];
@@ -792,6 +940,22 @@ export interface components {
             /** Format: date-time */
             requestedAt: string;
         };
+        LineResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            /** @enum {string} */
+            kind: "solid" | "dotted";
+            /** Format: uuid */
+            reportsToId: string;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            to: string | null;
+        };
         MetaResponse: {
             apiVersion: string;
             build: components["schemas"]["Info"];
@@ -827,6 +991,34 @@ export interface components {
              */
             to: string | null;
         };
+        PositionRequest: {
+            description?: string;
+            headOfUnit?: boolean;
+            title?: string;
+        };
+        PositionResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            archivedOn: string | null;
+            description: string;
+            dottedTo: string[];
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            existsFrom?: string;
+            headOfUnit: boolean;
+            /** Format: uuid */
+            id: string;
+            lines?: components["schemas"]["LineResponse"][];
+            /** Format: uuid */
+            reportsToId: string | null;
+            title: string;
+            /** Format: uuid */
+            unitId: string;
+        };
         ProfileRequest: {
             name: string;
         };
@@ -838,6 +1030,15 @@ export interface components {
             healthy: boolean;
             lastError?: string;
             name: string;
+        };
+        ReportsToRequest: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            /** Format: uuid */
+            reportsToId?: string;
         };
         RoleRequest: {
             /** @enum {string} */
@@ -1903,6 +2104,339 @@ export interface operations {
             };
         };
     };
+    positions: {
+        parameters: {
+            query?: {
+                asOf?: string;
+                unitId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        positions: components["schemas"]["PositionResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createPosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePositionRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    position: {
+        parameters: {
+            query?: {
+                asOf?: string;
+            };
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    updatePosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PositionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    archivePosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    addDottedLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DottedLineRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    endDottedLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                positionID: string;
+                reportsToID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    setReportsTo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportsToRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    restorePosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     readiness: {
         parameters: {
             query?: never;
@@ -2422,7 +2956,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ArchiveUnitRequest"];
+                "application/json": components["schemas"]["EndRequest"];
             };
         };
         responses: {

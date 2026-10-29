@@ -19,6 +19,9 @@
       "name": "health"
     },
     {
+      "name": "positions"
+    },
+    {
       "name": "themes"
     },
     {
@@ -1221,6 +1224,546 @@
         }
       }
     },
+    "/positions": {
+      "get": {
+        "operationId": "positions",
+        "summary": "The positions that exist on a day, in one unit or in all, heads first, each with its lines then.",
+        "description": "asOf is a day written 2006-01-02, today when left out; unitId keeps to one unit.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "positions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PositionResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "positions"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPosition",
+        "summary": "Add a position to a unit from a day.",
+        "tags": [
+          "positions"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePositionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "$ref": "#/components/schemas/PositionResponse"
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/positions/{positionID}": {
+      "get": {
+        "operationId": "position",
+        "summary": "One position as it stands on a day, with every line it has had and will have.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "position": {
+                      "$ref": "#/components/schemas/PositionResponse"
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updatePosition",
+        "summary": "Retitle or redescribe a position, or make it its unit's head; what is left out stays.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "$ref": "#/components/schemas/PositionResponse"
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/positions/{positionID}/archive": {
+      "post": {
+        "operationId": "archivePosition",
+        "summary": "End a position from a day. Its lines end there; positions still reporting to it must be given another line first.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "$ref": "#/components/schemas/PositionResponse"
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/positions/{positionID}/dotted-lines": {
+      "post": {
+        "operationId": "addDottedLine",
+        "summary": "Have a position report to another by a dotted line from a day.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DottedLineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "$ref": "#/components/schemas/PositionResponse"
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/positions/{positionID}/dotted-lines/{reportsToID}/end": {
+      "post": {
+        "operationId": "endDottedLine",
+        "summary": "End a dotted line from a day.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "reportsToID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "$ref": "#/components/schemas/PositionResponse"
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/positions/{positionID}/reports-to": {
+      "put": {
+        "operationId": "setReportsTo",
+        "summary": "Give a position its solid line from a day, or none.",
+        "description": "The solid line the day falls in ends there; one planned later stays, and the new line runs until it. A line that would have a position report to itself, through others or directly, is refused.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportsToRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "$ref": "#/components/schemas/PositionResponse"
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/positions/{positionID}/restore": {
+      "post": {
+        "operationId": "restorePosition",
+        "summary": "Bring an archived position back for good, with the lines that ended with it whose other end still exists.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "$ref": "#/components/schemas/PositionResponse"
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
     "/readyz": {
       "get": {
         "operationId": "readiness",
@@ -1961,7 +2504,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ArchiveUnitRequest"
+                "$ref": "#/components/schemas/EndRequest"
               }
             }
           }
@@ -2231,16 +2774,6 @@
           "role"
         ]
       },
-      "ArchiveUnitRequest": {
-        "type": "object",
-        "properties": {
-          "on": {
-            "type": "string",
-            "format": "date",
-            "description": "A calendar day, written 2006-01-02."
-          }
-        }
-      },
       "CreateAccountRequest": {
         "type": "object",
         "properties": {
@@ -2268,6 +2801,32 @@
           "email",
           "role",
           "password"
+        ]
+      },
+      "CreatePositionRequest": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "headOfUnit": {
+            "type": "boolean"
+          },
+          "title": {
+            "type": "string"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "unitId"
         ]
       },
       "CreateUnitRequest": {
@@ -2311,6 +2870,33 @@
         "required": [
           "themeId"
         ]
+      },
+      "DottedLineRequest": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "reportsToId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "reportsToId"
+        ]
+      },
+      "EndRequest": {
+        "type": "object",
+        "properties": {
+          "on": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          }
+        }
       },
       "ErrorEnvelope": {
         "type": "object",
@@ -2516,6 +3102,40 @@
           "requestedAt"
         ]
       },
+      "LineResponse": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "solid",
+              "dotted"
+            ]
+          },
+          "reportsToId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          }
+        },
+        "required": [
+          "reportsToId",
+          "kind",
+          "to"
+        ]
+      },
       "MetaResponse": {
         "type": "object",
         "properties": {
@@ -2607,6 +3227,85 @@
           "to"
         ]
       },
+      "PositionRequest": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "headOfUnit": {
+            "type": "boolean"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "PositionResponse": {
+        "type": "object",
+        "properties": {
+          "archivedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "description": {
+            "type": "string"
+          },
+          "dottedTo": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "existsFrom": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "headOfUnit": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineResponse"
+            }
+          },
+          "reportsToId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "unitId",
+          "title",
+          "description",
+          "headOfUnit",
+          "archivedOn",
+          "reportsToId",
+          "dottedTo"
+        ]
+      },
       "ProfileRequest": {
         "type": "object",
         "properties": {
@@ -2653,6 +3352,20 @@
           "name",
           "healthy"
         ]
+      },
+      "ReportsToRequest": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "reportsToId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
       },
       "RoleRequest": {
         "type": "object",
