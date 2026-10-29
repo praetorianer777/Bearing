@@ -32,6 +32,28 @@ Go (chi, pgx, goose), PostgreSQL with CloudNativePG, Valkey, React with
 Tailwind and React Flow, OIDC single sign-on and local accounts. Every
 toolchain runs in a container.
 
+## Working on it
+
+Docker, make, `jq` and `python3` are all the host needs; every toolchain runs
+in a container.
+
+```sh
+make up          # Postgres with a streaming replica, Valkey, Mailpit, Keycloak
+make ports       # this checkout's compose project and its twenty ports
+make down        # stop (make clean also drops the volumes)
+make realm-check # compare the realm with Dynamo's canonical copy
+make help        # every target
+```
+
+Every port is bound to `127.0.0.1` and derived from the checkout's path, in
+61000 to 65499, clear of the siblings' ranges, so worktrees and sibling stacks
+run side by side; the ports are also written to `.cache/stack.env`.
+Keycloak's realm `dynamo` (admin console `admin` / `admin`) is the suite's
+realm with a client `bearing` (secret `bearing-dev-secret`, PKCE) and a group
+`bearing-administrators` added; alice, bob, carol and dave sign in with
+`<name> password`. The secrets and passwords are for development only.
+
 ## License
 
-[Apache License 2.0](LICENSE).
+[Apache License 2.0](LICENSE). Contains code adapted from Exciter and
+Rotor, under the same license; see [NOTICE](NOTICE).

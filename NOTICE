@@ -1,0 +1,12 @@
+Bearing
+Copyright 2026 the Bearing authors
+
+This product contains code adapted from Exciter (https://github.com/Cloudster1/Exciter) and Rotor
+(https://github.com/Cloudster1/Rotor), both licensed under the Apache License 2.0:
+
+- deploy/postgres/replica-entrypoint.sh and deploy/postgres/init-roles.sh, the development stack's
+  streaming replica and database roles, from Exciter
+- scripts/stack-ports.sh, scripts/build-stamp.sh and tests/test-ports.sh, from Rotor
+- deploy/keycloak/realm-check.mjs, from Rotor
+- deploy/keycloak/realm.json, the suite's realm dynamo from Dynamo
+  (https://github.com/praetorianer777/Dynamo), with Bearing's client and group added
