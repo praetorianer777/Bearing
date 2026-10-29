@@ -1,0 +1,170 @@
+package db
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// setConfigSQL binds a row level security variable for the current transaction.
+// SET LOCAL takes no bind parameter; set_config does, and its true makes it local.
+const setConfigSQL = `SELECT set_config($1, $2, true)`
+
+// currentLSNSQL reads the primary's current write ahead log insert position.
+const currentLSNSQL = `SELECT pg_current_wal_insert_lsn()::text`
+
+// Write runs fn in a read-write transaction on the primary and returns the WAL
+// position reflecting it, or its refusal, for PinLSN to keep later reads fresh.
+func (c *Cluster) Write(ctx context.Context, fn func(context.Context, DBTX) error) (LSN, error) {
+	err := c.inTx(ctx, c.primary, pgx.TxOptions{AccessMode: pgx.ReadWrite}, func(ctx context.Context, tx pgx.Tx) error {
+		return fn(ctx, tx)
+	})
+	if err != nil {
+		return c.refusedLSN(ctx), err
+	}
+	return c.committedLSN(ctx, c.primary)
+}
+
+// WriteSnapshot is Write in which every statement sees the database as the first one did, so several statements
+// copy one consistent state even while others commit.
+func (c *Cluster) WriteSnapshot(ctx context.Context, fn func(context.Context, DBTX) error) (LSN, error) {
+	err := c.inTx(ctx, c.primary, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadWrite}, func(ctx context.Context, tx pgx.Tx) error {
+		return fn(ctx, tx)
+	})
+	if err != nil {
+		return c.refusedLSN(ctx), err
+	}
+	return c.committedLSN(ctx, c.primary)
+}
+
+// refusedLSN is where the primary stood when a write was refused, or zero,
+// which pins nothing, when it cannot say.
+func (c *Cluster) refusedLSN(ctx context.Context) LSN {
+	// A refusal such as an edit conflict tells the caller of somebody else's
+	// newer write, and the read they make next to see it must not miss it.
+	lsn, err := c.committedLSN(ctx, c.primary)
+	if err != nil {
+		return 0
+	}
+	return lsn
+}
+
+// committedLSN is read after the commit, never inside the transaction: the
+// commit record lands past any position read before it.
+func (c *Cluster) committedLSN(ctx context.Context, pool *pgxpool.Pool) (LSN, error) {
+	return position(ctx, pool)
+}
+
+// position is where the primary q reaches stands in its write ahead log.
+func position(ctx context.Context, q interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}) (LSN, error) {
+	var text string
+	if err := q.QueryRow(ctx, currentLSNSQL).Scan(&text); err != nil {
+		return 0, fmt.Errorf("read wal position: %w", err)
+	}
+	return ParseLSN(text)
+}
+
+// readOnly keeps one snapshot for a whole read: with one per statement, a replica
+// replaying in between answers with a requirement newer than its own permissions.
+var readOnly = pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}
+
+// Read runs fn in a read-only transaction on a healthy, caught-up replica when
+// there is one, otherwise on the primary.
+func (c *Cluster) Read(ctx context.Context, fn func(context.Context, DBTX) error) error {
+	var on beginner = c.primary
+	conn := c.readConn(ctx)
+	if conn != nil {
+		defer conn.Release()
+		on = conn
+	}
+	// The primary answering in a replica's place shows more than the replica may have yet; a read pinned to the
+	// primary chose to see the latest, and moves nobody else's reads.
+	t := trackerFrom(ctx)
+	instead := conn == nil && t != nil && len(c.replicas) > 0 && !pinFrom(ctx).forcePrimary
+	var at LSN
+	err := c.inTx(ctx, on, readOnly, func(ctx context.Context, tx pgx.Tx) error {
+		if err := fn(ctx, tx); err != nil {
+			return err
+		}
+		if !instead {
+			return nil
+		}
+		// Read after the snapshot was taken, so every commit the read saw lies before it.
+		var err error
+		at, err = position(ctx, tx)
+		return err
+	})
+	if err == nil && at != 0 && t.saw(at) && t.onPrimary != nil {
+		t.onPrimary(at)
+	}
+	return err
+}
+
+// beginner is a pool or one connection taken from it.
+type beginner interface {
+	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
+}
+
+// ReadPrimary is Read pinned to the primary.
+func (c *Cluster) ReadPrimary(ctx context.Context, fn func(context.Context, DBTX) error) error {
+	return c.Read(PinPrimary(ctx), fn)
+}
+
+// inTx opens a transaction, names who it acts for, runs fn and commits.
+func (c *Cluster) inTx(
+	ctx context.Context,
+	on beginner,
+	opts pgx.TxOptions,
+	fn func(context.Context, pgx.Tx) error,
+) error {
+	tx, err := on.BeginTx(ctx, opts)
+	if err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	// Rollback is a no-op once the transaction has committed, so this is safe
+	// on every path including panics.
+	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
+
+	// The permission policies ask who acts; a transaction acting for nobody reaches nothing they wall.
+	if user, ok := UserFrom(ctx); ok {
+		if _, err := tx.Exec(ctx, setConfigSQL, UserVar, user.String()); err != nil {
+			return fmt.Errorf("apply the acting person: %w", err)
+		}
+		if via, ok := ViaFrom(ctx); ok {
+			if _, err := tx.Exec(ctx, setConfigSQL, ViaVar, via.String()); err != nil {
+				return fmt.Errorf("apply what the person acts through: %w", err)
+			}
+		}
+	}
+	if err := fn(ctx, tx); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+	return nil
+}
+
+// WriteAdmin runs fn on the primary as the role exempt from row level security,
+// for work that runs before anybody acts, such as signing in.
+func (c *Cluster) WriteAdmin(ctx context.Context, fn func(context.Context, DBTX) error) (LSN, error) {
+	err := c.inTx(ctx, c.admin, pgx.TxOptions{AccessMode: pgx.ReadWrite}, func(ctx context.Context, tx pgx.Tx) error {
+		return fn(ctx, tx)
+	})
+	if err != nil {
+		return 0, err
+	}
+	return c.committedLSN(ctx, c.admin)
+}
+
+// ReadAdmin is WriteAdmin read-only. It reads the primary: its callers are
+// authentication paths, where a stale answer is worse than a dearer one.
+func (c *Cluster) ReadAdmin(ctx context.Context, fn func(context.Context, DBTX) error) error {
+	return c.inTx(ctx, c.admin, readOnly, func(ctx context.Context, tx pgx.Tx) error {
+		return fn(ctx, tx)
+	})
+}
