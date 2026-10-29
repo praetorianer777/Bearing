@@ -64,7 +64,8 @@ stack-env:
 .PHONY: up
 up: stack-env ## Build and start the whole stack in the background, and say where it is
 	docker compose up -d --build --wait
-	@echo "API        http://localhost:$(API_PORT)/api/v1/meta"
+	@echo "Bearing    http://localhost:$(WEB_PORT)"
+	@echo "API        http://localhost:$(API_PORT)/api/v1/meta (also under /api/ on the web port)"
 	@echo "Keycloak   http://localhost:$(KEYCLOAK_PORT) (admin / admin; realm $(KEYCLOAK_REALM); people alice, bob, carol, dave with password '<name> password')"
 	@echo "Mailpit    http://localhost:$(MAILPIT_PORT)"
 	@echo "Postgres   127.0.0.1:$(POSTGRES_PORT) (replica $(POSTGRES_REPLICA_PORT)), user bearing, password $(POSTGRES_PASSWORD)"
