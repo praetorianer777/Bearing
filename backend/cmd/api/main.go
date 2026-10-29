@@ -66,7 +66,10 @@ func run() error {
 		return fmt.Errorf("reach Valkey: %w", err)
 	}
 
-	srv := app.NewServer(cfg, cluster, valkey, log)
+	srv, err := app.NewServer(cfg, cluster, valkey, log)
+	if err != nil {
+		return err
+	}
 	httpServer := &http.Server{
 		Addr:              cfg.HTTP.Addr,
 		Handler:           srv.Routes(),

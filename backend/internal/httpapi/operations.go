@@ -20,6 +20,8 @@ type operation struct {
 	tag         string
 	// request is the JSON body type the handler decodes; nil is none.
 	request any
+	// query names the query parameters the handler reads, each a string.
+	query []string
 	// responses maps a status to its envelope or bare type; nil is no body.
 	responses map[int]any
 	// public operations need no session; every other needs somebody signed in, and administrator ones an
@@ -52,6 +54,27 @@ var operations = []operation{
 		request: signInRequest{}, responses: map[int]any{http.StatusOK: env{"account": accountResponse{}}}},
 	{method: http.MethodPost, path: "/auth/sign-out", id: "signOut", handle: (*Server).handleSignOut, tag: "accounts",
 		summary: "End this session.", public: true, responses: map[int]any{http.StatusNoContent: nil}},
+	{method: http.MethodGet, path: "/auth/oidc/start", id: "startSingleSignOn", handle: (*Server).handleSSOStart, tag: "accounts",
+		summary: "Send the browser to the identity provider; next is where it comes back to.", public: true,
+		query:     []string{"next"},
+		responses: map[int]any{http.StatusFound: nil}},
+	{method: http.MethodGet, path: "/auth/oidc/callback", id: "finishSingleSignOn", handle: (*Server).handleSSOCallback, tag: "accounts",
+		summary: "Where the identity provider sends the browser back. It goes on to the web client: where it was headed, or the sign-in page with sso set to pending, disabled, cancelled or failed.",
+		public:  true, query: []string{"state", "code", "error"}, responses: map[int]any{http.StatusFound: nil}},
+	{method: http.MethodGet, path: "/join-requests", id: "joinRequests", handle: (*Server).handleJoinRequests, tag: "accounts",
+		summary: "Who the identity provider vouches for and asked to join.", administrator: true,
+		responses: map[int]any{http.StatusOK: env{"joinRequests": []joinRequestResponse{}}}},
+	{method: http.MethodPost, path: "/join-requests/{requestID}/admit", id: "admit", handle: (*Server).handleAdmit, tag: "accounts",
+		summary: "Let somebody in who asked to join, with a role.", administrator: true,
+		request: admitRequest{}, responses: map[int]any{http.StatusCreated: env{"account": accountResponse{}}}},
+	{method: http.MethodDelete, path: "/join-requests/{requestID}", id: "decline", handle: (*Server).handleDecline, tag: "accounts",
+		summary: "Turn a request to join down.", administrator: true, responses: map[int]any{http.StatusNoContent: nil}},
+	{method: http.MethodGet, path: "/group-admissions", id: "groupAdmissions", handle: (*Server).handleGroupAdmissions, tag: "accounts",
+		summary: "The identity provider's groups whose members come in at once, with a role.", administrator: true,
+		responses: map[int]any{http.StatusOK: groupAdmissionsBody{}}},
+	{method: http.MethodPut, path: "/group-admissions", id: "setGroupAdmissions", handle: (*Server).handleSetGroupAdmissions, tag: "accounts",
+		summary: "Replace the group admissions. Somebody in several admitted groups comes in with the highest role.", administrator: true,
+		request: groupAdmissionsBody{}, responses: map[int]any{http.StatusOK: groupAdmissionsBody{}}},
 	{method: http.MethodGet, path: "/auth/me", id: "me", handle: (*Server).handleMe, tag: "accounts",
 		summary: "Who is signed in.", responses: map[int]any{http.StatusOK: env{"account": accountResponse{}}}},
 	{method: http.MethodPost, path: "/auth/password-reset", id: "requestPasswordReset", handle: (*Server).handleRequestPasswordReset, tag: "accounts",

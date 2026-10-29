@@ -101,22 +101,22 @@ func TestASessionThatCannotBeCheckedIsUnavailable(t *testing.T) {
 
 func TestTheSessionActsForItsAccountAndKeepsItsWrites(t *testing.T) {
 	s := signedInServer()
-	var acting uuid.UUID
-	var key string
-	h := s.identify(s.readYourWrites(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	fresh := memFresh{"s:" + auth.SessionKey("ada"): 700}
+	s.Fresh = fresh
+	var (
+		acting   uuid.UUID
+		required db.LSN
+	)
+	h := s.readYourWrites(s.identify(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		acting, _ = db.UserFrom(r.Context())
-		key = s.freshnessKey(w, r)
-	})))
-	s.Fresh = memFresh{}
-	h = s.identify(s.readYourWrites(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		acting, _ = db.UserFrom(r.Context())
-		key = s.freshnessKey(w, r)
+		required = db.RequiredLSN(r.Context())
+		noteWrite(r.Context(), 900)
 	})))
 	r := httptest.NewRequest(http.MethodPost, "/", nil)
 	r.AddCookie(&http.Cookie{Name: s.cookieName(), Value: "ada"})
 	h.ServeHTTP(httptest.NewRecorder(), r)
-	if acting != ada.ID || key != "s:key-ada" {
-		t.Errorf("acting %v, freshness key %q", acting, key)
+	if acting != ada.ID || required != 700 || fresh["s:"+auth.SessionKey("ada")] != 900 {
+		t.Errorf("acting %v, required %d, kept %v", acting, required, fresh)
 	}
 }
 

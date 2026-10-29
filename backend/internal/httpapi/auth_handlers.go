@@ -24,11 +24,18 @@ type accountResponse struct {
 	Role        auth.Role `json:"role"`
 	Disabled    bool      `json:"disabled"`
 	HasPassword bool      `json:"hasPassword"`
-	CreatedAt   time.Time `json:"createdAt"`
+	// Groups are what the identity provider last said the person belongs to.
+	Groups    []string  `json:"groups"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 func toAccount(a auth.Account) accountResponse {
-	return accountResponse{ID: a.ID, Email: a.Email, Name: a.Name, Role: a.Role, Disabled: a.Disabled, HasPassword: a.HasPassword, CreatedAt: a.CreatedAt}
+	groups := a.Groups
+	if groups == nil {
+		groups = []string{}
+	}
+	return accountResponse{ID: a.ID, Email: a.Email, Name: a.Name, Role: a.Role, Disabled: a.Disabled, HasPassword: a.HasPassword,
+		Groups: groups, CreatedAt: a.CreatedAt}
 }
 
 type installationResponse struct {
@@ -36,6 +43,8 @@ type installationResponse struct {
 	SetUp bool   `json:"setUp"`
 	// Mail says whether the installation sends mail, so the sign-in page knows whether to offer a reset.
 	Mail bool `json:"mail"`
+	// SSO says whether people may sign in through the identity provider.
+	SSO bool `json:"sso"`
 }
 
 type invitationResponse struct {
@@ -172,7 +181,7 @@ func (s *Server) handleInstallation(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, s.Log, err)
 		return
 	}
-	respondJSON(w, http.StatusOK, installationResponse{Name: in.Name, SetUp: in.SetUp, Mail: s.MailOn})
+	respondJSON(w, http.StatusOK, installationResponse{Name: in.Name, SetUp: in.SetUp, Mail: s.MailOn, SSO: s.SSO != nil})
 }
 
 func (s *Server) handleSetUp(w http.ResponseWriter, r *http.Request) {

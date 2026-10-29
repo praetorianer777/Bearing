@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"net/http"
 
+	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/db"
 )
 
@@ -66,10 +67,11 @@ func (s *Server) readYourWrites(next http.Handler) http.Handler {
 }
 
 // freshnessKey is the session, else the client cookie, minted for a request that may write; a read with neither has
-// no write to respect.
+// no write to respect. The session's key comes from its cookie, so the account a session signs in is itself read no
+// older than the session's last write; a forged cookie only sends its forger's reads to the primary.
 func (s *Server) freshnessKey(w http.ResponseWriter, r *http.Request) string {
-	if p := PrincipalFrom(r.Context()); p != nil && p.SessionKey != "" {
-		return "s:" + p.SessionKey
+	if c, err := r.Cookie(s.cookieName()); err == nil && c.Value != "" {
+		return "s:" + auth.SessionKey(c.Value)
 	}
 	if c, err := r.Cookie(ClientCookie); err == nil && validClientID(c.Value) {
 		return "c:" + c.Value

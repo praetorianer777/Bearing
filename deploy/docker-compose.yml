@@ -19,6 +19,11 @@ x-app-env: &app-env
   BEARING_APP_URL: http://localhost:${WEB_PORT:-5173}
   BEARING_SMTP_ADDR: mailpit:1025
   BEARING_MAIL_FROM: Bearing <bearing@bearing.test>
+  # The stack's Keycloak under the issuer browsers see; the api reaches it inside the network. For development only.
+  BEARING_OIDC_ISSUER: http://localhost:${KEYCLOAK_PORT:-8180}/realms/dynamo
+  BEARING_OIDC_CLIENT_ID: bearing
+  BEARING_OIDC_CLIENT_SECRET: bearing-dev-secret
+  BEARING_OIDC_BACKCHANNEL: http://localhost:${KEYCLOAK_PORT:-8180}=http://keycloak:8080
 
 # The installation's first administrator, which the seed sets up. For development only.
 x-bootstrap-env: &bootstrap-env
@@ -26,6 +31,8 @@ x-bootstrap-env: &bootstrap-env
   BEARING_BOOTSTRAP_ADMIN_NAME: Ada Admin
   BEARING_BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@bearing.test}
   BEARING_BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-bearing admin password}
+  # Let in ahead of their first single sign-on, as the suite's realm names them; carol and dave ask to join.
+  BEARING_BOOTSTRAP_MEMBERS: alice@suite.test=administrator,bob@suite.test=member
 
 # Every Go service runs the same image, which migrate alone builds: two builds racing to tag one name would fail the
 # stack's start.

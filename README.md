@@ -57,6 +57,13 @@ administrator `admin@bearing.test` / `bearing admin password`; mail goes to
 Mailpit. Without `BEARING_BOOTSTRAP_ADMIN_EMAIL` nothing is seeded, and whoever
 opens the web client first sets the installation up.
 
+"Continue with single sign-on" signs in through the stack's Keycloak. The seed
+lets `alice` in as an administrator and `bob` as a member ahead of time
+(`BEARING_BOOTSTRAP_MEMBERS`); `carol` and `dave` ask to join, and an
+administrator lets them in under Settings, Accounts, one by one or by their
+realm groups. Groups follow people at every sign-in. Without
+`BEARING_OIDC_ISSUER` Bearing offers passwords only.
+
 Every port is bound to `127.0.0.1` and derived from the checkout's path, in
 61000 to 65499, clear of the siblings' ranges, so worktrees and sibling stacks
 run side by side; the ports are also written to `.cache/stack.env`.

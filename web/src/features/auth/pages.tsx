@@ -1,6 +1,15 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
-import { useAcceptInvitation, useInstallation, useInvitationLink, useRequestPasswordReset, useResetPassword, useSetUp, useSignIn } from "@/api/auth";
+import {
+  ssoStartURL,
+  useAcceptInvitation,
+  useInstallation,
+  useInvitationLink,
+  useRequestPasswordReset,
+  useResetPassword,
+  useSetUp,
+  useSignIn,
+} from "@/api/auth";
 import { Button, Field, FormError, fieldError } from "@/components/ui";
 import { t, useLanguage } from "@/i18n";
 import { AuthLayout } from "./AuthLayout";
@@ -50,7 +59,7 @@ export function SetUpPage() {
   );
 }
 
-export function SignInPage({ next }: { next?: string }) {
+export function SignInPage({ next, sso }: { next?: string; sso?: string }) {
   useLanguage();
   const navigate = useNavigate();
   const signIn = useSignIn();
@@ -61,6 +70,22 @@ export function SignInPage({ next }: { next?: string }) {
   };
   return (
     <AuthLayout title={t.signIn.title} intro={installation.data?.name}>
+      {sso && t.signIn.outcomes[sso] && (
+        <p role="status" className="mb-4 rounded-md bg-accent-subtle px-3 py-2 text-sm text-ink">
+          {t.signIn.outcomes[sso]}
+        </p>
+      )}
+      {installation.data?.sso && (
+        <div className="mb-4 flex flex-col gap-3">
+          <a
+            href={ssoStartURL(safeNext(next))}
+            className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-on-primary hover:bg-primary-hover"
+          >
+            {t.signIn.sso}
+          </a>
+          <p className="text-center text-xs text-ink-subtle">{t.signIn.or}</p>
+        </div>
+      )}
       <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
         <FormError error={signIn.error} />
         <Field label={t.forms.email} name="email" type="email" autoComplete="username" required />

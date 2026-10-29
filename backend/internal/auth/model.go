@@ -35,7 +35,9 @@ type Account struct {
 	Disabled bool
 	// HasPassword is whether the account can sign in with a password, as opposed to only through single sign-on.
 	HasPassword bool
-	CreatedAt   time.Time
+	// Groups are what the identity provider last said the person belongs to; empty for a local account.
+	Groups    []string
+	CreatedAt time.Time
 }
 
 // Installation is the one organisation this installation serves.
@@ -66,4 +68,30 @@ var (
 	ErrSelf             = errors.New("you cannot switch off your own account")
 	ErrInvalidRole      = errors.New("that is not a role")
 	ErrNoPasswordToMail = errors.New("this installation sends no mail")
+	// ErrAwaitingAdmission is somebody the provider vouches for whom nobody has let in yet; they have asked to join.
+	ErrAwaitingAdmission = errors.New("you have asked to join; an administrator lets you in")
 )
+
+// Identity is who single sign-on says somebody is.
+type Identity struct {
+	Issuer  string
+	Subject string
+	Email   string
+	Name    string
+	Groups  []string
+}
+
+// JoinRequest is somebody the provider vouches for who asked to join.
+type JoinRequest struct {
+	ID          uuid.UUID
+	Email       string
+	Name        string
+	Groups      []string
+	RequestedAt time.Time
+}
+
+// GroupAdmission lets the members of a provider's group in at once, with a role.
+type GroupAdmission struct {
+	Group string
+	Role  Role
+}

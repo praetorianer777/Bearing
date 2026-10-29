@@ -24,13 +24,17 @@ const setUpRoute = createRoute({
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/sign-in",
-  validateSearch: (search: Record<string, unknown>): { next?: string } => (typeof search.next === "string" ? { next: search.next } : {}),
+  validateSearch: (search: Record<string, unknown>): { next?: string; sso?: string } => ({
+    ...(typeof search.next === "string" ? { next: search.next } : {}),
+    ...(typeof search.sso === "string" ? { sso: search.sso } : {}),
+  }),
   beforeLoad: async ({ context }) => {
     if (!(await context.queryClient.ensureQueryData(installationQuery)).setUp) throw redirect({ to: "/setup" });
     if (await context.queryClient.ensureQueryData(meQuery)) throw redirect({ to: "/" });
   },
   component: function SignIn() {
-    return <SignInPage next={signInRoute.useSearch().next} />;
+    const { next, sso } = signInRoute.useSearch();
+    return <SignInPage next={next} sso={sso} />;
   },
 });
 

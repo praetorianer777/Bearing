@@ -35,6 +35,10 @@ type Server struct {
 	SessionTTL    time.Duration
 	// MailOn says whether the installation sends mail, which decides whether a forgotten password can be reset.
 	MailOn bool
+	// SSO is the identity provider's side of signing in; nil offers passwords only.
+	SSO SingleSignOn
+	// AppURL is the web client's address, where a sign-in at the provider ends.
+	AppURL string
 	// Secure marks the cookies the api sets Secure.
 	Secure         bool
 	RequestTimeout time.Duration
@@ -51,7 +55,8 @@ func (s *Server) Routes() http.Handler {
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrMethodNotAllowed()) })
 
 	api := chi.NewRouter()
-	api.Use(s.sameSite, s.identify, s.readYourWrites)
+	// Freshness before identity: the account a session signs in is read no older than the session's last write.
+	api.Use(s.sameSite, s.readYourWrites, s.identify)
 	api.NotFound(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrNotFound()) })
 	api.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrMethodNotAllowed()) })
 	for _, op := range operations {

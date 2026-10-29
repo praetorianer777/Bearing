@@ -103,3 +103,19 @@ func TestTheAppURLLosesItsTrailingSlash(t *testing.T) {
 		t.Errorf("app url %q", cfg.Auth.AppURL)
 	}
 }
+
+func TestSingleSignOnNeedsAClient(t *testing.T) {
+	t.Setenv("BEARING_DB_PRIMARY_URL", "postgres://p")
+	t.Setenv("BEARING_OIDC_ISSUER", "https://id.example/realms/r/")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "BEARING_OIDC_CLIENT_ID") {
+		t.Errorf("an issuer without a client was accepted: %v", err)
+	}
+	t.Setenv("BEARING_OIDC_CLIENT_ID", "bearing")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.OIDC.Enabled() || cfg.OIDC.Issuer != "https://id.example/realms/r" || cfg.OIDC.GroupsClaim != "groups" {
+		t.Errorf("%+v", cfg.OIDC)
+	}
+}
