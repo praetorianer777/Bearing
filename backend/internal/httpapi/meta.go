@@ -23,7 +23,10 @@ type capability struct {
 
 // integrationCapabilities are what this build promises partners. A capability is listed only once every
 // operation it names is served.
-var integrationCapabilities = []capability{}
+var integrationCapabilities = []capability{
+	{name: "theme-export@1", promise: "A theme exported and imported as one armature-theme/1 file.",
+		operations: []string{"GET /themes/{themeID}/export", "POST /themes/import"}},
+}
 
 // capabilities is what this build announces beyond its API version, sorted; a client checks for a name here
 // rather than comparing versions.

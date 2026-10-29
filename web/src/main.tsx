@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 
+// Stamps the light or dark look this browser chose before anything renders, so no page flashes the other one.
+import "./lib/appearance";
 import { buildRouter } from "./routes";
 import "./styles/index.css";
 

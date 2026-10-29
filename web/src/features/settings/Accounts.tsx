@@ -16,6 +16,7 @@ import {
 import { Button, Field, FormError, fieldError } from "@/components/ui";
 import { locale, t, useLanguage } from "@/i18n";
 import { GroupGrants, JoinRequests } from "./Grants";
+import { SettingsNav } from "./SettingsNav";
 
 function RoleSelect({ name, defaultValue = "member" }: { name: string; defaultValue?: Role }) {
   const id = useId();
@@ -269,6 +270,7 @@ export function AccountsPage() {
   const [message, setMessage] = useState("");
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 px-6 py-8">
+      <SettingsNav />
       <div>
         <h1 className="text-2xl font-semibold">{t.accounts.title}</h1>
         <p className="mt-1 text-base text-ink-muted">{t.accounts.intro}</p>

@@ -2,15 +2,18 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/praetorianer777/bearing/backend/internal/auth"
+	"github.com/praetorianer777/bearing/backend/internal/theme"
 )
 
 // anybody marks a public operation in mayCall.
@@ -49,6 +52,12 @@ var mayCall = map[string]auth.Role{
 	"invitations":          auth.RoleAdministrator,
 	"invite":               auth.RoleAdministrator,
 	"revokeInvitation":     auth.RoleAdministrator,
+	"themes":               "",
+	"exportTheme":          "",
+	"themeFile":            "",
+	"importTheme":          auth.RoleAdministrator,
+	"setDefaultTheme":      auth.RoleAdministrator,
+	"deleteTheme":          auth.RoleAdministrator,
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {
@@ -158,5 +167,58 @@ func TestProfilesAndRolesAreCheckedBeforeAnythingIsWritten(t *testing.T) {
 	}
 	if rec := call(s, http.MethodPut, APIPrefix+"/accounts/nope/role", "ada", `{"role":"member"}`, nil); rec.Code != http.StatusNotFound {
 		t.Errorf("a malformed account id: %d", rec.Code)
+	}
+}
+
+func TestThemeRefusalsSayWhatToDo(t *testing.T) {
+	for err, want := range map[error]int{
+		theme.ErrNotFound:                      http.StatusNotFound,
+		theme.ErrDuplicateName:                 http.StatusConflict,
+		theme.ErrNotAThemeFile:                 http.StatusUnprocessableEntity,
+		theme.Invalid{Err: theme.ErrUnsafeSVG}: http.StatusUnprocessableEntity,
+		fmt.Errorf("x: %w", theme.ErrNotFound): http.StatusNotFound,
+	} {
+		var apiErr *APIError
+		if !errors.As(themeError(err), &apiErr) || apiErr.Status != want || !strings.HasSuffix(apiErr.Message, ".") {
+			t.Errorf("%v became %v, want status %d", err, themeError(err), want)
+		}
+	}
+	other := errors.New("boom")
+	if themeError(other) != other {
+		t.Error("an unknown error was dressed up")
+	}
+	if sentence("") != "" || sentence("done.") != "Done." {
+		t.Error("sentence")
+	}
+}
+
+func TestThemeFileNamesKeepToSafeLetters(t *testing.T) {
+	for in, want := range map[string]string{
+		"Harbour, from Armature": "harbour-from-armature",
+		`"; rm -rf /`:            "rm-rf",
+		"Ünïcode":                "n-code",
+		"???":                    "theme",
+	} {
+		if got := fileName(in); got != want {
+			t.Errorf("fileName(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestThemeAddressesNeedAnID(t *testing.T) {
+	s := signedInServer()
+	for _, path := range []string{"/themes/nope/export", "/themes/" + uuid.NewString() + "/assets/nope"} {
+		if rec := call(s, http.MethodGet, APIPrefix+path, "bert", "", nil); rec.Code != http.StatusNotFound {
+			t.Errorf("%s: %d", path, rec.Code)
+		}
+	}
+	if rec := call(s, http.MethodDelete, APIPrefix+"/themes/nope", "ada", "", nil); rec.Code != http.StatusNotFound {
+		t.Errorf("delete: %d", rec.Code)
+	}
+	if rec := call(s, http.MethodPost, APIPrefix+"/themes/import", "ada", `{"format":`, nil); rec.Code != http.StatusBadRequest {
+		t.Errorf("a broken file: %d", rec.Code)
+	}
+	if rec := call(s, http.MethodPut, APIPrefix+"/themes/default", "ada", `{"theme":"x"}`, nil); rec.Code != http.StatusBadRequest {
+		t.Errorf("a misspelt default: %d", rec.Code)
 	}
 }

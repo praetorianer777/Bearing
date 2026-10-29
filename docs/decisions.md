@@ -56,3 +56,12 @@ long as the person is in the group, so access follows the realm without a
 second list to keep. Somebody let in through a group gets reader as their own
 role. The database decides with `current_actor_role()` and the policies, and
 the API's operation table says the same thing first, with a clearer refusal.
+
+## Themes are the installation's; the look is the browser's
+
+Administrators import, export and remove themes and name the one everybody
+starts from. Each person chooses light, dark or the system's, and a theme,
+in their account menu, and the browser keeps that choice. Theme files and
+their pictures are stored in PostgreSQL, so Bearing needs no object store.
+That is why files are smaller here (4 MB, 32 per theme) than in the
+siblings.

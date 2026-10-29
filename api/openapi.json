@@ -17,6 +17,9 @@
     },
     {
       "name": "health"
+    },
+    {
+      "name": "themes"
     }
   ],
   "paths": {
@@ -1261,6 +1264,256 @@
           }
         ]
       }
+    },
+    "/themes": {
+      "get": {
+        "operationId": "themes",
+        "summary": "The installation's themes, to choose from, with the one everybody starts from marked.",
+        "tags": [
+          "themes"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "themes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ThemeResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "themes"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/themes/default": {
+      "put": {
+        "operationId": "setDefaultTheme",
+        "summary": "Name the theme everybody starts from; null is the built-in look.",
+        "tags": [
+          "themes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefaultThemeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      }
+    },
+    "/themes/import": {
+      "post": {
+        "operationId": "importTheme",
+        "summary": "Add a theme from an armature-theme/1 file, as Armature, Exciter, Stator and Bearing export it.",
+        "description": "The files get new ids, which the theme is rewritten to name. What each file is comes from its bytes. A taken name gets a number.",
+        "tags": [
+          "themes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThemePackage"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "theme": {
+                      "$ref": "#/components/schemas/ThemeResponse"
+                    }
+                  },
+                  "required": [
+                    "theme"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      }
+    },
+    "/themes/{themeID}": {
+      "delete": {
+        "operationId": "deleteTheme",
+        "summary": "Remove a theme and its files. Whoever had chosen it falls back to the installation's.",
+        "tags": [
+          "themes"
+        ],
+        "parameters": [
+          {
+            "name": "themeID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      }
+    },
+    "/themes/{themeID}/assets/{assetID}": {
+      "get": {
+        "operationId": "themeFile",
+        "summary": "One of a theme's files, as a download that never changes.",
+        "tags": [
+          "themes"
+        ],
+        "parameters": [
+          {
+            "name": "themeID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "assetID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/themes/{themeID}/export": {
+      "get": {
+        "operationId": "exportTheme",
+        "summary": "A theme as one armature-theme/1 file, its files inline.",
+        "tags": [
+          "themes"
+        ],
+        "parameters": [
+          {
+            "name": "themeID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThemePackage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1408,6 +1661,21 @@
           "email",
           "role",
           "password"
+        ]
+      },
+      "DefaultThemeRequest": {
+        "type": "object",
+        "properties": {
+          "themeId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "themeId"
         ]
       },
       "ErrorEnvelope": {
@@ -1773,6 +2041,271 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "ThemeAssetResponse": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "contentType",
+          "size"
+        ]
+      },
+      "ThemeBackdrop": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fit": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "assetId",
+          "fit"
+        ]
+      },
+      "ThemeCursor": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "hotspotX": {
+            "type": "integer"
+          },
+          "hotspotY": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "assetId",
+          "hotspotX",
+          "hotspotY"
+        ]
+      },
+      "ThemeFont": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "family": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "family"
+        ]
+      },
+      "ThemeFonts": {
+        "type": "object",
+        "properties": {
+          "mono": {
+            "$ref": "#/components/schemas/ThemeFont"
+          },
+          "sans": {
+            "$ref": "#/components/schemas/ThemeFont"
+          }
+        }
+      },
+      "ThemeIcon": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ThemePackage": {
+        "type": "object",
+        "properties": {
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ThemePackagedAsset"
+            }
+          },
+          "format": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/ThemeSpec"
+          }
+        },
+        "required": [
+          "format",
+          "name",
+          "spec",
+          "assets"
+        ]
+      },
+      "ThemePackagedAsset": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "format": "byte"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "contentType",
+          "data"
+        ]
+      },
+      "ThemePalette": {
+        "type": "object",
+        "properties": {
+          "dark": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "light": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "light",
+          "dark"
+        ]
+      },
+      "ThemeResponse": {
+        "type": "object",
+        "properties": {
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ThemeAssetResponse"
+            }
+          },
+          "default": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/ThemeSpec"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "default",
+          "spec",
+          "assets"
+        ]
+      },
+      "ThemeShape": {
+        "type": "object",
+        "properties": {
+          "radiusControl": {
+            "type": "integer"
+          },
+          "radiusOverlay": {
+            "type": "integer"
+          }
+        }
+      },
+      "ThemeSpec": {
+        "type": "object",
+        "properties": {
+          "backdrop": {
+            "$ref": "#/components/schemas/ThemeBackdrop"
+          },
+          "colors": {
+            "$ref": "#/components/schemas/ThemePalette"
+          },
+          "css": {
+            "type": "string"
+          },
+          "cursors": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ThemeCursor"
+            }
+          },
+          "effect": {
+            "type": "string"
+          },
+          "fonts": {
+            "$ref": "#/components/schemas/ThemeFonts"
+          },
+          "icons": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ThemeIcon"
+            }
+          },
+          "shadows": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "shape": {
+            "$ref": "#/components/schemas/ThemeShape"
+          }
+        },
+        "required": [
+          "colors",
+          "fonts",
+          "shape",
+          "shadows",
+          "cursors",
+          "icons",
+          "css"
         ]
       }
     },

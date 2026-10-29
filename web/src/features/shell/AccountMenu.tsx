@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
 import { useMe, useSignOut } from "@/api/auth";
+import { useThemes } from "@/api/themes";
 import { APP_VERSION } from "@/config";
 import { applyLanguage, LANGUAGES, type LanguageChoice, t, useLanguage } from "@/i18n";
 import { LANGUAGE_STORAGE_KEY } from "@/config";
+import { applyAppearance, BUILT_IN_THEME, INSTALLATION_THEME, MODES, useAppearance } from "@/lib/appearance";
 
 function storedChoice(): LanguageChoice {
   try {
@@ -32,6 +34,9 @@ export function AccountMenu() {
   const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState<LanguageChoice>(storedChoice);
   const menuId = useId();
+  const themeId = useId();
+  const appearance = useAppearance();
+  const themes = useThemes(open);
   const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -86,6 +91,34 @@ export function AccountMenu() {
               </label>
             ))}
           </fieldset>
+          <fieldset className="mt-3">
+            <legend className="mb-1.5 text-xs font-medium text-ink-subtle">{t.account.mode}</legend>
+            {MODES.map((mode) => (
+              <label key={mode} className="flex h-7 items-center gap-2 text-sm text-ink">
+                <input type="radio" name="mode" checked={appearance.mode === mode} onChange={() => applyAppearance({ mode })} />
+                {t.account.modes[mode]}
+              </label>
+            ))}
+          </fieldset>
+          <div className="mt-3 flex flex-col gap-1">
+            <label htmlFor={themeId} className="text-xs font-medium text-ink-subtle">
+              {t.account.theme}
+            </label>
+            <select
+              id={themeId}
+              value={appearance.theme}
+              onChange={(event) => applyAppearance({ theme: event.target.value })}
+              className="h-8 rounded-md border border-border-strong bg-surface px-2 text-sm text-ink"
+            >
+              <option value={INSTALLATION_THEME}>{t.account.themeInstallation}</option>
+              <option value={BUILT_IN_THEME}>{t.account.themeBuiltIn}</option>
+              {themes.data?.map((each) => (
+                <option key={each.id} value={each.id}>
+                  {each.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             type="button"
             onClick={() => signOut.mutate(undefined, { onSuccess: () => navigate({ to: "/sign-in" }) })}

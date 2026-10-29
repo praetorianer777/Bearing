@@ -12,6 +12,10 @@ export const API_BASE = "/api/v1";
 /** Where the language a person chose is remembered in the browser. */
 export const LANGUAGE_STORAGE_KEY = "bearing.language";
 
+/** Where the light or dark look a person chose, and the theme, are remembered in the browser. */
+export const MODE_STORAGE_KEY = "bearing.mode";
+export const THEME_STORAGE_KEY = "bearing.theme";
+
 /** Where the sidebar's folded state is remembered in the browser. */
 export const SIDEBAR_STORAGE_KEY = "bearing.sidebar";
 

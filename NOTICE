@@ -20,5 +20,7 @@ This product contains code adapted from Exciter (https://github.com/Cloudster1/E
 - backend/internal/auth/password.go, backend/internal/mail, and backend/internal/sso/backchannel.go and
   claims.go with their tests, from Exciter
 - scripts/coverage.sh, backend/internal/openapi, backend/cmd/openapi and web/scripts/schema.mjs, from Exciter
+- backend/internal/theme (spec.go, assets.go, the armature-theme/1 import and export) with the theme files in its
+  testdata, and web/src/lib/theme.ts, the theme compiler, from Exciter
 - deploy/keycloak/realm.json, the suite's realm dynamo from Dynamo
   (https://github.com/praetorianer777/Dynamo), with Bearing's client and group added
