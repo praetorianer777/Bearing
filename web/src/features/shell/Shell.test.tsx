@@ -72,7 +72,8 @@ describe("the overview", () => {
     const fetch = answerFetch(META);
     renderApp("/");
     expect(await screen.findByText("API 0.1.0+dev")).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith("/api/v1/meta", expect.anything());
+    const asked = fetch.mock.calls[0]?.[0];
+    expect(asked instanceof Request ? new URL(asked.url).pathname : asked).toBe("/api/v1/meta");
   });
 
   it("says when the API does not answer", async () => {

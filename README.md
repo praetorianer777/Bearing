@@ -42,7 +42,8 @@ make up          # Postgres with a streaming replica, Valkey, Mailpit, Keycloak,
 make ports       # this checkout's compose project and its twenty ports
 make down        # stop (make clean also drops the volumes)
 make realm-check # compare the realm with Dynamo's canonical copy
-make check-go    # the backend's formatting, vet and unit tests
+make check-go    # the backend's formatting, vet, unit tests and API document drift
+make openapi     # regenerate api/openapi.json from the route table, and the web client's types
 make test-integration  # the integration suite against the running stack
 make check-web   # the web client's lint, type check and unit tests
 make web-dev     # the web client with hot reload, against the running stack's api

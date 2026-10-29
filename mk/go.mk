@@ -52,8 +52,18 @@ build-go: | $(GO_CACHE) ## Build every backend binary into backend/bin, stamped 
 tidy: | $(GO_CACHE) ## Run go mod tidy
 	$(DOCKER_GO) go mod tidy
 
+.PHONY: openapi
+openapi: | $(GO_CACHE) ## Regenerate api/openapi.json from the route table, and the web client's types from it
+	$(DOCKER_GO) go run ./cmd/openapi ../api/openapi.json
+	@if [ -f $(ROOT)/web/package.json ]; then $(MAKE) --no-print-directory web-schema; fi
+
+.PHONY: openapi-check
+openapi-check: | $(GO_CACHE) ## Fail when api/openapi.json differs from what the code generates
+	@$(DOCKER_GO) sh -c 'go run ./cmd/openapi /tmp/openapi.json && diff -u ../api/openapi.json /tmp/openapi.json' \
+		|| { echo "api/openapi.json is out of date. Run make openapi and commit the result."; exit 1; }
+
 .PHONY: check-go
-check-go: fmt-check vet test-go ## The backend gate: formatting, vet and race-checked tests
+check-go: fmt-check vet test-go openapi-check ## The backend gate: formatting, vet, race-checked tests, OpenAPI drift
 
 # The Go toolchain on the stack's network with what the integration suite reads. Reads go to the replica as they do
 # in the running api, so the suite proves read-your-writes rather than stepping around it.

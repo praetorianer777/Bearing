@@ -31,10 +31,14 @@ web-install: | $(NPM_CACHE) ## Install the web client's dependencies from the lo
 # The usual output, and the timings as JSON for the run's summary.
 VITEST_REPORT = --reporter=default --reporter=json --outputFile.json=/src/reports/vitest.json --coverage
 
+.PHONY: web-schema
+web-schema: | $(NPM_CACHE) ## Regenerate web/src/api/schema.d.ts from api/openapi.json
+	$(DOCKER_NODE) sh -c '[ -d node_modules ] || npm ci --no-audit --no-fund; npm run schema'
+
 .PHONY: check-web
 check-web: | $(NPM_CACHE) ## Lint, type-check and unit-test the web client
 	@mkdir -p $(REPORTS)
-	$(DOCKER_NODE) sh -c 'npm ci --no-audit --no-fund && npm run lint && npm run typecheck && npm test -- $(VITEST_REPORT)'
+	$(DOCKER_NODE) sh -c 'npm ci --no-audit --no-fund && npm run lint && npm run typecheck && npm test -- $(VITEST_REPORT) && npm run schema:check'
 	$(ROOT)/scripts/coverage.sh web web-lines $(REPORTS)/vitest-coverage/coverage-summary.json
 
 .PHONY: test-web
