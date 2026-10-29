@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import type { ComponentType, SVGProps } from "react";
 import { APP_NAME, SIDEBAR_RAIL_WIDTH, SIDEBAR_WIDTH } from "@/config";
-import { FoldIcon, HomeIcon, OrgIcon, PeopleIcon, ProcessIcon } from "@/components/icons";
+import { useMe } from "@/api/auth";
+import { FoldIcon, HomeIcon, OrgIcon, PeopleIcon, ProcessIcon, SettingsIcon } from "@/components/icons";
 import { Mark } from "@/components/Logo";
 import { t, useLanguage } from "@/i18n";
 
-type Place = { to: "/" | "/organisation" | "/people" | "/processes"; label: () => string; icon: ComponentType<SVGProps<SVGSVGElement>> };
+type Place = { to: "/" | "/organisation" | "/people" | "/processes" | "/settings/accounts"; label: () => string; icon: ComponentType<SVGProps<SVGSVGElement>> };
 
 const places: Place[] = [
   { to: "/", label: () => t.nav.overview, icon: HomeIcon },
@@ -14,8 +15,12 @@ const places: Place[] = [
   { to: "/processes", label: () => t.nav.processes, icon: ProcessIcon },
 ];
 
+const settings: Place = { to: "/settings/accounts", label: () => t.nav.settings, icon: SettingsIcon };
+
 export function Sidebar({ folded, onToggle }: { folded: boolean; onToggle: () => void }) {
   useLanguage();
+  const administrator = useMe().data?.role === "administrator";
+  const shown = administrator ? [...places, settings] : places;
   return (
     <aside
       className="flex h-full shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-150"
@@ -26,7 +31,7 @@ export function Sidebar({ folded, onToggle }: { folded: boolean; onToggle: () =>
         {!folded && <span className="text-base font-semibold text-ink">{APP_NAME}</span>}
       </div>
       <nav aria-label={t.nav.main} className="flex flex-1 flex-col gap-0.5 px-2 py-2">
-        {places.map(({ to, label, icon: Icon }) => (
+        {shown.map(({ to, label, icon: Icon }) => (
           <Link
             key={to}
             to={to}

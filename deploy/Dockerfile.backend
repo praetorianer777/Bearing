@@ -29,7 +29,7 @@ ARG COMMIT=""
 RUN PKG=github.com/praetorianer777/bearing/backend/internal/version && \
     VERSION="${VERSION:-$(cat /VERSION)+dev}" && \
     LDFLAGS="-s -w -X $PKG.Version=$VERSION -X $PKG.Commit=$COMMIT -X $PKG.BuiltAt=$(date -u +%Y-%m-%dT%H:%M:%SZ)" && \
-    go build -trimpath -ldflags="$LDFLAGS" -o /out/ ./cmd/api ./cmd/worker && \
+    go build -trimpath -ldflags="$LDFLAGS" -o /out/ ./cmd/api ./cmd/worker ./cmd/seed && \
     go build -trimpath -ldflags="$LDFLAGS" -tags "$GOOSE_TAGS" -o /out/migrate ./cmd/migrate
 
 # Alpine rather than scratch: the health checks want a shell and wget.

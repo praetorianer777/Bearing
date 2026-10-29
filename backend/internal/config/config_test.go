@@ -83,3 +83,23 @@ func TestValkeyIsRequiredWhereAsked(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestTheFirstAdministratorNeedsAPassword(t *testing.T) {
+	t.Setenv("BEARING_DB_PRIMARY_URL", "postgres://p")
+	t.Setenv("BEARING_BOOTSTRAP_ADMIN_EMAIL", "admin@bearing.test")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "BEARING_BOOTSTRAP_ADMIN_PASSWORD") {
+		t.Errorf("an administrator without a password was accepted: %v", err)
+	}
+}
+
+func TestTheAppURLLosesItsTrailingSlash(t *testing.T) {
+	t.Setenv("BEARING_DB_PRIMARY_URL", "postgres://p")
+	t.Setenv("BEARING_APP_URL", "https://org.example/")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Auth.AppURL != "https://org.example" {
+		t.Errorf("app url %q", cfg.Auth.AppURL)
+	}
+}

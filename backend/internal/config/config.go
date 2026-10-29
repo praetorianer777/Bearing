@@ -4,6 +4,7 @@ package config
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"time"
 )
@@ -28,6 +29,14 @@ const (
 	DefaultLagSamples      = 3
 	DefaultReadYourWrites  = 30 * time.Second
 	DefaultJobStream       = "bearing:jobs"
+	DefaultAppURL          = "http://localhost:5173"
+	DefaultSessionCookie   = "bearing_session"
+	DefaultSessionTTL      = 720 * time.Hour
+	DefaultInvitationTTL   = 7 * 24 * time.Hour
+	DefaultResetTTL        = time.Hour
+	DefaultMailFrom        = "Bearing <bearing@localhost>"
+	// DefaultName is what a first start calls the installation when nobody names it.
+	DefaultName = "Bearing"
 )
 
 // Config is everything a process reads at start.
@@ -35,9 +44,38 @@ type Config struct {
 	Env      string
 	LogLevel string
 
-	HTTP   HTTP
-	DB     DB
-	Valkey Valkey
+	HTTP      HTTP
+	DB        DB
+	Valkey    Valkey
+	Auth      Auth
+	Mail      Mail
+	Bootstrap Bootstrap
+}
+
+// Auth is how people stay signed in, and how long the links that bring them in last.
+type Auth struct {
+	// AppURL is the web client's address as people open it, for the links a mail carries.
+	AppURL        string
+	SessionCookie string
+	SessionTTL    time.Duration
+	InvitationTTL time.Duration
+	ResetTTL      time.Duration
+}
+
+// Mail is the SMTP relay mail goes out through; without an address no mail is sent, and an administrator hands an
+// invitation's link on by hand.
+type Mail struct {
+	SMTPAddr string
+	From     string
+}
+
+// Bootstrap is what cmd/seed sets an installation up with when it is not set up yet: its name and its first
+// administrator. Without an email nothing is set up, and the first person to open the web client does it.
+type Bootstrap struct {
+	Name          string
+	AdminName     string
+	AdminEmail    string
+	AdminPassword string
 }
 
 // HTTP is how the api listens.
@@ -109,6 +147,23 @@ func Load() (Config, error) {
 			URL:       l.str("BEARING_VALKEY_URL", ""),
 			JobStream: l.str("BEARING_JOB_STREAM", DefaultJobStream),
 		},
+	}
+	cfg.Auth = Auth{
+		AppURL:        strings.TrimRight(l.str("BEARING_APP_URL", DefaultAppURL), "/"),
+		SessionCookie: l.str("BEARING_SESSION_COOKIE", DefaultSessionCookie),
+		SessionTTL:    l.duration("BEARING_SESSION_TTL", DefaultSessionTTL),
+		InvitationTTL: l.duration("BEARING_INVITATION_TTL", DefaultInvitationTTL),
+		ResetTTL:      l.duration("BEARING_RESET_TTL", DefaultResetTTL),
+	}
+	cfg.Mail = Mail{SMTPAddr: l.str("BEARING_SMTP_ADDR", ""), From: l.str("BEARING_MAIL_FROM", DefaultMailFrom)}
+	cfg.Bootstrap = Bootstrap{
+		Name:          l.str("BEARING_NAME", DefaultName),
+		AdminName:     l.str("BEARING_BOOTSTRAP_ADMIN_NAME", "Administrator"),
+		AdminEmail:    l.str("BEARING_BOOTSTRAP_ADMIN_EMAIL", ""),
+		AdminPassword: os.Getenv("BEARING_BOOTSTRAP_ADMIN_PASSWORD"),
+	}
+	if cfg.Bootstrap.AdminEmail != "" && cfg.Bootstrap.AdminPassword == "" {
+		l.problem("BEARING_BOOTSTRAP_ADMIN_EMAIL is set without BEARING_BOOTSTRAP_ADMIN_PASSWORD; give the first administrator a password, or leave both unset.")
 	}
 	cfg.HTTP.SecureCookies = l.boolean("BEARING_SECURE_COOKIES", cfg.Env != EnvDevelopment)
 	if cfg.DB.PrimaryURL == "" {

@@ -13,3 +13,6 @@ function stackEnv(): Record<string, string> {
 const env = stackEnv();
 
 export const WEB_URL = env.BEARING_WEB_URL ?? "http://localhost:5173";
+
+/** The first administrator the stack's seed sets up. */
+export const ADMIN = { email: "admin@bearing.test", password: "bearing admin password" };

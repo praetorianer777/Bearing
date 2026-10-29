@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/praetorianer777/bearing/backend/internal/auth"
+	"github.com/praetorianer777/bearing/backend/internal/config"
 	"github.com/praetorianer777/bearing/backend/internal/openapi"
 )
 
@@ -19,6 +21,11 @@ func specBuilder() *openapi.Builder {
 	b := openapi.NewBuilder()
 	// The document describes itself as an object; its own schema would be the OpenAPI meta-schema.
 	b.Overrides[reflect.TypeOf(openapi.Document{})] = &openapi.Schema{Type: "object", Description: "An OpenAPI 3.1 document."}
+	roles := make([]string, len(auth.Roles))
+	for i, r := range auth.Roles {
+		roles[i] = string(r)
+	}
+	b.Enums[reflect.TypeOf(auth.Role(""))] = roles
 	return b
 }
 
@@ -35,6 +42,12 @@ func Spec() *openapi.Document {
 		},
 		Servers: []openapi.Server{{URL: APIPrefix, Description: "This deployment"}},
 		Paths:   map[string]openapi.PathItem{},
+		Components: openapi.Components{
+			SecuritySchemes: map[string]openapi.SecurityScheme{
+				"session": {Type: "apiKey", In: "cookie", Name: config.DefaultSessionCookie, Description: "The cookie a sign-in sets."},
+			},
+		},
+		Security: []map[string][]string{{"session": {}}},
 	}
 	errorSchema := b.Schema(reflect.TypeOf(errorEnvelope{}))
 	tags := map[string]bool{}

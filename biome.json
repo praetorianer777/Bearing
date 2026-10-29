@@ -20,7 +20,9 @@
     "includes": [
       "web/**",
       "e2e/**",
-      "!web/src/api/schema.d.ts"
+      "!web/src/api/schema.d.ts",
+      "!e2e/test-results",
+      "!e2e/playwright-report"
     ]
   }
 }
