@@ -50,6 +50,10 @@ const (
 	sessionIDBytes = 2 * sha256.Size
 )
 
+// SessionKey is what the session a token starts is known by, as Lookup returns it, so a caller can remember the
+// session's first write under it before its first request.
+func SessionKey(token string) string { return hex.EncodeToString(hashToken(token)) }
+
 // ErrNoSession is a cookie that names no live session.
 var ErrNoSession = errors.New("no such session")
 
@@ -75,7 +79,7 @@ func (s *Sessions) Lookup(ctx context.Context, token string) (account uuid.UUID,
 	if token == "" {
 		return uuid.Nil, "", ErrNoSession
 	}
-	key = hex.EncodeToString(hashToken(token))
+	key = SessionKey(token)
 	v, err := s.client.Get(ctx, sessionPrefix+key).Result()
 	if errors.Is(err, redis.Nil) {
 		return uuid.Nil, "", ErrNoSession

@@ -80,6 +80,10 @@ DOCKER_GO_STACK = $(call go_run,--network $(STACK_NET) \
 	-e BEARING_SMTP_ADDR=mailpit:1025 \
 	-e BEARING_APP_URL=http://localhost:$(WEB_PORT) \
 	-e BEARING_ENV=development \
+	-e BEARING_OIDC_ISSUER=http://localhost:$(KEYCLOAK_PORT)/realms/dynamo \
+	-e BEARING_OIDC_CLIENT_ID=bearing \
+	-e BEARING_OIDC_CLIENT_SECRET=bearing-dev-secret \
+	-e BEARING_OIDC_BACKCHANNEL=http://localhost:$(KEYCLOAK_PORT)=http://keycloak:8080 \
 	$(1))
 
 INTEGRATION_TIMEOUT ?= 10m

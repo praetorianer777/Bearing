@@ -3,6 +3,7 @@
 package app
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/redis/go-redis/v9"
@@ -13,10 +14,11 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/freshness"
 	"github.com/praetorianer777/bearing/backend/internal/httpapi"
 	"github.com/praetorianer777/bearing/backend/internal/jobs"
+	"github.com/praetorianer777/bearing/backend/internal/sso"
 )
 
 // NewServer is the api's HTTP server over cluster and valkey, as cfg sets it up.
-func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log *slog.Logger) *httpapi.Server {
+func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log *slog.Logger) (*httpapi.Server, error) {
 	accounts := &auth.Service{
 		DB:            cluster,
 		Sessions:      auth.NewSessions(valkey, cfg.Auth.SessionTTL),
@@ -28,7 +30,7 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 	if cfg.Mail.SMTPAddr != "" {
 		accounts.Mail = jobs.NewQueue(valkey, cfg.Valkey.JobStream)
 	}
-	return &httpapi.Server{
+	srv := &httpapi.Server{
 		DB:             cluster,
 		Fresh:          freshness.NewValkeyTracker(valkey, cfg.DB.ReadYourWritesTTL, freshness.Prefix),
 		Log:            log,
@@ -39,5 +41,21 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 		MailOn:         cfg.Mail.SMTPAddr != "",
 		Secure:         cfg.HTTP.SecureCookies,
 		RequestTimeout: cfg.HTTP.RequestTimeout,
+		AppURL:         cfg.Auth.AppURL,
 	}
+	if cfg.OIDC.Enabled() {
+		backchannel, err := sso.ParseBackchannel(cfg.OIDC.Backchannel)
+		if err != nil {
+			return nil, fmt.Errorf("BEARING_OIDC_BACKCHANNEL: %w", err)
+		}
+		srv.SSO = sso.New(sso.Config{
+			Issuer:       cfg.OIDC.Issuer,
+			ClientID:     cfg.OIDC.ClientID,
+			ClientSecret: cfg.OIDC.ClientSecret,
+			RedirectURL:  cfg.Auth.AppURL + config.OIDCCallbackPath,
+			GroupsClaim:  cfg.OIDC.GroupsClaim,
+			Backchannel:  backchannel,
+		}, valkey)
+	}
+	return srv, nil
 }

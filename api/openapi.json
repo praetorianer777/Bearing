@@ -263,6 +263,86 @@
         }
       }
     },
+    "/auth/oidc/callback": {
+      "get": {
+        "operationId": "finishSingleSignOn",
+        "summary": "Where the identity provider sends the browser back. It goes on to the web client: where it was headed, or the sign-in page with sso set to pending, disabled, cancelled or failed.",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/oidc/start": {
+      "get": {
+        "operationId": "startSingleSignOn",
+        "summary": "Send the browser to the identity provider; next is where it comes back to.",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "name": "next",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/password-reset": {
       "post": {
         "operationId": "requestPasswordReset",
@@ -400,6 +480,76 @@
         "responses": {
           "204": {
             "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/group-admissions": {
+      "get": {
+        "operationId": "groupAdmissions",
+        "summary": "The identity provider's groups whose members come in at once, with a role.",
+        "tags": [
+          "accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupAdmissionsBody"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "setGroupAdmissions",
+        "summary": "Replace the group admissions. Somebody in several admitted groups comes in with the highest role.",
+        "tags": [
+          "accounts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupAdmissionsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupAdmissionsBody"
+                }
+              }
+            }
           },
           "default": {
             "description": "An error, in the one shape every endpoint uses.",
@@ -757,6 +907,143 @@
         }
       }
     },
+    "/join-requests": {
+      "get": {
+        "operationId": "joinRequests",
+        "summary": "Who the identity provider vouches for and asked to join.",
+        "tags": [
+          "accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "joinRequests": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/JoinRequestResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "joinRequests"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/join-requests/{requestID}": {
+      "delete": {
+        "operationId": "decline",
+        "summary": "Turn a request to join down.",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "name": "requestID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/join-requests/{requestID}/admit": {
+      "post": {
+        "operationId": "admit",
+        "summary": "Let somebody in who asked to join, with a role.",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "name": "requestID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdmitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "account": {
+                      "$ref": "#/components/schemas/AccountResponse"
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/meta": {
       "get": {
         "operationId": "meta",
@@ -922,6 +1209,12 @@
           "email": {
             "type": "string"
           },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "hasPassword": {
             "type": "boolean"
           },
@@ -949,7 +1242,25 @@
           "role",
           "disabled",
           "hasPassword",
+          "groups",
           "createdAt"
+        ]
+      },
+      "AdmitRequest": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "administrator",
+              "editor",
+              "member",
+              "reader"
+            ]
+          }
+        },
+        "required": [
+          "role"
         ]
       },
       "CreateAccountRequest": {
@@ -992,6 +1303,41 @@
           "error"
         ]
       },
+      "GroupAdmission": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "administrator",
+              "editor",
+              "member",
+              "reader"
+            ]
+          }
+        },
+        "required": [
+          "group",
+          "role"
+        ]
+      },
+      "GroupAdmissionsBody": {
+        "type": "object",
+        "properties": {
+          "admissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupAdmission"
+            }
+          }
+        },
+        "required": [
+          "admissions"
+        ]
+      },
       "Info": {
         "type": "object",
         "properties": {
@@ -1020,12 +1366,16 @@
           },
           "setUp": {
             "type": "boolean"
+          },
+          "sso": {
+            "type": "boolean"
           }
         },
         "required": [
           "name",
           "setUp",
-          "mail"
+          "mail",
+          "sso"
         ]
       },
       "InvitationLinkResponse": {
@@ -1112,6 +1462,38 @@
         "required": [
           "email",
           "role"
+        ]
+      },
+      "JoinRequestResponse": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "groups",
+          "requestedAt"
         ]
       },
       "MetaResponse": {

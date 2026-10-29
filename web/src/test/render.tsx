@@ -28,6 +28,7 @@ export const ADMIN = {
   role: "administrator",
   disabled: false,
   hasPassword: true,
+  groups: [] as string[],
   createdAt: "2026-10-01T09:00:00Z",
 } as const;
 

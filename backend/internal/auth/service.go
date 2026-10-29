@@ -46,10 +46,12 @@ var decoyHash = func() string {
 	return h
 }()
 
-const accountColumns = `id, email, name, role, disabled_at IS NOT NULL, created_at`
+// accountColumns read an account with the groups its provider last named.
+const accountColumns = `id, email, name, role, disabled_at IS NOT NULL, created_at,
+	coalesce((SELECT groups FROM account_identity i WHERE i.account_id = account.id ORDER BY last_sign_in DESC LIMIT 1), '{}')`
 
 func scanAccount(row pgx.Row, a *Account) error {
-	return row.Scan(&a.ID, &a.Email, &a.Name, &a.Role, &a.Disabled, &a.CreatedAt)
+	return row.Scan(&a.ID, &a.Email, &a.Name, &a.Role, &a.Disabled, &a.CreatedAt, &a.Groups)
 }
 
 // NormaliseEmail trims an address and refuses one that is not an address.
@@ -116,7 +118,7 @@ func (s *Service) SignIn(ctx context.Context, email, password string) (Account, 
 	)
 	err := s.DB.ReadAdmin(ctx, func(ctx context.Context, q db.DBTX) error {
 		return q.QueryRow(ctx, `SELECT `+accountColumns+`, password_hash FROM account WHERE email = $1`, strings.TrimSpace(email)).
-			Scan(&a.ID, &a.Email, &a.Name, &a.Role, &a.Disabled, &a.CreatedAt, &hash)
+			Scan(&a.ID, &a.Email, &a.Name, &a.Role, &a.Disabled, &a.CreatedAt, &a.Groups, &hash)
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return Account{}, "", err

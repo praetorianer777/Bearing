@@ -35,6 +35,10 @@ type Server struct {
 	SessionTTL    time.Duration
 	// MailOn says whether the installation sends mail, which decides whether a forgotten password can be reset.
 	MailOn bool
+	// SSO is the identity provider's side of signing in; nil offers passwords only.
+	SSO SingleSignOn
+	// AppURL is the web client's address, where a sign-in at the provider ends.
+	AppURL string
 	// Secure marks the cookies the api sets Secure.
 	Secure         bool
 	RequestTimeout time.Duration

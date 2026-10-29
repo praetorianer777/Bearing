@@ -35,6 +35,7 @@ const (
 	DefaultInvitationTTL   = 7 * 24 * time.Hour
 	DefaultResetTTL        = time.Hour
 	DefaultMailFrom        = "Bearing <bearing@localhost>"
+	DefaultGroupsClaim     = "groups"
 	// DefaultName is what a first start calls the installation when nobody names it.
 	DefaultName = "Bearing"
 )
@@ -49,8 +50,25 @@ type Config struct {
 	Valkey    Valkey
 	Auth      Auth
 	Mail      Mail
+	OIDC      OIDC
 	Bootstrap Bootstrap
 }
+
+// OIDC is the identity provider people may sign in through; without an issuer the sign-in page offers passwords only.
+type OIDC struct {
+	Issuer       string
+	ClientID     string
+	ClientSecret string
+	GroupsClaim  string
+	// Backchannel is "public=reachable" pairs, for a provider this process reaches at another address than browsers.
+	Backchannel string
+}
+
+// Enabled says whether a provider is configured.
+func (o OIDC) Enabled() bool { return o.Issuer != "" }
+
+// OIDCCallbackPath is where the provider sends the browser back, under the web client's origin, which proxies the API.
+const OIDCCallbackPath = "/api/v1/auth/oidc/callback"
 
 // Auth is how people stay signed in, and how long the links that bring them in last.
 type Auth struct {
@@ -76,6 +94,8 @@ type Bootstrap struct {
 	AdminName     string
 	AdminEmail    string
 	AdminPassword string
+	// Members are let in ahead of their first single sign-on: "email=role" pairs, separated by commas.
+	Members string
 }
 
 // HTTP is how the api listens.
@@ -161,6 +181,17 @@ func Load() (Config, error) {
 		AdminName:     l.str("BEARING_BOOTSTRAP_ADMIN_NAME", "Administrator"),
 		AdminEmail:    l.str("BEARING_BOOTSTRAP_ADMIN_EMAIL", ""),
 		AdminPassword: os.Getenv("BEARING_BOOTSTRAP_ADMIN_PASSWORD"),
+	}
+	cfg.Bootstrap.Members = l.str("BEARING_BOOTSTRAP_MEMBERS", "")
+	cfg.OIDC = OIDC{
+		Issuer:       strings.TrimRight(l.str("BEARING_OIDC_ISSUER", ""), "/"),
+		ClientID:     l.str("BEARING_OIDC_CLIENT_ID", ""),
+		ClientSecret: os.Getenv("BEARING_OIDC_CLIENT_SECRET"),
+		GroupsClaim:  l.str("BEARING_OIDC_GROUPS_CLAIM", DefaultGroupsClaim),
+		Backchannel:  l.str("BEARING_OIDC_BACKCHANNEL", ""),
+	}
+	if cfg.OIDC.Enabled() && cfg.OIDC.ClientID == "" {
+		l.problem("BEARING_OIDC_ISSUER is set without BEARING_OIDC_CLIENT_ID; name the client Bearing is registered as at the provider.")
 	}
 	if cfg.Bootstrap.AdminEmail != "" && cfg.Bootstrap.AdminPassword == "" {
 		l.problem("BEARING_BOOTSTRAP_ADMIN_EMAIL is set without BEARING_BOOTSTRAP_ADMIN_PASSWORD; give the first administrator a password, or leave both unset.")

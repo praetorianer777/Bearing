@@ -79,6 +79,9 @@ func (op operation) describe(b *openapi.Builder, errorSchema *openapi.Schema) *o
 	for _, name := range pathParams(op.path) {
 		o.Parameters = append(o.Parameters, openapi.Parameter{Name: name, In: "path", Required: true, Schema: pathParamSchema(name)})
 	}
+	for _, name := range op.query {
+		o.Parameters = append(o.Parameters, openapi.Parameter{Name: name, In: "query", Schema: &openapi.Schema{Type: "string"}})
+	}
 	if op.request != nil {
 		o.RequestBody = &openapi.RequestBody{Required: true, Content: map[string]openapi.MediaType{
 			"application/json": {Schema: b.SchemaOf(op.request)},

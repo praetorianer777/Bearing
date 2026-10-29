@@ -14,6 +14,7 @@ import {
 } from "@/api/auth";
 import { Button, Field, FormError, fieldError } from "@/components/ui";
 import { locale, t, useLanguage } from "@/i18n";
+import { GroupAdmissions, JoinRequests } from "./Admission";
 
 function RoleSelect({ name, defaultValue = "member" }: { name: string; defaultValue?: Role }) {
   const id = useId();
@@ -78,6 +79,11 @@ function AccountRow({ account, self, onMessage }: { account: Account; self: bool
             {self && <span className="ml-1.5 text-xs font-normal text-ink-subtle">({t.accounts.you})</span>}
           </p>
           <p className="truncate text-sm text-ink-muted">{account.email}</p>
+          {account.groups.length > 0 && (
+            <p className="truncate text-xs text-ink-subtle">
+              {t.accounts.groups}: {account.groups.join(", ")}
+            </p>
+          )}
         </div>
         <span className="text-sm text-ink-muted">{t.roles[account.role]}</span>
         <span className={`text-sm ${account.disabled ? "text-danger" : "text-ink-muted"}`}>
@@ -256,9 +262,11 @@ export function AccountsPage() {
           <AccountRow key={account.id} account={account} self={account.id === me.data?.id} onMessage={setMessage} />
         ))}
       </ul>
+      <JoinRequests />
       <InviteForm />
       <OpenInvitations />
       <CreateForm />
+      <GroupAdmissions />
     </div>
   );
 }

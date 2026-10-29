@@ -1,4 +1,4 @@
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ADMIN, fakeAPI, nobodySignedIn, renderApp, signedInAs } from "@/test/render";
@@ -232,5 +232,82 @@ describe("the accounts page", () => {
     await user.click(within(create).getByRole("button", { name: "Make the account" }));
     expect(await within(create).findByRole("status")).toHaveTextContent("The account for max@acme.test is made");
     expect(await within(list).findByText("Max")).toBeInTheDocument();
+  });
+
+  it("lets in who asked to join, declines another, and saves who comes in by group", async () => {
+    let requests = [
+      { id: "r1", email: "carol@suite.test", name: "Carol", groups: ["quality"], requestedAt: ADMIN.createdAt },
+      { id: "r2", email: "mallory@suite.test", name: "Mallory", groups: [], requestedAt: ADMIN.createdAt },
+    ];
+    const admitted: unknown[] = [];
+    let saved: unknown;
+    fakeAPI({
+      ...signedInAs(),
+      "GET /accounts": { body: { accounts: [{ ...ADMIN, groups: ["bearing-administrators", "engineering"] }] } },
+      "GET /invitations": { body: { invitations: [] } },
+      "GET /join-requests": () => ({ body: { joinRequests: requests } }),
+      "POST /join-requests/r1/admit": (body) => {
+        admitted.push(body);
+        requests = requests.filter((r) => r.id !== "r1");
+        return { status: 201, body: { account: { ...BERT, email: "carol@suite.test", name: "Carol", role: "editor" } } };
+      },
+      "DELETE /join-requests/r2": () => {
+        requests = requests.filter((r) => r.id !== "r2");
+        return { status: 204 };
+      },
+      "GET /group-admissions": { body: { admissions: [{ group: "marketing", role: "reader" }] } },
+      "PUT /group-admissions": (body) => {
+        const rows = (body as { admissions: { group: string; role: string }[] }).admissions;
+        if (rows.some((r) => !r.group.trim()))
+          return { status: 422, body: { error: { code: "validation_failed", message: "x", fields: { "admissions[1].group": "Name the group." } } } };
+        saved = body;
+        return { body };
+      },
+    });
+    const user = userEvent.setup();
+    renderApp("/settings/accounts");
+    expect(await screen.findByText("Groups: bearing-administrators, engineering")).toBeInTheDocument();
+
+    const asked = await screen.findByRole("region", { name: "Asked to join" });
+    expect(within(asked).getByText("quality")).toBeInTheDocument();
+    await user.selectOptions(within(asked).getByLabelText("Role: Carol"), "editor");
+    await user.click(within(asked).getByRole("button", { name: "Let in: Carol" }));
+    await user.click(await within(asked).findByRole("button", { name: "Decline: Mallory" }));
+    expect(admitted).toEqual([{ role: "editor" }]);
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Asked to join" })).not.toBeInTheDocument());
+
+    const admissions = screen.getByRole("region", { name: "Let in by group" });
+    expect(await within(admissions).findByDisplayValue("marketing")).toBeInTheDocument();
+    await user.click(within(admissions).getByRole("button", { name: "Add a group" }));
+    await user.click(within(admissions).getByRole("button", { name: "Save" }));
+    expect(await within(admissions).findByText("Name the group.")).toBeInTheDocument();
+    await user.type(within(admissions).getByLabelText("Group 2"), "quality");
+    await user.selectOptions(within(admissions).getByLabelText("Role 2"), "editor");
+    await user.click(within(admissions).getByRole("button", { name: "Save" }));
+    expect(await within(admissions).findByRole("status")).toHaveTextContent("Saved.");
+    expect(saved).toEqual({
+      admissions: [
+        { group: "marketing", role: "reader" },
+        { group: "quality", role: "editor" },
+      ],
+    });
+    await user.click(within(admissions).getAllByRole("button", { name: "Remove" })[0] as HTMLElement);
+    expect(within(admissions).queryByDisplayValue("marketing")).not.toBeInTheDocument();
+  });
+});
+
+describe("single sign-on", () => {
+  it("offers the provider with the page to come back to, and says how a sign-in there ended", async () => {
+    fakeAPI({ ...nobodySignedIn, "GET /installation": { body: { name: "Acme", setUp: true, mail: false, sso: true } } });
+    renderApp("/sign-in?next=%2Fpeople&sso=pending");
+    expect(await screen.findByRole("link", { name: "Continue with single sign-on" })).toHaveAttribute("href", "/api/v1/auth/oidc/start?next=%2Fpeople");
+    expect(screen.getByRole("status")).toHaveTextContent("You have asked to join");
+  });
+
+  it("is not offered without a provider", async () => {
+    fakeAPI(nobodySignedIn);
+    renderApp("/sign-in");
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue with single sign-on" })).not.toBeInTheDocument();
   });
 });

@@ -64,7 +64,15 @@ func inProcessAPI(t *testing.T) string {
 		if err != nil {
 			t.Fatal(err)
 		}
-		srv := httptest.NewServer(app.NewServer(cfg, cluster, valkeyFor(t, cfg), quietLog()).Routes())
+		// The server learns its own address only once it listens, and the provider sends browsers back to it.
+		var handler http.Handler
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { handler.ServeHTTP(w, r) }))
+		cfg.Auth.AppURL = srv.URL
+		api, err := app.NewServer(cfg, cluster, valkeyFor(t, cfg), quietLog())
+		if err != nil {
+			t.Fatal(err)
+		}
+		handler = api.Routes()
 		apiURL = srv.URL
 	})
 	return apiURL

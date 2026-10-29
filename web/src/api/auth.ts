@@ -116,3 +116,39 @@ export const useSetDisabled = () =>
   useAccountsMutation(async ({ accountID, disabled }: { accountID: string; disabled: boolean }) =>
     unwrap(await api.POST(disabled ? "/accounts/{accountID}/disable" : "/accounts/{accountID}/enable", { params: { path: { accountID } } })),
   );
+
+export type JoinRequest = components["schemas"]["JoinRequestResponse"];
+export type GroupAdmission = components["schemas"]["GroupAdmission"];
+
+/** Where the browser goes to sign in through the identity provider, coming back to next. */
+export const ssoStartURL = (next = "/") => `/api/v1/auth/oidc/start?next=${encodeURIComponent(next)}`;
+
+export const useJoinRequests = () => useQuery({ queryKey: ["join-requests"], queryFn: async () => unwrap(await api.GET("/join-requests")).joinRequests });
+
+export const useGroupAdmissions = () =>
+  useQuery({ queryKey: ["group-admissions"], queryFn: async () => unwrap(await api.GET("/group-admissions")).admissions });
+
+export function useAdmit() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ requestID, role }: { requestID: string; role: Role }) =>
+      unwrap(await api.POST("/join-requests/{requestID}/admit", { params: { path: { requestID } }, body: { role } })).account,
+    onSuccess: () => Promise.all([client.invalidateQueries({ queryKey: ["join-requests"] }), client.invalidateQueries({ queryKey: ["accounts"] })]),
+  });
+}
+
+export function useDecline() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (requestID: string) => unwrap(await api.DELETE("/join-requests/{requestID}", { params: { path: { requestID } } })),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["join-requests"] }),
+  });
+}
+
+export function useSetGroupAdmissions() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (admissions: GroupAdmission[]) => unwrap(await api.PUT("/group-admissions", { body: { admissions } })).admissions,
+    onSuccess: (admissions) => client.setQueryData(["group-admissions"], admissions),
+  });
+}
