@@ -16,7 +16,8 @@ export const de: Messages = {
   },
   home: {
     title: "Übersicht",
-    intro: "Bearing bildet Ihre Organisation aus Einheiten, Stellen, Rollen und Personen ab und zeichnet ihre Prozesse mit der Verantwortung für jeden Schritt.",
+    intro:
+      "Bearing bildet Ihre Organisation aus Einheiten, Stellen, Rollen und Personen ab und zeichnet ihre Prozesse mit der Verantwortung für jeden Schritt.",
     next: "Was als Nächstes kommt",
     steps: [
       "Das Organisationsmodell: Einheiten, Stellen, Berichtslinien und die Personen, die sie besetzen.",

@@ -8,14 +8,19 @@ import { buildRouter } from "@/routes";
 export function renderApp(path = "/") {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const router = buildRouter(queryClient, createMemoryHistory({ initialEntries: [path] }));
-  return { router, ...render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  ) };
+  return {
+    router,
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    ),
+  };
 }
 
 /** Answers fetch with body as JSON and status, for the calls a test makes. */
 export function answerFetch(body: unknown, status = 200) {
-  return vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }));
+  return vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async () => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }));
 }

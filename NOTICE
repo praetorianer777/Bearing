@@ -14,6 +14,9 @@ This product contains code adapted from Exciter (https://github.com/Cloudster1/E
   web/src/test/setup.ts and web/src/test/layout.ts, the web client's and the browser suite's configuration,
   deploy/Dockerfile.web and deploy/nginx.conf, from Exciter
 - scripts/stack-ports.sh, scripts/build-stamp.sh and tests/test-ports.sh, from Rotor
-- deploy/keycloak/realm-check.mjs, from Rotor
+- deploy/keycloak/realm-check.mjs, run-tests.sh, scripts/test-summary.sh, scripts/go-test.sh,
+  tests/test-ci.sh, tests/test-build-stamp.sh, .github/workflows/ci.yml, mk/biome.mk, mk/actions.mk and
+  .claude/hooks with their tests, from Rotor
+- scripts/coverage.sh, from Exciter
 - deploy/keycloak/realm.json, the suite's realm dynamo from Dynamo
   (https://github.com/praetorianer777/Dynamo), with Bearing's client and group added
