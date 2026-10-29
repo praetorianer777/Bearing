@@ -17,6 +17,6 @@ This product contains code adapted from Exciter (https://github.com/Cloudster1/E
 - deploy/keycloak/realm-check.mjs, run-tests.sh, scripts/test-summary.sh, scripts/go-test.sh,
   tests/test-ci.sh, tests/test-build-stamp.sh, .github/workflows/ci.yml, mk/biome.mk, mk/actions.mk and
   .claude/hooks with their tests, from Rotor
-- scripts/coverage.sh, from Exciter
+- scripts/coverage.sh, backend/internal/openapi, backend/cmd/openapi and web/scripts/schema.mjs, from Exciter
 - deploy/keycloak/realm.json, the suite's realm dynamo from Dynamo
   (https://github.com/praetorianer777/Dynamo), with Bearing's client and group added
