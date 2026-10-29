@@ -11,6 +11,7 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/config"
 	"github.com/praetorianer777/bearing/backend/internal/openapi"
+	"github.com/praetorianer777/bearing/backend/internal/org"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
 )
 
@@ -27,6 +28,7 @@ func specBuilder() *openapi.Builder {
 		roles[i] = string(r)
 	}
 	b.Enums[reflect.TypeOf(auth.Role(""))] = roles
+	b.Overrides[reflect.TypeOf(org.Day{})] = &openapi.Schema{Type: "string", Format: "date", Description: "A calendar day, written 2006-01-02."}
 	// The theme file's parts have names too plain to stand alone among the API's.
 	for _, v := range []any{theme.Package{}, theme.PackagedAsset{}, theme.Spec{}, theme.Palette{}, theme.Fonts{}, theme.Font{},
 		theme.Shape{}, theme.Cursor{}, theme.Icon{}, theme.Backdrop{}} {

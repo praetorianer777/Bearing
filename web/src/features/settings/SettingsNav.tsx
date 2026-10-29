@@ -8,6 +8,7 @@ export function SettingsNav() {
       {(
         [
           ["/settings/accounts", t.accounts.title],
+          ["/settings/unit-types", t.unitTypes.title],
           ["/settings/themes", t.themes.title],
         ] as const
       ).map(([to, label]) => (

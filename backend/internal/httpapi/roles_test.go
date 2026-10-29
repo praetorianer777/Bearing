@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/praetorianer777/bearing/backend/internal/auth"
+	"github.com/praetorianer777/bearing/backend/internal/org"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
 )
 
@@ -58,6 +59,17 @@ var mayCall = map[string]auth.Role{
 	"importTheme":          auth.RoleAdministrator,
 	"setDefaultTheme":      auth.RoleAdministrator,
 	"deleteTheme":          auth.RoleAdministrator,
+	"unitTypes":            "",
+	"createUnitType":       auth.RoleAdministrator,
+	"updateUnitType":       auth.RoleAdministrator,
+	"deleteUnitType":       auth.RoleAdministrator,
+	"units":                "",
+	"unit":                 "",
+	"createUnit":           auth.RoleEditor,
+	"updateUnit":           auth.RoleEditor,
+	"moveUnit":             auth.RoleEditor,
+	"archiveUnit":          auth.RoleEditor,
+	"restoreUnit":          auth.RoleEditor,
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {
@@ -220,5 +232,60 @@ func TestThemeAddressesNeedAnID(t *testing.T) {
 	}
 	if rec := call(s, http.MethodPut, APIPrefix+"/themes/default", "ada", `{"theme":"x"}`, nil); rec.Code != http.StatusBadRequest {
 		t.Errorf("a misspelt default: %d", rec.Code)
+	}
+}
+
+func TestUnitRefusalsSayWhatToDo(t *testing.T) {
+	for err, want := range map[error]int{
+		org.Invalid{Field: "name", Message: "Give a name."}: http.StatusUnprocessableEntity,
+		org.ErrNotFound:       http.StatusNotFound,
+		org.ErrTypeNotFound:   http.StatusUnprocessableEntity,
+		org.ErrTypeNameTaken:  http.StatusConflict,
+		org.ErrTypeInUse:      http.StatusConflict,
+		org.ErrCycle:          http.StatusConflict,
+		org.ErrRootTaken:      http.StatusConflict,
+		org.ErrHasUnits:       http.StatusConflict,
+		org.ErrParentArchived: http.StatusConflict,
+	} {
+		var apiErr *APIError
+		if !errors.As(orgError(err), &apiErr) || apiErr.Status != want || apiErr.Message == "" {
+			t.Errorf("%v became %v, want status %d", err, orgError(err), want)
+		}
+	}
+	other := errors.New("boom")
+	if orgError(other) != other {
+		t.Error("an unknown error was dressed up")
+	}
+}
+
+func TestUnitRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
+	s := signedInServer()
+	editorSessions := s.Accounts.(fakeSessions)
+	editorSessions["eve"] = auth.Account{ID: uuid.New(), Name: "Eve", Role: auth.RoleEditor}
+	for _, c := range []struct {
+		method, path, cookie, body string
+		want                       int
+	}{
+		{http.MethodGet, "/units?asOf=someday", "bert", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/units/nope", "bert", "", http.StatusNotFound},
+		{http.MethodPatch, "/units/nope", "eve", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/units/nope/move", "eve", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/units/nope/archive", "eve", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/units/nope/restore", "eve", ``, http.StatusNotFound},
+		{http.MethodPatch, "/unit-types/nope", "ada", `{}`, http.StatusNotFound},
+		{http.MethodDelete, "/unit-types/nope", "ada", ``, http.StatusNotFound},
+		{http.MethodPost, "/units", "eve", `{"from":"soon"}`, http.StatusBadRequest},
+		{http.MethodPost, "/units/" + uuid.NewString() + "/move", "eve", `{"parent":"x"}`, http.StatusBadRequest},
+		{http.MethodPost, "/units/" + uuid.NewString() + "/archive", "eve", `{"on":5}`, http.StatusBadRequest},
+		{http.MethodPatch, "/units/" + uuid.NewString(), "eve", `{"nam":"x"}`, http.StatusBadRequest},
+		{http.MethodPost, "/unit-types", "ada", `{"colour":`, http.StatusBadRequest},
+		{http.MethodPatch, "/unit-types/" + uuid.NewString(), "ada", `[]`, http.StatusBadRequest},
+	} {
+		if rec := call(s, c.method, APIPrefix+c.path, c.cookie, c.body, nil); rec.Code != c.want {
+			t.Errorf("%s %s %s: %d, want %d", c.method, c.path, c.body, rec.Code, c.want)
+		}
+	}
+	if d := dayOr(nil); d != today() {
+		t.Errorf("no day is %s, want today", d)
 	}
 }

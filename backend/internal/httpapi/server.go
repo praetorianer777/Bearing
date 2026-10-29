@@ -11,6 +11,7 @@ import (
 
 	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/db"
+	"github.com/praetorianer777/bearing/backend/internal/org"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
 )
 
@@ -45,6 +46,8 @@ type Server struct {
 	RequestTimeout time.Duration
 	// Themes keeps the installation's themes.
 	Themes *theme.Service
+	// Org is the organisation model.
+	Org *org.Service
 }
 
 // Routes is the whole HTTP surface, built from the operations table.
