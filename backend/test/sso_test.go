@@ -164,14 +164,14 @@ func TestSomebodyNobodyLetInAsksToJoinAndIsLetIn(t *testing.T) {
 	}
 }
 
-func TestAGroupAdmissionLetsItsMembersInAtOnce(t *testing.T) {
+func TestAGroupGrantLetsItsMembersInAtOnce(t *testing.T) {
 	forget(t, "dave@suite.test")
 	admin := signedIn(t, adminEmail, adminPassword)
-	var before groupAdmissions
-	admin.do(http.MethodGet, "/group-admissions", nil, &before)
-	t.Cleanup(func() { admin.do(http.MethodPut, "/group-admissions", before, nil) })
-	if status := admin.do(http.MethodPut, "/group-admissions", groupAdmissions{Admissions: []admission{{"marketing", "reader"}, {"readers", "member"}}}, nil); status != http.StatusOK {
-		t.Fatalf("setting admissions answered %d", status)
+	var before groupGrants
+	admin.do(http.MethodGet, "/group-grants", nil, &before)
+	t.Cleanup(func() { admin.do(http.MethodPut, "/group-grants", before, nil) })
+	if status := admin.do(http.MethodPut, "/group-grants", groupGrants{Grants: []grant{{"marketing", "reader"}, {"readers", "member"}}}, nil); status != http.StatusOK {
+		t.Fatalf("setting grants answered %d", status)
 	}
 	b, landed := ssoSignIn(t, "dave", "dave password")
 	if landed.Path != "/people" {
@@ -201,10 +201,10 @@ func TestASwitchedOffAccountCannotSignInThroughTheProvider(t *testing.T) {
 	}
 }
 
-type admission struct {
+type grant struct {
 	Group string `json:"group"`
 	Role  string `json:"role"`
 }
-type groupAdmissions struct {
-	Admissions []admission `json:"admissions"`
+type groupGrants struct {
+	Grants []grant `json:"grants"`
 }

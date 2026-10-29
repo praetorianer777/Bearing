@@ -73,6 +73,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/accounts/{accountID}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Grant an account a role of its own. Its groups may grant it a higher one; nobody changes their own. */
+        put: operations["setAccountRole"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/me": {
         parameters: {
             query?: never;
@@ -87,7 +104,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Change your own profile. */
+        patch: operations["updateMe"];
         trace?: never;
     };
     "/auth/oidc/callback": {
@@ -192,17 +210,20 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/group-admissions": {
+    "/group-grants": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** The identity provider's groups whose members come in at once, with a role. */
-        get: operations["groupAdmissions"];
-        /** Replace the group admissions. Somebody in several admitted groups comes in with the highest role. */
-        put: operations["setGroupAdmissions"];
+        /** The identity provider's groups whose members hold a role. */
+        get: operations["groupGrants"];
+        /**
+         * Replace the group grants. Members of a granted group come in at once and hold its role while they are in it; somebody in several holds the highest.
+         * @description Groups are what the identity provider names at sign-in, so a change to somebody's groups there takes effect at their next sign-in.
+         */
+        put: operations["setGroupGrants"];
         post?: never;
         delete?: never;
         options?: never;
@@ -443,6 +464,8 @@ export interface components {
             id: string;
             name: string;
             /** @enum {string} */
+            ownRole: "administrator" | "editor" | "member" | "reader";
+            /** @enum {string} */
             role: "administrator" | "editor" | "member" | "reader";
         };
         AdmitRequest: {
@@ -459,13 +482,13 @@ export interface components {
         ErrorEnvelope: {
             error: components["schemas"]["APIError"];
         };
-        GroupAdmission: {
+        GroupGrant: {
             group: string;
             /** @enum {string} */
             role: "administrator" | "editor" | "member" | "reader";
         };
-        GroupAdmissionsBody: {
-            admissions: components["schemas"]["GroupAdmission"][];
+        GroupGrantsBody: {
+            grants: components["schemas"]["GroupGrant"][];
         };
         Info: {
             builtAt?: string;
@@ -522,6 +545,9 @@ export interface components {
         PasswordResetRequest: {
             email: string;
         };
+        ProfileRequest: {
+            name: string;
+        };
         ReadinessResponse: {
             replicas: components["schemas"]["ReplicaStatus"][];
             status: string;
@@ -530,6 +556,10 @@ export interface components {
             healthy: boolean;
             lastError?: string;
             name: string;
+        };
+        RoleRequest: {
+            /** @enum {string} */
+            role: "administrator" | "editor" | "member" | "reader";
         };
         SetUpRequest: {
             adminName: string;
@@ -710,6 +740,39 @@ export interface operations {
             };
         };
     };
+    setAccountRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     me: {
         parameters: {
             query?: never;
@@ -718,6 +781,41 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        account: components["schemas"]["AccountResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    updateMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -927,7 +1025,7 @@ export interface operations {
             };
         };
     };
-    groupAdmissions: {
+    groupGrants: {
         parameters: {
             query?: never;
             header?: never;
@@ -942,7 +1040,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GroupAdmissionsBody"];
+                    "application/json": components["schemas"]["GroupGrantsBody"];
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */
@@ -956,7 +1054,7 @@ export interface operations {
             };
         };
     };
-    setGroupAdmissions: {
+    setGroupGrants: {
         parameters: {
             query?: never;
             header?: never;
@@ -965,7 +1063,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["GroupAdmissionsBody"];
+                "application/json": components["schemas"]["GroupGrantsBody"];
             };
         };
         responses: {
@@ -975,7 +1073,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GroupAdmissionsBody"];
+                    "application/json": components["schemas"]["GroupGrantsBody"];
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */

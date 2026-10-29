@@ -4,6 +4,7 @@ import { installationQuery, meQuery } from "@/api/auth";
 import { AcceptInvitationPage, ForgotPasswordPage, ResetPasswordPage, SetUpPage, SignInPage } from "@/features/auth/pages";
 import { Home } from "@/features/home/Home";
 import { AccountsPage } from "@/features/settings/Accounts";
+import { ProfilePage } from "@/features/settings/Profile";
 import { AppShell } from "@/features/shell/AppShell";
 import { ComingSoon, NotFound } from "@/features/shell/Placeholder";
 import { t } from "@/i18n";
@@ -89,6 +90,7 @@ const accountsRoute = createRoute({
   },
   component: AccountsPage,
 });
+const profileRoute = createRoute({ getParentRoute: () => appRoute, path: "/settings/profile", component: ProfilePage });
 
 const routeTree = rootRoute.addChildren([
   setUpRoute,
@@ -96,7 +98,7 @@ const routeTree = rootRoute.addChildren([
   forgotRoute,
   resetRoute,
   invitationRoute,
-  appRoute.addChildren([homeRoute, organisationRoute, peopleRoute, processesRoute, accountsRoute]),
+  appRoute.addChildren([homeRoute, organisationRoute, peopleRoute, processesRoute, accountsRoute, profileRoute]),
 ]);
 
 export function buildRouter(queryClient: QueryClient, history?: RouterHistory) {

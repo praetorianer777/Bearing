@@ -49,6 +49,8 @@ type Operation struct {
 	RequestBody *RequestBody          `json:"requestBody,omitempty"`
 	Responses   map[string]*Response  `json:"responses"`
 	Security    []map[string][]string `json:"security,omitempty"`
+	// Role is the least role an account needs to call the operation; empty is any, or nobody for a public one.
+	Role string `json:"x-bearing-role,omitempty"`
 	// Servers puts an operation outside the document's prefix, as a probe or a well-known address is.
 	Servers []Server `json:"servers,omitempty"`
 }

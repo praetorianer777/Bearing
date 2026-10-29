@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/praetorianer777/bearing/backend/internal/httpapi"
 )
@@ -40,16 +41,28 @@ func TestTheRunningAPINamesItself(t *testing.T) {
 	}
 }
 
+// Health is a moment's view: right after the suite's writes the replica may lag past its bound for a check or two,
+// so the test waits for it rather than reading one moment.
 func TestTheRunningAPIReadsFromItsReplica(t *testing.T) {
-	var ready struct {
-		Status   string
-		Replicas []struct{ Healthy bool }
-	}
-	if status := get(t, "/readyz", &ready); status != http.StatusOK {
-		t.Fatalf("status %d", status)
-	}
-	if len(ready.Replicas) != 1 || !ready.Replicas[0].Healthy {
-		t.Errorf("replicas %+v, want one healthy", ready.Replicas)
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		var ready struct {
+			Status   string
+			Replicas []struct {
+				Healthy   bool
+				LastError string
+			}
+		}
+		if status := get(t, "/readyz", &ready); status != http.StatusOK {
+			t.Fatalf("status %d", status)
+		}
+		if len(ready.Replicas) == 1 && ready.Replicas[0].Healthy {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("replicas %+v, want one healthy", ready.Replicas)
+		}
+		time.Sleep(200 * time.Millisecond)
 	}
 }
 

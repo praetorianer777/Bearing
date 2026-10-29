@@ -13,7 +13,7 @@ import (
 
 // SignInWithIdentity signs in somebody single sign-on vouches for. An identity seen before signs in its account; a
 // verified address matching an account made ahead of time is linked to it; somebody in a group an administrator
-// admits gets an account with that group's role. Anybody else asks to join, and ErrAwaitingAdmission says so. The
+// granted a role gets an account of their own as a reader, and holds the group's role while they are in it. Anybody else asks to join, and ErrAwaitingAdmission says so. The
 // groups the provider names replace the ones it named last time. It returns the sign-in's write position, for the
 // session's first reads to respect.
 func (s *Service) SignInWithIdentity(ctx context.Context, id Identity) (Account, string, db.LSN, error) {
@@ -34,9 +34,9 @@ func (s *Service) SignInWithIdentity(ctx context.Context, id Identity) (Account,
 		err = q.QueryRow(ctx, `SELECT id FROM account a WHERE email = $1 AND NOT EXISTS (
 			SELECT 1 FROM account_identity i WHERE i.account_id = a.id AND i.issuer = $2)`, id.Email, id.Issuer).Scan(&accountID)
 		if errors.Is(err, pgx.ErrNoRows) {
-			var role Role
-			err = q.QueryRow(ctx, `SELECT role FROM group_admission WHERE group_name = ANY($1) ORDER BY role LIMIT 1`, id.Groups).Scan(&role)
-			if errors.Is(err, pgx.ErrNoRows) {
+			var granted bool
+			err = q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM group_grant WHERE group_name = ANY($1))`, id.Groups).Scan(&granted)
+			if err == nil && !granted {
 				_, err = q.Exec(ctx, `INSERT INTO join_request (issuer, subject, email, name, groups) VALUES ($1, $2, $3, $4, $5)
 					ON CONFLICT (issuer, subject) DO UPDATE SET email = $3, name = $4, groups = $5, requested_at = now()`,
 					id.Issuer, id.Subject, id.Email, id.Name, id.Groups)
@@ -47,8 +47,8 @@ func (s *Service) SignInWithIdentity(ctx context.Context, id Identity) (Account,
 			if err != nil {
 				return err
 			}
-			err = q.QueryRow(ctx, `INSERT INTO account (email, name, role) VALUES ($1, $2, $3) RETURNING id`,
-				id.Email, strings.TrimSpace(id.Name), role).Scan(&accountID)
+			err = q.QueryRow(ctx, `INSERT INTO account (email, name, role) VALUES ($1, $2, 'reader') RETURNING id`,
+				id.Email, strings.TrimSpace(id.Name)).Scan(&accountID)
 			if err := uniqueEmail(err); err != nil {
 				return err
 			}
@@ -133,16 +133,16 @@ func (s *Service) Decline(ctx context.Context, requestID uuid.UUID) (db.LSN, err
 	})
 }
 
-// GroupAdmissions lists the groups whose members come in at once, as an administrator.
-func (s *Service) GroupAdmissions(ctx context.Context) ([]GroupAdmission, error) {
-	var out []GroupAdmission
+// GroupGrants lists the groups whose members come in at once, as an administrator.
+func (s *Service) GroupGrants(ctx context.Context) ([]GroupGrant, error) {
+	var out []GroupGrant
 	err := s.DB.Read(ctx, func(ctx context.Context, q db.DBTX) error {
-		rows, err := q.Query(ctx, `SELECT group_name, role FROM group_admission ORDER BY group_name`)
+		rows, err := q.Query(ctx, `SELECT group_name, role FROM group_grant ORDER BY group_name`)
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (GroupAdmission, error) {
-			var g GroupAdmission
+		out, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (GroupGrant, error) {
+			var g GroupGrant
 			return g, r.Scan(&g.Group, &g.Role)
 		})
 		return err
@@ -150,19 +150,19 @@ func (s *Service) GroupAdmissions(ctx context.Context) ([]GroupAdmission, error)
 	return out, err
 }
 
-// SetGroupAdmissions replaces every group admission with these, as an administrator.
-func (s *Service) SetGroupAdmissions(ctx context.Context, admissions []GroupAdmission) (db.LSN, error) {
-	for _, a := range admissions {
+// SetGroupGrants replaces every group grant with these, as an administrator.
+func (s *Service) SetGroupGrants(ctx context.Context, grants []GroupGrant) (db.LSN, error) {
+	for _, a := range grants {
 		if !a.Role.Valid() {
 			return 0, ErrInvalidRole
 		}
 	}
 	return s.DB.Write(ctx, func(ctx context.Context, q db.DBTX) error {
-		if _, err := q.Exec(ctx, `DELETE FROM group_admission`); err != nil {
+		if _, err := q.Exec(ctx, `DELETE FROM group_grant`); err != nil {
 			return err
 		}
-		for _, a := range admissions {
-			if _, err := q.Exec(ctx, `INSERT INTO group_admission (group_name, role) VALUES ($1, $2)
+		for _, a := range grants {
+			if _, err := q.Exec(ctx, `INSERT INTO group_grant (group_name, role) VALUES ($1, $2)
 				ON CONFLICT (group_name) DO UPDATE SET role = excluded.role`, strings.TrimSpace(a.Group), a.Role); err != nil {
 				return err
 			}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { type GroupAdmission, ROLES, type Role, useAdmit, useDecline, useGroupAdmissions, useJoinRequests, useSetGroupAdmissions } from "@/api/auth";
+import { type GroupGrant, ROLES, type Role, useAdmit, useDecline, useGroupGrants, useJoinRequests, useSetGroupGrants } from "@/api/auth";
 import { Button, FormError, fieldError } from "@/components/ui";
 import { locale, t, useLanguage } from "@/i18n";
 
@@ -67,21 +67,21 @@ export function JoinRequests() {
   );
 }
 
-export function GroupAdmissions() {
+export function GroupGrants() {
   useLanguage();
-  const saved = useGroupAdmissions();
-  const save = useSetGroupAdmissions();
-  const [rows, setRows] = useState<GroupAdmission[]>([]);
+  const saved = useGroupGrants();
+  const save = useSetGroupGrants();
+  const [rows, setRows] = useState<GroupGrant[]>([]);
   useEffect(() => {
     if (saved.data) setRows(saved.data);
   }, [saved.data]);
-  const change = (index: number, patch: Partial<GroupAdmission>) => setRows((all) => all.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  const change = (index: number, patch: Partial<GroupGrant>) => setRows((all) => all.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   return (
-    <section aria-labelledby="admissions-heading" className="rounded-xl border border-border bg-surface p-5">
-      <h2 id="admissions-heading" className="text-lg font-semibold">
-        {t.accounts.admissions}
+    <section aria-labelledby="grants-heading" className="rounded-xl border border-border bg-surface p-5">
+      <h2 id="grants-heading" className="text-lg font-semibold">
+        {t.accounts.grants}
       </h2>
-      <p className="mt-1 text-sm text-ink-muted">{t.accounts.admissionsIntro}</p>
+      <p className="mt-1 text-sm text-ink-muted">{t.accounts.grantsIntro}</p>
       <ul className="mt-3 flex flex-col gap-2">
         {rows.map((row, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: rows have no identity until saved, and are edited in place
@@ -91,11 +91,11 @@ export function GroupAdmissions() {
                 aria-label={`${t.accounts.group} ${index + 1}`}
                 value={row.group}
                 onChange={(event) => change(index, { group: event.target.value })}
-                aria-invalid={fieldError(save.error, `admissions[${index}].group`) ? true : undefined}
+                aria-invalid={fieldError(save.error, `grants[${index}].group`) ? true : undefined}
                 className="h-9 rounded-md border border-border-strong bg-surface px-2.5 text-sm text-ink aria-invalid:border-danger"
               />
-              {fieldError(save.error, `admissions[${index}].group`) && (
-                <span className="text-xs text-danger">{fieldError(save.error, `admissions[${index}].group`)}</span>
+              {fieldError(save.error, `grants[${index}].group`) && (
+                <span className="text-xs text-danger">{fieldError(save.error, `grants[${index}].group`)}</span>
               )}
             </div>
             <RolePicker value={row.role} onChange={(role) => change(index, { role })} label={`${t.forms.role} ${index + 1}`} />
@@ -110,11 +110,11 @@ export function GroupAdmissions() {
           {t.accounts.addGroup}
         </Button>
         <Button onClick={() => save.mutate(rows)} disabled={save.isPending}>
-          {t.accounts.saveAdmissions}
+          {t.accounts.saveGrants}
         </Button>
         {save.isSuccess && (
           <span role="status" className="text-sm text-ink-muted">
-            {t.accounts.admissionsSaved}
+            {t.accounts.grantsSaved}
           </span>
         )}
       </div>

@@ -185,6 +185,9 @@ func TestAuthRefusalsSayWhatToDo(t *testing.T) {
 		auth.ErrSelf:             http.StatusConflict,
 		auth.ErrNoPasswordToMail: http.StatusConflict,
 		auth.ErrPasswordTooShort: http.StatusUnprocessableEntity,
+		auth.ErrOwnRole:          http.StatusConflict,
+		auth.ErrNotPermitted:     http.StatusForbidden,
+		auth.ErrInvalidRole:      http.StatusUnprocessableEntity,
 	} {
 		var apiErr *APIError
 		if !errors.As(authError(err), &apiErr) || apiErr.Status != want || apiErr.Message == "" {

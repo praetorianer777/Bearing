@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -344,7 +345,7 @@ func TestTheDatabaseKeepsAccountsToTheirRules(t *testing.T) {
 		}
 		return err
 	})
-	if err != nil {
+	if pgErr := (*pgconn.PgError)(nil); err != nil && (!errors.As(err, &pgErr) || pgErr.Code != "42501") {
 		t.Error(err)
 	}
 	err = cluster.Read(asMember, func(ctx context.Context, q db.DBTX) error {
