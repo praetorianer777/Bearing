@@ -256,13 +256,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A person's or a position's holdings, oldest first, those past and planned too.
-         * @description Name personId or positionId, or both; asOf, a day written 2006-01-02, keeps to the holdings on that day.
+         * A person's, a position's or a role's holdings, oldest first, those past and planned too.
+         * @description Name personId, positionId or roleId, or several; roleId keeps to the role held directly. asOf, a day written 2006-01-02, keeps to the holdings on that day.
          */
         get: operations["holdings"];
         put?: never;
         /**
-         * Have a person hold a position from a day, now or planned ahead.
+         * Have a person hold a position, or a role directly, from a day, now or planned ahead.
          * @description Left without an end, the holding runs until the position is archived or the person leaves, if either is known, or for good. A position takes as many holders at once as it has seats.
          */
         post: operations["giveHolding"];
@@ -702,6 +702,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/positions/{positionID}/deputies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace the positions standing in for a position, first first.
+         * @description Deputies are a standing order, not dated; each must be another position that exists today. One archived later drops out of the order from then.
+         */
+        put: operations["setDeputies"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/positions/{positionID}/dotted-lines": {
         parameters: {
             query?: never;
@@ -773,6 +793,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/positions/{positionID}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Have a position carry a role from a day, so whoever holds it has the role. */
+        post: operations["carryRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/positions/{positionID}/roles/{roleID}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Have a position no longer carry a role from a day. */
+        post: operations["dropRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/readyz": {
         parameters: {
             query?: never;
@@ -788,6 +842,46 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every role, by name. */
+        get: operations["roles"];
+        put?: never;
+        /** Add a role, a function that does not follow the tree. */
+        post: operations["createRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/roles/{roleID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One role, with the positions carrying it and who has it on a day.
+         * @description asOf is a day written 2006-01-02, today when left out. Holders are those holding the role directly, then those holding a position that carries it.
+         */
+        get: operations["role"];
+        put?: never;
+        post?: never;
+        /** Remove a role nobody ever held and no position ever carried; one that was stays for the history. */
+        delete: operations["deleteRole"];
+        options?: never;
+        head?: never;
+        /** Change a role's key, name or description; what is left out stays. */
+        patch: operations["updateRole"];
         trace?: never;
     };
     "/themes": {
@@ -1059,6 +1153,15 @@ export interface components {
             /** @enum {string} */
             role: "administrator" | "editor" | "member" | "reader";
         };
+        CarryRoleRequest: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            /** Format: uuid */
+            roleId: string;
+        };
         CreateAccountRequest: {
             email: string;
             name: string;
@@ -1097,6 +1200,9 @@ export interface components {
             /** Format: uuid */
             themeId: string | null;
         };
+        DeputiesRequest: {
+            deputyIds: string[];
+        };
         DottedLineRequest: {
             /**
              * Format: date
@@ -1133,7 +1239,9 @@ export interface components {
             /** Format: uuid */
             personId: string;
             /** Format: uuid */
-            positionId: string;
+            positionId?: string;
+            /** Format: uuid */
+            roleId?: string;
             share?: number;
             /**
              * Format: date
@@ -1152,7 +1260,9 @@ export interface components {
             /** Format: uuid */
             personId: string;
             /** Format: uuid */
-            positionId: string;
+            positionId: string | null;
+            /** Format: uuid */
+            roleId: string | null;
             share: number;
             /**
              * Format: date
@@ -1238,6 +1348,29 @@ export interface components {
             /** Format: uuid */
             parentId?: string;
         };
+        OrgRoleHolderResponse: {
+            /** Format: uuid */
+            holdingId: string;
+            /** Format: uuid */
+            personId: string;
+            share: number;
+            /** Format: uuid */
+            through: string | null;
+        };
+        OrgRoleRequest: {
+            description?: string;
+            key?: string;
+            name?: string;
+        };
+        OrgRoleResponse: {
+            description: string;
+            holders?: components["schemas"]["OrgRoleHolderResponse"][];
+            /** Format: uuid */
+            id: string;
+            key: string;
+            name: string;
+            positions?: string[];
+        };
         PasswordRequest: {
             password: string;
         };
@@ -1300,6 +1433,7 @@ export interface components {
              * @description A calendar day, written 2006-01-02.
              */
             archivedOn: string | null;
+            deputies: string[];
             description: string;
             dottedTo: string[];
             /**
@@ -1314,6 +1448,7 @@ export interface components {
             lines?: components["schemas"]["LineResponse"][];
             /** Format: uuid */
             reportsToId: string | null;
+            roles: string[];
             seats: number;
             title: string;
             /** Format: uuid */
@@ -2032,6 +2167,7 @@ export interface operations {
             query?: {
                 personId?: string;
                 positionId?: string;
+                roleId?: string;
                 asOf?: string;
             };
             header?: never;
@@ -3334,6 +3470,43 @@ export interface operations {
             };
         };
     };
+    setDeputies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeputiesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     addDottedLine: {
         parameters: {
             query?: never;
@@ -3479,6 +3652,81 @@ export interface operations {
             };
         };
     };
+    carryRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CarryRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    dropRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                positionID: string;
+                roleID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     readiness: {
         parameters: {
             query?: never;
@@ -3504,6 +3752,178 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    roles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        roles: components["schemas"]["OrgRoleResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrgRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        role: components["schemas"]["OrgRoleResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    role: {
+        parameters: {
+            query?: {
+                asOf?: string;
+            };
+            header?: never;
+            path: {
+                roleID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        role: components["schemas"]["OrgRoleResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    deleteRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                roleID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    updateRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                roleID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrgRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        role: components["schemas"]["OrgRoleResponse"];
+                    };
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */

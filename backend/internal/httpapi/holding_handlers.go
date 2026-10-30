@@ -10,8 +10,10 @@ import (
 )
 
 type holdingRequest struct {
-	PersonID   uuid.UUID `json:"personId"`
-	PositionID uuid.UUID `json:"positionId"`
+	PersonID uuid.UUID `json:"personId"`
+	// PositionID or RoleID names what is held, one of them.
+	PositionID *uuid.UUID `json:"positionId,omitempty"`
+	RoleID     *uuid.UUID `json:"roleId,omitempty"`
 	// Share is the part of the person's week it takes, in percent; the whole week when left out.
 	Share *int `json:"share,omitempty"`
 	// From is the day it starts, today when left out.
@@ -26,9 +28,11 @@ type shareRequest struct {
 }
 
 type holdingResponse struct {
-	ID         uuid.UUID `json:"id"`
-	PersonID   uuid.UUID `json:"personId"`
-	PositionID uuid.UUID `json:"positionId"`
+	ID       uuid.UUID `json:"id"`
+	PersonID uuid.UUID `json:"personId"`
+	// PositionID or RoleID is what is held; the other is null.
+	PositionID *uuid.UUID `json:"positionId"`
+	RoleID     *uuid.UUID `json:"roleId"`
 	// Share is the part of the person's week it takes, in percent.
 	Share int     `json:"share"`
 	From  org.Day `json:"from"`
@@ -37,7 +41,7 @@ type holdingResponse struct {
 }
 
 func toHolding(h org.Holding) holdingResponse {
-	return holdingResponse{ID: h.ID, PersonID: h.PersonID, PositionID: h.PositionID, Share: h.Share, From: h.From, To: h.To}
+	return holdingResponse{ID: h.ID, PersonID: h.PersonID, PositionID: h.PositionID, RoleID: h.RoleID, Share: h.Share, From: h.From, To: h.To}
 }
 
 // holdingError says a refusal about holdings in the API's terms.
@@ -47,8 +51,10 @@ func holdingError(err error) error {
 		return ErrNotFound()
 	case errors.Is(err, org.ErrPersonNotFound):
 		return ErrValidation(map[string]string{"personId": sentence(err.Error())})
-	case errors.Is(err, org.ErrPositionNotFound):
+	case errors.Is(err, org.ErrPositionNotFound), errors.Is(err, org.ErrHoldingWhat):
 		return ErrValidation(map[string]string{"positionId": sentence(err.Error())})
+	case errors.Is(err, org.ErrRoleNotFound):
+		return ErrValidation(map[string]string{"roleId": sentence(err.Error())})
 	}
 	for code, refusal := range map[string]error{
 		"position_not_there": org.ErrPositionNotThere, "person_not_there": org.ErrPersonNotThere,
@@ -73,7 +79,7 @@ func (s *Server) respondHolding(w http.ResponseWriter, r *http.Request, status i
 func (s *Server) handleHoldings(w http.ResponseWriter, r *http.Request) {
 	var f org.HoldingFilter
 	fields := map[string]string{}
-	for param, into := range map[string]**uuid.UUID{"personId": &f.PersonID, "positionId": &f.PositionID} {
+	for param, into := range map[string]**uuid.UUID{"personId": &f.PersonID, "positionId": &f.PositionID, "roleId": &f.RoleID} {
 		raw := r.URL.Query().Get(param)
 		if raw == "" {
 			continue
@@ -85,8 +91,8 @@ func (s *Server) handleHoldings(w http.ResponseWriter, r *http.Request) {
 		}
 		*into = &id
 	}
-	if len(fields) == 0 && f.PersonID == nil && f.PositionID == nil {
-		fields["personId"] = "Name a person or a position."
+	if len(fields) == 0 && f.PersonID == nil && f.PositionID == nil && f.RoleID == nil {
+		fields["personId"] = "Name a person, a position or a role."
 	}
 	if raw := r.URL.Query().Get("asOf"); raw != "" {
 		day, err := org.ParseDay(raw)
@@ -126,7 +132,7 @@ func (s *Server) handleGiveHolding(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, s.Log, err)
 		return
 	}
-	in := org.HoldingInput{PersonID: req.PersonID, PositionID: req.PositionID, Share: req.Share, From: dayOr(req.From), To: req.To}
+	in := org.HoldingInput{PersonID: req.PersonID, PositionID: req.PositionID, RoleID: req.RoleID, Share: req.Share, From: dayOr(req.From), To: req.To}
 	h, lsn, err := s.Org.GiveHolding(r.Context(), in)
 	noteWrite(r.Context(), lsn)
 	s.respondHolding(w, r, http.StatusCreated, h, err)

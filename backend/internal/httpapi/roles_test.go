@@ -101,6 +101,14 @@ var mayCall = map[string]auth.Role{
 	"updateHolding":        auth.RoleEditor,
 	"endHolding":           auth.RoleEditor,
 	"removeHolding":        auth.RoleEditor,
+	"roles":                "",
+	"role":                 "",
+	"createRole":           auth.RoleEditor,
+	"updateRole":           auth.RoleEditor,
+	"deleteRole":           auth.RoleEditor,
+	"carryRole":            auth.RoleEditor,
+	"dropRole":             auth.RoleEditor,
+	"setDeputies":          auth.RoleEditor,
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {
@@ -321,6 +329,46 @@ func TestHoldingRefusalsSayWhatToDo(t *testing.T) {
 	}
 }
 
+func TestRoleRefusalsSayWhatToDo(t *testing.T) {
+	for err, want := range map[error]int{
+		org.ErrRoleNotFound: http.StatusNotFound,
+		org.ErrRoleKeyTaken: http.StatusConflict,
+		org.ErrRoleInUse:    http.StatusConflict,
+		org.Invalid{Field: "key", Message: "Give a key."}: http.StatusUnprocessableEntity,
+	} {
+		var apiErr *APIError
+		if !errors.As(roleError(err), &apiErr) || apiErr.Status != want {
+			t.Errorf("%v became %v, want status %d", err, roleError(err), want)
+		}
+	}
+	for err, want := range map[error]int{
+		org.ErrRoleNotFound:     http.StatusUnprocessableEntity,
+		org.ErrRoleCarried:      http.StatusConflict,
+		org.ErrRoleNotCarried:   http.StatusConflict,
+		org.ErrDeputyNotThere:   http.StatusUnprocessableEntity,
+		org.ErrPositionNotFound: http.StatusNotFound,
+	} {
+		var apiErr *APIError
+		if !errors.As(carriedRoleError(err), &apiErr) || apiErr.Status != want {
+			t.Errorf("%v became %v, want status %d", err, carriedRoleError(err), want)
+		}
+	}
+	for _, err := range []error{org.ErrRoleNotFound, org.ErrHoldingWhat} {
+		var apiErr *APIError
+		if !errors.As(holdingError(err), &apiErr) || apiErr.Status != http.StatusUnprocessableEntity {
+			t.Errorf("%v became %v", err, holdingError(err))
+		}
+	}
+	through := uuid.New()
+	r := toRole(org.Role{Key: "approver", Positions: []uuid.UUID{through}, Holders: []org.RoleHolder{{Share: 20, Through: &through}}})
+	if r.Key != "approver" || len(r.Holders) != 1 || *r.Holders[0].Through != through || r.Holders[0].Share != 20 {
+		t.Errorf("the role reads %+v", r)
+	}
+	if p := toPosition(org.Position{}); p.Roles == nil || p.Deputies == nil {
+		t.Error("a position without roles or deputies has null lists")
+	}
+}
+
 func TestUnitRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
 	s := signedInServer()
 	editorSessions := s.Accounts.(fakeSessions)
@@ -410,6 +458,20 @@ func TestPeopleRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
 		{http.MethodGet, "/holdings?personId=x", "bert", "", http.StatusUnprocessableEntity},
 		{http.MethodGet, "/holdings?positionId=" + uuid.NewString() + "&asOf=x", "bert", "", http.StatusUnprocessableEntity},
 		{http.MethodGet, "/holdings/nope", "bert", "", http.StatusNotFound},
+		{http.MethodGet, "/holdings?roleId=x", "bert", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/roles/nope", "bert", "", http.StatusNotFound},
+		{http.MethodGet, "/roles/" + uuid.NewString() + "?asOf=x", "bert", "", http.StatusUnprocessableEntity},
+		{http.MethodPatch, "/roles/nope", "eve", `{}`, http.StatusNotFound},
+		{http.MethodDelete, "/roles/nope", "eve", ``, http.StatusNotFound},
+		{http.MethodPost, "/roles", "eve", `{"title":"x"}`, http.StatusBadRequest},
+		{http.MethodPatch, "/roles/" + uuid.NewString(), "eve", `{"key":3}`, http.StatusBadRequest},
+		{http.MethodPost, "/positions/nope/roles", "eve", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/positions/" + uuid.NewString() + "/roles", "eve", `{"role":"x"}`, http.StatusBadRequest},
+		{http.MethodPost, "/positions/nope/roles/" + uuid.NewString() + "/end", "eve", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/positions/" + uuid.NewString() + "/roles/nope/end", "eve", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/positions/" + uuid.NewString() + "/roles/" + uuid.NewString() + "/end", "eve", `{"on":1}`, http.StatusBadRequest},
+		{http.MethodPut, "/positions/nope/deputies", "eve", `{}`, http.StatusNotFound},
+		{http.MethodPut, "/positions/" + uuid.NewString() + "/deputies", "eve", `{"deputies":[]}`, http.StatusBadRequest},
 		{http.MethodPatch, "/holdings/nope", "eve", `{}`, http.StatusNotFound},
 		{http.MethodPost, "/holdings/nope/end", "eve", `{}`, http.StatusNotFound},
 		{http.MethodDelete, "/holdings/nope", "eve", ``, http.StatusNotFound},

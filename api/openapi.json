@@ -28,6 +28,9 @@
       "name": "positions"
     },
     {
+      "name": "roles"
+    },
+    {
       "name": "themes"
     },
     {
@@ -721,8 +724,8 @@
     "/holdings": {
       "get": {
         "operationId": "holdings",
-        "summary": "A person's or a position's holdings, oldest first, those past and planned too.",
-        "description": "Name personId or positionId, or both; asOf, a day written 2006-01-02, keeps to the holdings on that day.",
+        "summary": "A person's, a position's or a role's holdings, oldest first, those past and planned too.",
+        "description": "Name personId, positionId or roleId, or several; roleId keeps to the role held directly. asOf, a day written 2006-01-02, keeps to the holdings on that day.",
         "tags": [
           "holdings"
         ],
@@ -736,6 +739,13 @@
           },
           {
             "name": "positionId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleId",
             "in": "query",
             "schema": {
               "type": "string"
@@ -785,7 +795,7 @@
       },
       "post": {
         "operationId": "giveHolding",
-        "summary": "Have a person hold a position from a day, now or planned ahead.",
+        "summary": "Have a person hold a position, or a role directly, from a day, now or planned ahead.",
         "description": "Left without an end, the holding runs until the position is archived or the person leaves, if either is known, or for good. A position takes as many holders at once as it has seats.",
         "tags": [
           "holdings"
@@ -2584,6 +2594,68 @@
         "x-bearing-role": "editor"
       }
     },
+    "/positions/{positionID}/deputies": {
+      "put": {
+        "operationId": "setDeputies",
+        "summary": "Replace the positions standing in for a position, first first.",
+        "description": "Deputies are a standing order, not dated; each must be another position that exists today. One archived later drops out of the order from then.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeputiesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "$ref": "#/components/schemas/PositionResponse"
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
     "/positions/{positionID}/dotted-lines": {
       "post": {
         "operationId": "addDottedLine",
@@ -2828,6 +2900,137 @@
         "x-bearing-role": "editor"
       }
     },
+    "/positions/{positionID}/roles": {
+      "post": {
+        "operationId": "carryRole",
+        "summary": "Have a position carry a role from a day, so whoever holds it has the role.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarryRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "$ref": "#/components/schemas/PositionResponse"
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/positions/{positionID}/roles/{roleID}/end": {
+      "post": {
+        "operationId": "dropRole",
+        "summary": "Have a position no longer carry a role from a day.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "roleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "$ref": "#/components/schemas/PositionResponse"
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
     "/readyz": {
       "get": {
         "operationId": "readiness",
@@ -2873,6 +3076,253 @@
             "description": "Outside the API's prefix"
           }
         ]
+      }
+    },
+    "/roles": {
+      "get": {
+        "operationId": "roles",
+        "summary": "Every role, by name.",
+        "tags": [
+          "roles"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrgRoleResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "roles"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createRole",
+        "summary": "Add a role, a function that does not follow the tree.",
+        "tags": [
+          "roles"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "$ref": "#/components/schemas/OrgRoleResponse"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/roles/{roleID}": {
+      "delete": {
+        "operationId": "deleteRole",
+        "summary": "Remove a role nobody ever held and no position ever carried; one that was stays for the history.",
+        "tags": [
+          "roles"
+        ],
+        "parameters": [
+          {
+            "name": "roleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      },
+      "get": {
+        "operationId": "role",
+        "summary": "One role, with the positions carrying it and who has it on a day.",
+        "description": "asOf is a day written 2006-01-02, today when left out. Holders are those holding the role directly, then those holding a position that carries it.",
+        "tags": [
+          "roles"
+        ],
+        "parameters": [
+          {
+            "name": "roleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "role": {
+                      "$ref": "#/components/schemas/OrgRoleResponse"
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "role"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateRole",
+        "summary": "Change a role's key, name or description; what is left out stays.",
+        "tags": [
+          "roles"
+        ],
+        "parameters": [
+          {
+            "name": "roleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "$ref": "#/components/schemas/OrgRoleResponse"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
       }
     },
     "/themes": {
@@ -3838,6 +4288,23 @@
           "role"
         ]
       },
+      "CarryRoleRequest": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "roleId"
+        ]
+      },
       "CreateAccountRequest": {
         "type": "object",
         "properties": {
@@ -3938,6 +4405,21 @@
           "themeId"
         ]
       },
+      "DeputiesRequest": {
+        "type": "object",
+        "properties": {
+          "deputyIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "deputyIds"
+        ]
+      },
       "DottedLineRequest": {
         "type": "object",
         "properties": {
@@ -4027,6 +4509,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "share": {
             "type": "integer"
           },
@@ -4037,8 +4523,7 @@
           }
         },
         "required": [
-          "personId",
-          "positionId"
+          "personId"
         ]
       },
       "HoldingResponse": {
@@ -4058,7 +4543,17 @@
             "format": "uuid"
           },
           "positionId": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "roleId": {
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid"
           },
           "share": {
@@ -4077,6 +4572,7 @@
           "id",
           "personId",
           "positionId",
+          "roleId",
           "share",
           "to"
         ]
@@ -4322,6 +4818,86 @@
           }
         }
       },
+      "OrgRoleHolderResponse": {
+        "type": "object",
+        "properties": {
+          "holdingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "share": {
+            "type": "integer"
+          },
+          "through": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "personId",
+          "holdingId",
+          "share",
+          "through"
+        ]
+      },
+      "OrgRoleRequest": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "OrgRoleResponse": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "holders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgRoleHolderResponse"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "description"
+        ]
+      },
       "PasswordRequest": {
         "type": "object",
         "properties": {
@@ -4511,6 +5087,13 @@
             "format": "date",
             "description": "A calendar day, written 2006-01-02."
           },
+          "deputies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           "description": {
             "type": "string"
           },
@@ -4552,6 +5135,13 @@
             ],
             "format": "uuid"
           },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           "seats": {
             "type": "integer"
           },
@@ -4573,7 +5163,9 @@
           "archivedOn",
           "reportsToId",
           "dottedTo",
-          "holders"
+          "holders",
+          "roles",
+          "deputies"
         ]
       },
       "ProfileRequest": {

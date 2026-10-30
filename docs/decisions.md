@@ -109,3 +109,16 @@ holdings end that day and those planned later go; taking the leaving or the
 archiving back does not bring them back, since the seat may have been given
 to somebody else meanwhile. A share that changes from a day is the holding
 ended there and a new one.
+
+## Roles come through positions or directly; deputies are a standing order
+
+A role is a function that does not follow the tree, named by a key other
+tools can rely on. A position carries roles for a time, dated like every
+relation, so whoever holds the position has them; a person may also hold a
+role directly, as a holding of the role itself, without seats. A role's
+holders on a day are both kinds together, each saying how they have it. A
+role nobody ever held and no position ever carried may be removed; any
+other stays for the history. A position's deputies are other positions in
+the order they stand in. The order is not dated: it is a standing
+arrangement, changed as a whole, and its history belongs to the audit log.
+A deputy archived later drops out of the order from that day.
