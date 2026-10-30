@@ -283,3 +283,29 @@ func TestHoldingInputAndRefusals(t *testing.T) {
 		t.Error("other errors")
 	}
 }
+
+func TestWalksFollowLinesTheWayTheyAreAsked(t *testing.T) {
+	solidUp, dottedDown := walkQuery(up, false), walkQuery(down, true)
+	for _, want := range []string{"l.reports_to_id, l.position_id, l.kind, 1 FROM", "l.position_id = ANY ($1)", "kind = 'solid'"} {
+		if !strings.Contains(solidUp, want) {
+			t.Errorf("the walk up lacks %q", want)
+		}
+	}
+	if strings.Contains(solidUp, "path") || strings.Contains(solidUp, "l.near") {
+		t.Error("a walk over solid lines, which form a tree, keeps a path")
+	}
+	for _, want := range []string{"l.reports_to_id = ANY ($1)", "r.path || l.position_id", "l.position_id <> ALL (r.path)"} {
+		if !strings.Contains(dottedDown, want) {
+			t.Errorf("the walk down over dotted lines lacks %q", want)
+		}
+	}
+	if strings.Contains(dottedDown, "kind = 'solid'") {
+		t.Error("a walk over dotted lines keeps to solid ones")
+	}
+	if links, err := walk(t.Context(), nil, nil, DayOf(time.Now()), up, Walk{}); links != nil || err != nil {
+		t.Errorf("a walk from nowhere = %v, %v", links, err)
+	}
+	if compareBool(true, true) != 0 || compareBool(true, false) != 1 || compareBool(false, true) != -1 {
+		t.Error("compareBool")
+	}
+}

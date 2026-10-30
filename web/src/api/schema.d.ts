@@ -593,6 +593,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{personID}/chain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The management chain above a person on a day: the positions above those they hold, nearest first, with their holders.
+         * @description asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones.
+         */
+        get: operations["personChain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{personID}/leave": {
         parameters: {
             query?: never;
@@ -624,6 +644,26 @@ export interface paths {
         post?: never;
         /** Take a person's photo away. */
         delete: operations["deletePhoto"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{personID}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who reports to a person on a day: the positions below those they hold, the direct ones or with all=true every one, nearest first.
+         * @description asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones.
+         */
+        get: operations["personReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -702,6 +742,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/positions/{positionID}/chain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The positions a position reports to on a day, nearest first, each with its holders then.
+         * @description asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones.
+         */
+        get: operations["positionChain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/positions/{positionID}/deputies": {
         parameters: {
             query?: never;
@@ -750,6 +810,26 @@ export interface paths {
         put?: never;
         /** End a dotted line from a day. */
         post: operations["endDottedLine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/positions/{positionID}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The positions reporting to a position on a day, the direct ones or with all=true every one below, nearest first.
+         * @description asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones.
+         */
+        get: operations["positionReports"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1081,6 +1161,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/units/{unitID}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who holds a position in a unit on a day, and with subUnits=true, in the units inside it then; the unit's own head first.
+         * @description asOf is a day written 2006-01-02, today when left out.
+         */
+        get: operations["members"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/units/{unitID}/move": {
         parameters: {
             query?: never;
@@ -1230,6 +1330,12 @@ export interface components {
         GroupGrantsBody: {
             grants: components["schemas"]["GroupGrant"][];
         };
+        HolderResponse: {
+            name: string;
+            /** Format: uuid */
+            personId: string;
+            share: number;
+        };
         HoldingRequest: {
             /**
              * Format: date
@@ -1332,6 +1438,33 @@ export interface components {
         LinkAccountRequest: {
             /** Format: uuid */
             accountId?: string;
+        };
+        LinkResponse: {
+            depth: number;
+            /** Format: uuid */
+            from: string;
+            holders: components["schemas"]["HolderResponse"][];
+            /** @enum {string} */
+            kind: "solid" | "dotted";
+            /** Format: uuid */
+            positionId: string;
+            title: string;
+            /** Format: uuid */
+            unitId: string;
+        };
+        MemberResponse: {
+            headOfUnit: boolean;
+            /** Format: uuid */
+            holdingId: string;
+            name: string;
+            /** Format: uuid */
+            personId: string;
+            /** Format: uuid */
+            positionId: string;
+            share: number;
+            title: string;
+            /** Format: uuid */
+            unitId: string;
         };
         MetaResponse: {
             apiVersion: string;
@@ -3120,6 +3253,47 @@ export interface operations {
             };
         };
     };
+    personChain: {
+        parameters: {
+            query?: {
+                asOf?: string;
+                dotted?: string;
+            };
+            header?: never;
+            path: {
+                personID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        positions: components["schemas"]["LinkResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     leave: {
         parameters: {
             query?: never;
@@ -3236,6 +3410,48 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    personReports: {
+        parameters: {
+            query?: {
+                asOf?: string;
+                all?: string;
+                dotted?: string;
+            };
+            header?: never;
+            path: {
+                personID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        positions: components["schemas"]["LinkResponse"][];
+                    };
+                };
             };
             /** @description An error, in the one shape every endpoint uses. */
             default: {
@@ -3470,6 +3686,47 @@ export interface operations {
             };
         };
     };
+    positionChain: {
+        parameters: {
+            query?: {
+                asOf?: string;
+                dotted?: string;
+            };
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        positions: components["schemas"]["LinkResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     setDeputies: {
         parameters: {
             query?: never;
@@ -3568,6 +3825,48 @@ export interface operations {
                 content: {
                     "application/json": {
                         position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    positionReports: {
+        parameters: {
+            query?: {
+                asOf?: string;
+                all?: string;
+                dotted?: string;
+            };
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        positions: components["schemas"]["LinkResponse"][];
                     };
                 };
             };
@@ -4430,6 +4729,47 @@ export interface operations {
                 content: {
                     "application/json": {
                         unit: components["schemas"]["UnitResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    members: {
+        parameters: {
+            query?: {
+                asOf?: string;
+                subUnits?: string;
+            };
+            header?: never;
+            path: {
+                unitID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        members: components["schemas"]["MemberResponse"][];
                     };
                 };
             };

@@ -2066,6 +2066,80 @@
         "x-bearing-role": "administrator"
       }
     },
+    "/people/{personID}/chain": {
+      "get": {
+        "operationId": "personChain",
+        "summary": "The management chain above a person on a day: the positions above those they hold, nearest first, with their holders.",
+        "description": "asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones.",
+        "tags": [
+          "people"
+        ],
+        "parameters": [
+          {
+            "name": "personID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dotted",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "positions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LinkResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "positions"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/people/{personID}/leave": {
       "post": {
         "operationId": "leave",
@@ -2238,6 +2312,87 @@
           }
         },
         "x-bearing-role": "editor"
+      }
+    },
+    "/people/{personID}/reports": {
+      "get": {
+        "operationId": "personReports",
+        "summary": "Who reports to a person on a day: the positions below those they hold, the direct ones or with all=true every one, nearest first.",
+        "description": "asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones.",
+        "tags": [
+          "people"
+        ],
+        "parameters": [
+          {
+            "name": "personID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "all",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dotted",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "positions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LinkResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "positions"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/people/{personID}/return": {
@@ -2594,6 +2749,80 @@
         "x-bearing-role": "editor"
       }
     },
+    "/positions/{positionID}/chain": {
+      "get": {
+        "operationId": "positionChain",
+        "summary": "The positions a position reports to on a day, nearest first, each with its holders then.",
+        "description": "asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dotted",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "positions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LinkResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "positions"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/positions/{positionID}/deputies": {
       "put": {
         "operationId": "setDeputies",
@@ -2785,6 +3014,87 @@
           }
         },
         "x-bearing-role": "editor"
+      }
+    },
+    "/positions/{positionID}/reports": {
+      "get": {
+        "operationId": "positionReports",
+        "summary": "The positions reporting to a position on a day, the direct ones or with all=true every one below, nearest first.",
+        "description": "asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones.",
+        "tags": [
+          "positions"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "all",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dotted",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "positions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LinkResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "positions"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/positions/{positionID}/reports-to": {
@@ -4056,6 +4366,80 @@
         "x-bearing-role": "editor"
       }
     },
+    "/units/{unitID}/members": {
+      "get": {
+        "operationId": "members",
+        "summary": "Who holds a position in a unit on a day, and with subUnits=true, in the units inside it then; the unit's own head first.",
+        "description": "asOf is a day written 2006-01-02, today when left out.",
+        "tags": [
+          "units"
+        ],
+        "parameters": [
+          {
+            "name": "unitID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subUnits",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MemberResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "members"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/units/{unitID}/move": {
       "post": {
         "operationId": "moveUnit",
@@ -4493,6 +4877,26 @@
           "grants"
         ]
       },
+      "HolderResponse": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "share": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "personId",
+          "name",
+          "share"
+        ]
+      },
       "HoldingRequest": {
         "type": "object",
         "properties": {
@@ -4777,6 +5181,94 @@
             "format": "uuid"
           }
         }
+      },
+      "LinkResponse": {
+        "type": "object",
+        "properties": {
+          "depth": {
+            "type": "integer"
+          },
+          "from": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "holders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HolderResponse"
+            }
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "solid",
+              "dotted"
+            ]
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "positionId",
+          "title",
+          "unitId",
+          "from",
+          "kind",
+          "depth",
+          "holders"
+        ]
+      },
+      "MemberResponse": {
+        "type": "object",
+        "properties": {
+          "headOfUnit": {
+            "type": "boolean"
+          },
+          "holdingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "share": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "personId",
+          "name",
+          "positionId",
+          "title",
+          "unitId",
+          "headOfUnit",
+          "holdingId",
+          "share"
+        ]
       },
       "MetaResponse": {
         "type": "object",

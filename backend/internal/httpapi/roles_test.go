@@ -1,14 +1,18 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 
@@ -109,6 +113,11 @@ var mayCall = map[string]auth.Role{
 	"carryRole":            auth.RoleEditor,
 	"dropRole":             auth.RoleEditor,
 	"setDeputies":          auth.RoleEditor,
+	"members":              "",
+	"positionChain":        "",
+	"positionReports":      "",
+	"personChain":          "",
+	"personReports":        "",
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {
@@ -460,6 +469,12 @@ func TestPeopleRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
 		{http.MethodGet, "/holdings/nope", "bert", "", http.StatusNotFound},
 		{http.MethodGet, "/holdings?roleId=x", "bert", "", http.StatusUnprocessableEntity},
 		{http.MethodGet, "/roles/nope", "bert", "", http.StatusNotFound},
+		{http.MethodGet, "/units/nope/members", "bert", "", http.StatusNotFound},
+		{http.MethodGet, "/units/" + uuid.NewString() + "/members?asOf=x", "bert", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/positions/nope/chain", "bert", "", http.StatusNotFound},
+		{http.MethodGet, "/positions/" + uuid.NewString() + "/reports?asOf=x", "bert", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/people/nope/chain", "bert", "", http.StatusNotFound},
+		{http.MethodGet, "/people/" + uuid.NewString() + "/reports?asOf=x", "bert", "", http.StatusUnprocessableEntity},
 		{http.MethodGet, "/roles/" + uuid.NewString() + "?asOf=x", "bert", "", http.StatusUnprocessableEntity},
 		{http.MethodPatch, "/roles/nope", "eve", `{}`, http.StatusNotFound},
 		{http.MethodDelete, "/roles/nope", "eve", ``, http.StatusNotFound},
@@ -510,6 +525,80 @@ func TestPeopleRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
 		var apiErr *APIError
 		if !errors.As(personError(err), &apiErr) || apiErr.Status != want {
 			t.Errorf("%v became %v, want status %d", err, personError(err), want)
+		}
+	}
+}
+
+func TestWalksAnswerEveryHolder(t *testing.T) {
+	s := &Server{}
+	called := false
+	walk := func(_ context.Context, _ uuid.UUID, _ org.Day, w org.Walk) ([]org.Link, error) {
+		called = w.Dotted && w.All
+		return []org.Link{{Title: "Lead", Depth: 1, Kind: org.Solid, Holders: []org.Holder{{Name: "Lena", Share: 50}}}}, nil
+	}
+	r := httptest.NewRequest(http.MethodGet, "/positions/x/reports?all=true&dotted=true", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("positionID", uuid.NewString())
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+	s.respondWalk(w, r, "positionID", walk, positionError)
+	var got struct{ Positions []linkResponse }
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil || w.Code != http.StatusOK || !called {
+		t.Fatalf("%d %s %v", w.Code, w.Body, err)
+	}
+	if len(got.Positions) != 1 || got.Positions[0].Holders[0].Name != "Lena" || got.Positions[0].Holders[0].Share != 50 {
+		t.Errorf("the walk answered %+v", got.Positions)
+	}
+}
+
+func TestWalksRefuseWhatTheyCannotAnswer(t *testing.T) {
+	s := &Server{Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	missing := func(context.Context, uuid.UUID, org.Day, org.Walk) ([]org.Link, error) {
+		return nil, org.ErrPersonNotFound
+	}
+	for name, c := range map[string]struct {
+		id, query string
+		want      int
+	}{
+		"no id":      {"nope", "", http.StatusNotFound},
+		"a bad day":  {uuid.NewString(), "?asOf=x", http.StatusUnprocessableEntity},
+		"nobody":     {uuid.NewString(), "", http.StatusNotFound},
+		"a good day": {uuid.NewString(), "?asOf=2026-01-01", http.StatusNotFound},
+	} {
+		r := httptest.NewRequest(http.MethodGet, "/people/x/chain"+c.query, nil)
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("personID", c.id)
+		r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+		w := httptest.NewRecorder()
+		s.respondWalk(w, r, "personID", missing, personError)
+		if w.Code != c.want {
+			t.Errorf("%s answered %d, want %d", name, w.Code, c.want)
+		}
+	}
+}
+
+func TestOrgAnswersCarryTheirBodyOrTheirRefusal(t *testing.T) {
+	s := &Server{Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	for name, c := range map[string]struct {
+		respond func(w http.ResponseWriter)
+		want    int
+	}{
+		"a holding": {func(w http.ResponseWriter) { s.respondHolding(w, r, http.StatusCreated, org.Holding{Share: 50}, nil) }, http.StatusCreated},
+		"no holding": {func(w http.ResponseWriter) {
+			s.respondHolding(w, r, http.StatusOK, org.Holding{}, org.ErrHoldingNotFound)
+		}, http.StatusNotFound},
+		"a role":    {func(w http.ResponseWriter) { s.respondRole(w, r, http.StatusOK, org.Role{Key: "approver"}, nil) }, http.StatusOK},
+		"no role":   {func(w http.ResponseWriter) { s.respondRole(w, r, http.StatusOK, org.Role{}, org.ErrRoleKeyTaken) }, http.StatusConflict},
+		"a carrier": {func(w http.ResponseWriter) { s.respondCarried(w, r, http.StatusCreated, org.Position{}, nil) }, http.StatusCreated},
+		"no carrier": {func(w http.ResponseWriter) {
+			s.respondCarried(w, r, http.StatusOK, org.Position{}, org.ErrRoleCarried)
+		}, http.StatusConflict},
+	} {
+		w := httptest.NewRecorder()
+		c.respond(w)
+		if w.Code != c.want || !json.Valid(w.Body.Bytes()) {
+			t.Errorf("%s answered %d %s", name, w.Code, w.Body)
 		}
 	}
 }
