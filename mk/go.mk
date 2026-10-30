@@ -95,6 +95,14 @@ test-integration: | $(GO_CACHE) ## Run the integration suite against this checko
 	$(ROOT)/scripts/go-test.sh $(REPORTS)/integration.json $(call DOCKER_GO_STACK,) go test -race -json -tags integration -count=1 -p 1 \
 		-timeout $(INTEGRATION_TIMEOUT) -coverpkg=./... -coverprofile=../reports/go-integration.cover $(TESTFLAGS) ./test/...
 	@[ -n "$(TESTFLAGS)" ] || $(ROOT)/scripts/coverage.sh go go-integration $(REPORTS)/go-integration.cover
+	@[ -n "$(TESTFLAGS)" ] || $(MAKE) --no-print-directory test-timing
+
+# The race detector slows the code it watches many times over, so the tests that hold answers to a time run again
+# without it; under it they skip.
+.PHONY: test-timing
+test-timing: | $(GO_CACHE) ## Run the integration tests that hold answers to a time, without the race detector
+	$(ROOT)/scripts/go-test.sh $(REPORTS)/timing.json $(call DOCKER_GO_STACK,) go test -json -tags integration -count=1 -p 1 \
+		-timeout $(INTEGRATION_TIMEOUT) -run 'Within' ./test/...
 
 .PHONY: shell
 shell: | $(GO_CACHE) ## Interactive shell in the Go toolchain container, on the stack's network

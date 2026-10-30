@@ -122,3 +122,18 @@ other stays for the history. A position's deputies are other positions in
 the order they stand in. The order is not dated: it is a standing
 arrangement, changed as a whole, and its history belongs to the audit log.
 A deputy archived later drops out of the order from that day.
+
+## Hierarchy questions are answered by walks the database does in one query
+
+Who someone reports to, who reports to them and who is in a unit are
+recursive queries on the read path, each for one day. A walk over solid
+lines alone needs no guard against circles, since solid lines form a tree;
+one over dotted lines as well keeps the path it went and lists each
+position once, where it is nearest. Holders come back as a row each and the
+answer is sorted in Go: both are far cheaper for thousands of rows than
+arrays per position and sorting under the database's collation. The
+model's row-level policies ask who acts once per query, through a
+sub-select the planner runs once, not once per row. A 5000-person
+organisation answers every question within 50 ms; `make test-timing`
+holds it to that, without the race detector, which slows the code it
+watches too much for times to mean anything.
