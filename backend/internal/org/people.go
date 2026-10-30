@@ -251,12 +251,12 @@ func (s *Service) LinkAccount(ctx context.Context, id uuid.UUID, account *uuid.U
 	return out, lsn, err
 }
 
-// Leave marks a person as gone from a day, as an editor. The days before keep them.
+// Leave marks a person as gone from a day, as an editor. The days before keep them; their holdings end there.
 func (s *Service) Leave(ctx context.Context, id uuid.UUID, on Day) (Person, db.LSN, error) {
 	return s.setLeft(ctx, id, &on)
 }
 
-// Return takes back that a person left, as an editor.
+// Return takes back that a person left, as an editor. Holdings that ended with leaving stay ended.
 func (s *Service) Return(ctx context.Context, id uuid.UUID) (Person, db.LSN, error) {
 	return s.setLeft(ctx, id, nil)
 }
@@ -281,6 +281,11 @@ func (s *Service) setLeft(ctx context.Context, id uuid.UUID, on *Day) (Person, d
 		case on != nil:
 			t := on.Time()
 			to = &t
+		}
+		if on != nil {
+			if err := endHoldings(ctx, q, "person_id", id, *on); err != nil {
+				return err
+			}
 		}
 		if _, err := q.Exec(ctx, `UPDATE person SET left_on = $2 WHERE id = $1`, id, to); err != nil {
 			return err

@@ -19,6 +19,9 @@
       "name": "health"
     },
     {
+      "name": "holdings"
+    },
+    {
       "name": "people"
     },
     {
@@ -713,6 +716,326 @@
             "description": "Outside the API's prefix"
           }
         ]
+      }
+    },
+    "/holdings": {
+      "get": {
+        "operationId": "holdings",
+        "summary": "A person's or a position's holdings, oldest first, those past and planned too.",
+        "description": "Name personId or positionId, or both; asOf, a day written 2006-01-02, keeps to the holdings on that day.",
+        "tags": [
+          "holdings"
+        ],
+        "parameters": [
+          {
+            "name": "personId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "positionId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "holdings": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/HoldingResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "holdings"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "giveHolding",
+        "summary": "Have a person hold a position from a day, now or planned ahead.",
+        "description": "Left without an end, the holding runs until the position is archived or the person leaves, if either is known, or for good. A position takes as many holders at once as it has seats.",
+        "tags": [
+          "holdings"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoldingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "holding": {
+                      "$ref": "#/components/schemas/HoldingResponse"
+                    }
+                  },
+                  "required": [
+                    "holding"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/holdings/{holdingID}": {
+      "delete": {
+        "operationId": "removeHolding",
+        "summary": "Take a holding away as if it never was: one planned and called off, or entered by mistake.",
+        "tags": [
+          "holdings"
+        ],
+        "parameters": [
+          {
+            "name": "holdingID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      },
+      "get": {
+        "operationId": "holding",
+        "summary": "One holding.",
+        "tags": [
+          "holdings"
+        ],
+        "parameters": [
+          {
+            "name": "holdingID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "holding": {
+                      "$ref": "#/components/schemas/HoldingResponse"
+                    }
+                  },
+                  "required": [
+                    "holding"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateHolding",
+        "summary": "Change the share of the week a holding takes, for all of it.",
+        "description": "A share that changes from a day is the holding ended there and a new one.",
+        "tags": [
+          "holdings"
+        ],
+        "parameters": [
+          {
+            "name": "holdingID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "holding": {
+                      "$ref": "#/components/schemas/HoldingResponse"
+                    }
+                  },
+                  "required": [
+                    "holding"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/holdings/{holdingID}/end": {
+      "post": {
+        "operationId": "endHolding",
+        "summary": "End a holding from a day; the days before keep it.",
+        "tags": [
+          "holdings"
+        ],
+        "parameters": [
+          {
+            "name": "holdingID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "holding": {
+                      "$ref": "#/components/schemas/HoldingResponse"
+                    }
+                  },
+                  "required": [
+                    "holding"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
       }
     },
     "/installation": {
@@ -1736,7 +2059,7 @@
     "/people/{personID}/leave": {
       "post": {
         "operationId": "leave",
-        "summary": "Mark a person as gone from a day; the days before keep them.",
+        "summary": "Mark a person as gone from a day; the days before keep them, and their holdings end there.",
         "tags": [
           "people"
         ],
@@ -1961,8 +2284,8 @@
     "/positions": {
       "get": {
         "operationId": "positions",
-        "summary": "The positions that exist on a day, in one unit or in all, heads first, each with its lines then.",
-        "description": "asOf is a day written 2006-01-02, today when left out; unitId keeps to one unit.",
+        "summary": "The positions that exist on a day, in one unit or in all, heads first, each with its lines and holders then.",
+        "description": "asOf is a day written 2006-01-02, today when left out; unitId keeps to one unit, and vacant=true to positions nobody holds then.",
         "tags": [
           "positions"
         ],
@@ -1976,6 +2299,13 @@
           },
           {
             "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vacant",
             "in": "query",
             "schema": {
               "type": "string"
@@ -2196,7 +2526,7 @@
     "/positions/{positionID}/archive": {
       "post": {
         "operationId": "archivePosition",
-        "summary": "End a position from a day. Its lines end there; positions still reporting to it must be given another line first.",
+        "summary": "End a position from a day. Its lines and holdings end there; positions still reporting to it must be given another line first.",
         "tags": [
           "positions"
         ],
@@ -3551,6 +3881,9 @@
           "headOfUnit": {
             "type": "boolean"
           },
+          "seats": {
+            "type": "integer"
+          },
           "title": {
             "type": "string"
           },
@@ -3676,6 +4009,76 @@
         },
         "required": [
           "grants"
+        ]
+      },
+      "HoldingRequest": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "share": {
+            "type": "integer"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          }
+        },
+        "required": [
+          "personId",
+          "positionId"
+        ]
+      },
+      "HoldingResponse": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "share": {
+            "type": "integer"
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          }
+        },
+        "required": [
+          "id",
+          "personId",
+          "positionId",
+          "share",
+          "to"
         ]
       },
       "Info": {
@@ -4089,6 +4492,9 @@
           "headOfUnit": {
             "type": "boolean"
           },
+          "seats": {
+            "type": "integer"
+          },
           "title": {
             "type": "string"
           }
@@ -4123,6 +4529,12 @@
           "headOfUnit": {
             "type": "boolean"
           },
+          "holders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoldingResponse"
+            }
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -4140,6 +4552,9 @@
             ],
             "format": "uuid"
           },
+          "seats": {
+            "type": "integer"
+          },
           "title": {
             "type": "string"
           },
@@ -4154,9 +4569,11 @@
           "title",
           "description",
           "headOfUnit",
+          "seats",
           "archivedOn",
           "reportsToId",
-          "dottedTo"
+          "dottedTo",
+          "holders"
         ]
       },
       "ProfileRequest": {
@@ -4272,6 +4689,17 @@
           "adminName",
           "email",
           "password"
+        ]
+      },
+      "ShareRequest": {
+        "type": "object",
+        "properties": {
+          "share": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "share"
         ]
       },
       "SignInRequest": {

@@ -248,6 +248,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/holdings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A person's or a position's holdings, oldest first, those past and planned too.
+         * @description Name personId or positionId, or both; asOf, a day written 2006-01-02, keeps to the holdings on that day.
+         */
+        get: operations["holdings"];
+        put?: never;
+        /**
+         * Have a person hold a position from a day, now or planned ahead.
+         * @description Left without an end, the holding runs until the position is archived or the person leaves, if either is known, or for good. A position takes as many holders at once as it has seats.
+         */
+        post: operations["giveHolding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/holdings/{holdingID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One holding. */
+        get: operations["holding"];
+        put?: never;
+        post?: never;
+        /** Take a holding away as if it never was: one planned and called off, or entered by mistake. */
+        delete: operations["removeHolding"];
+        options?: never;
+        head?: never;
+        /**
+         * Change the share of the week a holding takes, for all of it.
+         * @description A share that changes from a day is the holding ended there and a new one.
+         */
+        patch: operations["updateHolding"];
+        trace?: never;
+    };
+    "/holdings/{holdingID}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End a holding from a day; the days before keep it. */
+        post: operations["endHolding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/installation": {
         parameters: {
             query?: never;
@@ -539,7 +602,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark a person as gone from a day; the days before keep them. */
+        /** Mark a person as gone from a day; the days before keep them, and their holdings end there. */
         post: operations["leave"];
         delete?: never;
         options?: never;
@@ -591,8 +654,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The positions that exist on a day, in one unit or in all, heads first, each with its lines then.
-         * @description asOf is a day written 2006-01-02, today when left out; unitId keeps to one unit.
+         * The positions that exist on a day, in one unit or in all, heads first, each with its lines and holders then.
+         * @description asOf is a day written 2006-01-02, today when left out; unitId keeps to one unit, and vacant=true to positions nobody holds then.
          */
         get: operations["positions"];
         put?: never;
@@ -631,7 +694,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** End a position from a day. Its lines end there; positions still reporting to it must be given another line first. */
+        /** End a position from a day. Its lines and holdings end there; positions still reporting to it must be given another line first. */
         post: operations["archivePosition"];
         delete?: never;
         options?: never;
@@ -1011,6 +1074,7 @@ export interface components {
              */
             from?: string;
             headOfUnit?: boolean;
+            seats?: number;
             title?: string;
             /** Format: uuid */
             unitId: string;
@@ -1059,6 +1123,42 @@ export interface components {
         };
         GroupGrantsBody: {
             grants: components["schemas"]["GroupGrant"][];
+        };
+        HoldingRequest: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            /** Format: uuid */
+            personId: string;
+            /** Format: uuid */
+            positionId: string;
+            share?: number;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            to?: string;
+        };
+        HoldingResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            personId: string;
+            /** Format: uuid */
+            positionId: string;
+            share: number;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            to: string | null;
         };
         Info: {
             builtAt?: string;
@@ -1191,6 +1291,7 @@ export interface components {
         PositionRequest: {
             description?: string;
             headOfUnit?: boolean;
+            seats?: number;
             title?: string;
         };
         PositionResponse: {
@@ -1207,11 +1308,13 @@ export interface components {
              */
             existsFrom?: string;
             headOfUnit: boolean;
+            holders: components["schemas"]["HoldingResponse"][];
             /** Format: uuid */
             id: string;
             lines?: components["schemas"]["LineResponse"][];
             /** Format: uuid */
             reportsToId: string | null;
+            seats: number;
             title: string;
             /** Format: uuid */
             unitId: string;
@@ -1249,6 +1352,9 @@ export interface components {
             email: string;
             name: string;
             password: string;
+        };
+        ShareRequest: {
+            share: number;
         };
         SignInRequest: {
             email: string;
@@ -1908,6 +2014,212 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StatusResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    holdings: {
+        parameters: {
+            query?: {
+                personId?: string;
+                positionId?: string;
+                asOf?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        holdings: components["schemas"]["HoldingResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    giveHolding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoldingRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        holding: components["schemas"]["HoldingResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    holding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                holdingID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        holding: components["schemas"]["HoldingResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    removeHolding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                holdingID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    updateHolding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                holdingID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        holding: components["schemas"]["HoldingResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    endHolding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                holdingID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        holding: components["schemas"]["HoldingResponse"];
+                    };
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */
@@ -2838,6 +3150,7 @@ export interface operations {
             query?: {
                 asOf?: string;
                 unitId?: string;
+                vacant?: string;
             };
             header?: never;
             path?: never;
