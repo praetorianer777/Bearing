@@ -12,11 +12,14 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/db"
 )
 
-// Holding is a person holding a position from a day, until a day or for good, at a share of their week.
+// Holding is a person holding a position, or a role directly, from a day, until a day or for good, at a share of
+// their week.
 type Holding struct {
-	ID         uuid.UUID
-	PersonID   uuid.UUID
-	PositionID uuid.UUID
+	ID       uuid.UUID
+	PersonID uuid.UUID
+	// PositionID or RoleID is what is held; the other is nil.
+	PositionID *uuid.UUID
+	RoleID     *uuid.UUID
 	// Share is the part of the person's week it takes, in percent.
 	Share int
 	From  Day
@@ -24,27 +27,31 @@ type Holding struct {
 	To *Day
 }
 
-// HoldingInput is what a holding is given with. A nil share is the whole week; a nil end runs until the position
-// is archived or the person leaves, if either is known, or for good.
+// HoldingInput is what a holding is given with: a position or a role. A nil share is the whole week; a nil end runs
+// until the position is archived or the person leaves, if either is known, or for good.
 type HoldingInput struct {
 	PersonID   uuid.UUID
-	PositionID uuid.UUID
+	PositionID *uuid.UUID
+	RoleID     *uuid.UUID
 	Share      *int
 	From       Day
 	To         *Day
 }
 
-// HoldingFilter narrows holdings to a person's or a position's, and to those on one day when AsOf is set.
+// HoldingFilter narrows holdings to a person's, a position's or a role's held directly, and to those on one day
+// when AsOf is set.
 type HoldingFilter struct {
 	PersonID   *uuid.UUID
 	PositionID *uuid.UUID
+	RoleID     *uuid.UUID
 	AsOf       *Day
 }
 
 var (
 	ErrHoldingNotFound   = errors.New("there is no such holding")
 	ErrPersonNotThere    = errors.New("the person has left by then")
-	ErrHoldingOverlaps   = errors.New("the person holds that position then already")
+	ErrHoldingOverlaps   = errors.New("the person holds that then already")
+	ErrHoldingWhat       = errors.New("a holding is of a position or a role, one of them")
 	ErrSeatsTaken        = errors.New("more people would hold the position then than it has seats")
 	ErrHoldingNotStarted = errors.New("the holding starts on that day or later; remove it instead")
 	ErrHoldingEnded      = errors.New("the holding has ended by then")
@@ -57,13 +64,13 @@ func checkShare(share *int) error {
 	return nil
 }
 
-const holdingColumns = `id, person_id, position_id, share, valid_from, valid_to`
+const holdingColumns = `id, person_id, position_id, role_id, share, valid_from, valid_to`
 
 func scanHolding(row pgx.CollectableRow) (Holding, error) {
 	var h Holding
 	var from time.Time
 	var to *time.Time
-	err := row.Scan(&h.ID, &h.PersonID, &h.PositionID, &h.Share, &from, &to)
+	err := row.Scan(&h.ID, &h.PersonID, &h.PositionID, &h.RoleID, &h.Share, &from, &to)
 	h.From, h.To = DayOf(from), dayPtr(to)
 	return h, err
 }
@@ -79,8 +86,9 @@ func (s *Service) Holdings(ctx context.Context, f HoldingFilter) ([]Holding, err
 	err := s.DB.Read(ctx, func(ctx context.Context, q db.DBTX) error {
 		rows, err := q.Query(ctx, `SELECT `+holdingColumns+` FROM holding
 			WHERE ($1::uuid IS NULL OR person_id = $1) AND ($2::uuid IS NULL OR position_id = $2)
+			  AND ($4::uuid IS NULL OR role_id = $4)
 			  AND ($3::date IS NULL OR valid_from <= $3 AND (valid_to IS NULL OR valid_to > $3))
-			ORDER BY valid_from, id`, f.PersonID, f.PositionID, on)
+			ORDER BY valid_from, id`, f.PersonID, f.PositionID, on, f.RoleID)
 		if err != nil {
 			return err
 		}
@@ -115,8 +123,12 @@ func holding(ctx context.Context, q db.DBTX, id uuid.UUID, lock bool, out *Holdi
 	return err
 }
 
-// GiveHolding has a person hold a position, as an editor. A holding may start later than today, planned ahead.
+// GiveHolding has a person hold a position or a role, as an editor. A holding may start later than today, planned
+// ahead.
 func (s *Service) GiveHolding(ctx context.Context, in HoldingInput) (Holding, db.LSN, error) {
+	if (in.PositionID == nil) == (in.RoleID == nil) {
+		return Holding{}, 0, ErrHoldingWhat
+	}
 	if err := checkShare(in.Share); err != nil {
 		return Holding{}, 0, err
 	}
@@ -125,15 +137,27 @@ func (s *Service) GiveHolding(ctx context.Context, in HoldingInput) (Holding, db
 	}
 	var out Holding
 	lsn, err := s.DB.Write(ctx, func(ctx context.Context, q db.DBTX) error {
-		exists, archived, err := lockPosition(ctx, q, in.PositionID)
-		if err != nil {
-			return err
-		}
-		if !livesOn(exists, archived, in.From) || archived != nil && in.To != nil && archived.Before(*in.To) {
-			return ErrPositionNotThere
+		var archived *Day
+		if in.PositionID != nil {
+			exists, end, err := lockPosition(ctx, q, *in.PositionID)
+			if err != nil {
+				return err
+			}
+			if !livesOn(exists, end, in.From) || end != nil && in.To != nil && end.Before(*in.To) {
+				return ErrPositionNotThere
+			}
+			archived = end
+		} else {
+			err := q.QueryRow(ctx, `SELECT id FROM role WHERE id = $1 FOR SHARE`, *in.RoleID).Scan(new(uuid.UUID))
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrRoleNotFound
+			}
+			if err != nil {
+				return err
+			}
 		}
 		var left *time.Time
-		err = q.QueryRow(ctx, `SELECT left_on FROM person WHERE id = $1 FOR SHARE`, in.PersonID).Scan(&left)
+		err := q.QueryRow(ctx, `SELECT left_on FROM person WHERE id = $1 FOR SHARE`, in.PersonID).Scan(&left)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrPersonNotFound
 		}
@@ -156,9 +180,9 @@ func (s *Service) GiveHolding(ctx context.Context, in HoldingInput) (Holding, db
 			until = &t
 		}
 		var id uuid.UUID
-		if err := q.QueryRow(ctx, `INSERT INTO holding (person_id, position_id, share, valid_from, valid_to)
-			VALUES ($1, $2, coalesce($3, 100), $4, $5) RETURNING id`,
-			in.PersonID, in.PositionID, in.Share, in.From.Time(), until).Scan(&id); err != nil {
+		if err := q.QueryRow(ctx, `INSERT INTO holding (person_id, position_id, role_id, share, valid_from, valid_to)
+			VALUES ($1, $2, $3, coalesce($4, 100), $5, $6) RETURNING id`,
+			in.PersonID, in.PositionID, in.RoleID, in.Share, in.From.Time(), until).Scan(&id); err != nil {
 			return holdingError(err)
 		}
 		return holding(ctx, q, id, false, &out)
@@ -239,7 +263,7 @@ func holdingError(err error) error {
 		return err
 	}
 	switch pgErr.ConstraintName {
-	case "holding_once":
+	case "holding_once", "holding_role_once":
 		return ErrHoldingOverlaps
 	case "holding_within_seats":
 		return ErrSeatsTaken

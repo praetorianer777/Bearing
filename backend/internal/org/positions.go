@@ -38,6 +38,10 @@ type Position struct {
 	DottedTo []uuid.UUID
 	// Holders are the holdings of it on that day; none means it is vacant then.
 	Holders []Holding
+	// Roles are the roles it carries on that day.
+	Roles []uuid.UUID
+	// Deputies are the positions standing in for it, first first, those that exist on that day.
+	Deputies []uuid.UUID
 	// Lines are every line it has had and will have, oldest first; filled when one position is asked for.
 	Lines []Line
 }
@@ -96,13 +100,17 @@ const positionColumns = `p.id, p.unit_id, p.title, p.description, p.head_of_unit
 	(SELECT l.reports_to_id FROM reporting_line l WHERE l.position_id = p.id AND l.kind = 'solid'
 		AND l.valid_from <= $1 AND (l.valid_to IS NULL OR l.valid_to > $1)),
 	coalesce((SELECT array_agg(l.reports_to_id ORDER BY l.reports_to_id) FROM reporting_line l WHERE l.position_id = p.id
-		AND l.kind = 'dotted' AND l.valid_from <= $1 AND (l.valid_to IS NULL OR l.valid_to > $1)), '{}')`
+		AND l.kind = 'dotted' AND l.valid_from <= $1 AND (l.valid_to IS NULL OR l.valid_to > $1)), '{}'),
+	coalesce((SELECT array_agg(r.role_id ORDER BY r.role_id) FROM position_role r WHERE r.position_id = p.id
+		AND r.valid_from <= $1 AND (r.valid_to IS NULL OR r.valid_to > $1)), '{}'),
+	coalesce((SELECT array_agg(d.deputy_id ORDER BY d.rank) FROM deputy d JOIN position x ON x.id = d.deputy_id
+		WHERE d.position_id = p.id AND x.exists_from <= $1 AND (x.archived_on IS NULL OR x.archived_on > $1)), '{}')`
 
 func scanPosition(row pgx.CollectableRow) (Position, error) {
 	var p Position
 	var from time.Time
 	var archived *time.Time
-	err := row.Scan(&p.ID, &p.UnitID, &p.Title, &p.Description, &p.HeadOfUnit, &p.Seats, &from, &archived, &p.ReportsTo, &p.DottedTo)
+	err := row.Scan(&p.ID, &p.UnitID, &p.Title, &p.Description, &p.HeadOfUnit, &p.Seats, &from, &archived, &p.ReportsTo, &p.DottedTo, &p.Roles, &p.Deputies)
 	p.ExistsFrom, p.ArchivedOn = DayOf(from), dayPtr(archived)
 	return p, err
 }
@@ -142,7 +150,7 @@ func fillHolders(ctx context.Context, q db.DBTX, asOf Day, positions []Position)
 	}
 	holdings, err := pgx.CollectRows(rows, scanHolding)
 	for _, h := range holdings {
-		p := &positions[at[h.PositionID]]
+		p := &positions[at[*h.PositionID]]
 		p.Holders = append(p.Holders, h)
 	}
 	return err
@@ -413,7 +421,7 @@ func (s *Service) EndDottedLine(ctx context.Context, id, target uuid.UUID, on Da
 	return out, lsn, err
 }
 
-// ArchivePosition ends a position from a day, as an editor. Its own lines and its holdings end there; positions still
+// ArchivePosition ends a position from a day, as an editor. Its own lines, its holdings and its roles end there; positions still
 // reporting to it then must be given another line first.
 func (s *Service) ArchivePosition(ctx context.Context, id uuid.UUID, on Day) (Position, db.LSN, error) {
 	var out Position
@@ -438,6 +446,14 @@ func (s *Service) ArchivePosition(ctx context.Context, id uuid.UUID, on Day) (Po
 		}
 		if err := endHoldings(ctx, q, "position_id", id, on); err != nil {
 			return err
+		}
+		for _, stmt := range []string{
+			`DELETE FROM position_role WHERE position_id = $1 AND valid_from >= $2`,
+			`UPDATE position_role SET valid_to = $2 WHERE position_id = $1 AND (valid_to IS NULL OR valid_to > $2)`,
+		} {
+			if _, err := q.Exec(ctx, stmt, id, on.Time()); err != nil {
+				return err
+			}
 		}
 		for _, stmt := range []string{
 			`DELETE FROM reporting_line WHERE position_id = $1 AND valid_from >= $2`,

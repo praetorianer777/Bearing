@@ -216,15 +216,53 @@ func TestPeopleInputKindsAndPhotos(t *testing.T) {
 func TestHoldingInputAndRefusals(t *testing.T) {
 	s := &Service{}
 	d := DayOf(time.Now())
+	pos := ptr(uuid.New())
 	for name, in := range map[string]HoldingInput{
-		"no share":        {Share: ptr(0), From: d},
-		"too much":        {Share: ptr(101), From: d},
-		"ends as it does": {From: d, To: &d},
+		"no share":        {PositionID: pos, Share: ptr(0), From: d},
+		"too much":        {PositionID: pos, Share: ptr(101), From: d},
+		"ends as it does": {PositionID: pos, From: d, To: &d},
 	} {
 		var invalid Invalid
 		if _, _, err := s.GiveHolding(t.Context(), in); !errors.As(err, &invalid) {
 			t.Errorf("%s: %v", name, err)
 		}
+	}
+	for _, in := range []HoldingInput{{From: d}, {PositionID: pos, RoleID: ptr(uuid.New()), From: d}} {
+		if _, _, err := s.GiveHolding(t.Context(), in); !errors.Is(err, ErrHoldingWhat) {
+			t.Errorf("a holding of %v and %v = %v", in.PositionID, in.RoleID, err)
+		}
+	}
+	for name, in := range map[string]RoleInput{
+		"no key":        {Name: ptr("Approver")},
+		"no name":       {Key: ptr("approver")},
+		"a bad key":     {Key: ptr("Approver!"), Name: ptr("Approver")},
+		"long text":     {Key: ptr("approver"), Name: ptr("Approver"), Description: ptr(strings.Repeat("x", 4001))},
+		"an empty name": {Key: ptr("approver"), Name: ptr(" ")},
+	} {
+		var invalid Invalid
+		if _, _, err := s.CreateRole(t.Context(), in); !errors.As(err, &invalid) {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	if _, _, err := s.UpdateRole(t.Context(), uuid.New(), RoleInput{Key: ptr("-x")}, d); err == nil {
+		t.Error("a key starting with a dash was taken")
+	}
+	id := uuid.New()
+	another := uuid.New()
+	for name, deputies := range map[string][]uuid.UUID{"itself": {another, id}, "twice": {another, another}} {
+		if _, _, err := s.SetDeputies(t.Context(), id, deputies); !errors.Is(err, ErrDeputyNotThere) {
+			t.Errorf("deputies %s = %v", name, err)
+		}
+	}
+	for constraint, want := range map[string]error{
+		"role_key_key": ErrRoleKeyTaken, "position_role_once": ErrRoleCarried, "position_role_role_id_fkey": ErrRoleNotFound,
+	} {
+		if got := roleError(&pgconn.PgError{ConstraintName: constraint}); !errors.Is(got, want) {
+			t.Errorf("%s became %v", constraint, got)
+		}
+	}
+	if boom := errors.New("boom"); roleError(boom) != boom || roleError(&pgconn.PgError{ConstraintName: "x"}) == nil {
+		t.Error("other role errors")
 	}
 	if _, _, err := s.SetShare(t.Context(), uuid.New(), 150); err == nil {
 		t.Error("a share above the week was taken")
@@ -232,7 +270,7 @@ func TestHoldingInputAndRefusals(t *testing.T) {
 	if _, _, err := s.CreatePosition(t.Context(), uuid.New(), PositionInput{Title: ptr("Pool"), Seats: ptr(0)}, d); err == nil {
 		t.Error("a position without seats was taken")
 	}
-	for constraint, want := range map[string]error{"holding_once": ErrHoldingOverlaps, "holding_within_seats": ErrSeatsTaken} {
+	for constraint, want := range map[string]error{"holding_once": ErrHoldingOverlaps, "holding_role_once": ErrHoldingOverlaps, "holding_within_seats": ErrSeatsTaken} {
 		if got := holdingError(&pgconn.PgError{ConstraintName: constraint}); !errors.Is(got, want) {
 			t.Errorf("%s became %v", constraint, got)
 		}

@@ -13,6 +13,7 @@ type holdingJSON struct {
 	ID         string
 	PersonID   string
 	PositionID string
+	RoleID     *string
 	Share      int
 	From       string
 	To         *string

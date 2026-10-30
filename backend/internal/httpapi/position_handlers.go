@@ -65,6 +65,10 @@ type positionResponse struct {
 	DottedTo []uuid.UUID `json:"dottedTo"`
 	// Holders are the holdings of it on that day; none means it is vacant then.
 	Holders []holdingResponse `json:"holders"`
+	// Roles are the roles it carries on that day.
+	Roles []uuid.UUID `json:"roles"`
+	// Deputies are the positions standing in for it, first first, those that exist on that day.
+	Deputies []uuid.UUID `json:"deputies"`
 	// Lines are every line it has had and will have, oldest first; only when one position is asked for.
 	Lines []lineResponse `json:"lines,omitempty"`
 }
@@ -72,10 +76,8 @@ type positionResponse struct {
 func toPosition(p org.Position) positionResponse {
 	out := positionResponse{ID: p.ID, UnitID: p.UnitID, Title: p.Title, Description: p.Description, HeadOfUnit: p.HeadOfUnit,
 		Seats: p.Seats, ExistsFrom: p.ExistsFrom, ArchivedOn: p.ArchivedOn, ReportsToID: p.ReportsTo, DottedTo: p.DottedTo,
-		Holders: make([]holdingResponse, len(p.Holders))}
-	if out.DottedTo == nil {
-		out.DottedTo = []uuid.UUID{}
-	}
+		Holders: make([]holdingResponse, len(p.Holders)), Roles: orEmpty(p.Roles), Deputies: orEmpty(p.Deputies)}
+	out.DottedTo = orEmpty(out.DottedTo)
 	for i, h := range p.Holders {
 		out.Holders[i] = toHolding(h)
 	}
@@ -83,6 +85,14 @@ func toPosition(p org.Position) positionResponse {
 		out.Lines = append(out.Lines, lineResponse{ReportsToID: l.ReportsTo, Kind: l.Kind, From: l.From, To: l.To})
 	}
 	return out
+}
+
+// orEmpty answers an empty list, not null, for none.
+func orEmpty(ids []uuid.UUID) []uuid.UUID {
+	if ids == nil {
+		return []uuid.UUID{}
+	}
+	return ids
 }
 
 // positionError says a refusal about positions in the API's terms.
