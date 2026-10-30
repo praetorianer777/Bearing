@@ -13,6 +13,8 @@ type positionRequest struct {
 	Title       *string `json:"title,omitempty"`
 	Description *string `json:"description,omitempty"`
 	HeadOfUnit  *bool   `json:"headOfUnit,omitempty"`
+	// Seats is how many people may hold it at once.
+	Seats *int `json:"seats,omitempty"`
 }
 
 type createPositionRequest struct {
@@ -20,6 +22,8 @@ type createPositionRequest struct {
 	Title       *string   `json:"title,omitempty"`
 	Description *string   `json:"description,omitempty"`
 	HeadOfUnit  *bool     `json:"headOfUnit,omitempty"`
+	// Seats is how many people may hold it at once, one when left out.
+	Seats *int `json:"seats,omitempty"`
 	// From is the day it starts to exist, today when left out.
 	From *org.Day `json:"from,omitempty"`
 }
@@ -51,21 +55,29 @@ type positionResponse struct {
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
 	HeadOfUnit  bool      `json:"headOfUnit"`
-	ExistsFrom  org.Day   `json:"existsFrom"`
-	ArchivedOn  *org.Day  `json:"archivedOn"`
+	// Seats is how many people may hold it at once.
+	Seats      int      `json:"seats"`
+	ExistsFrom org.Day  `json:"existsFrom"`
+	ArchivedOn *org.Day `json:"archivedOn"`
 	// ReportsToID is the position it reports to by a solid line on the day asked about.
 	ReportsToID *uuid.UUID `json:"reportsToId"`
 	// DottedTo are the positions it reports to by dotted lines on that day.
 	DottedTo []uuid.UUID `json:"dottedTo"`
+	// Holders are the holdings of it on that day; none means it is vacant then.
+	Holders []holdingResponse `json:"holders"`
 	// Lines are every line it has had and will have, oldest first; only when one position is asked for.
 	Lines []lineResponse `json:"lines,omitempty"`
 }
 
 func toPosition(p org.Position) positionResponse {
 	out := positionResponse{ID: p.ID, UnitID: p.UnitID, Title: p.Title, Description: p.Description, HeadOfUnit: p.HeadOfUnit,
-		ExistsFrom: p.ExistsFrom, ArchivedOn: p.ArchivedOn, ReportsToID: p.ReportsTo, DottedTo: p.DottedTo}
+		Seats: p.Seats, ExistsFrom: p.ExistsFrom, ArchivedOn: p.ArchivedOn, ReportsToID: p.ReportsTo, DottedTo: p.DottedTo,
+		Holders: make([]holdingResponse, len(p.Holders))}
 	if out.DottedTo == nil {
 		out.DottedTo = []uuid.UUID{}
+	}
+	for i, h := range p.Holders {
+		out.Holders[i] = toHolding(h)
 	}
 	for _, l := range p.Lines {
 		out.Lines = append(out.Lines, lineResponse{ReportsToID: l.ReportsTo, Kind: l.Kind, From: l.From, To: l.To})
@@ -86,7 +98,7 @@ func positionError(err error) error {
 		"unit_gone": org.ErrUnitGone, "not_there": org.ErrPositionNotThere, "archived": org.ErrPositionArchived,
 		"not_archived": org.ErrPositionNotArchived, "target_not_there": org.ErrTargetNotThere, "cycle": org.ErrReportsToItself,
 		"line_exists": org.ErrLineExists, "line_not_found": org.ErrLineNotFound, "has_reports": org.ErrHasReports,
-		"head_taken": org.ErrHeadTaken,
+		"head_taken": org.ErrHeadTaken, "too_few_seats": org.ErrTooFewSeats,
 	} {
 		if errors.Is(err, refusal) {
 			return ErrConflict(code, sentence(err.Error()))
@@ -117,7 +129,7 @@ func (s *Server) handlePositions(w http.ResponseWriter, r *http.Request) {
 		}
 		unit = &id
 	}
-	positions, err := s.Org.Positions(r.Context(), day, unit)
+	positions, err := s.Org.Positions(r.Context(), day, unit, r.URL.Query().Get("vacant") == "true")
 	if err != nil {
 		respondError(w, r, s.Log, err)
 		return
@@ -152,7 +164,7 @@ func (s *Server) handleCreatePosition(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, s.Log, err)
 		return
 	}
-	in := org.PositionInput{Title: req.Title, Description: req.Description, HeadOfUnit: req.HeadOfUnit}
+	in := org.PositionInput{Title: req.Title, Description: req.Description, HeadOfUnit: req.HeadOfUnit, Seats: req.Seats}
 	p, lsn, err := s.Org.CreatePosition(r.Context(), req.UnitID, in, dayOr(req.From))
 	noteWrite(r.Context(), lsn)
 	s.respondPosition(w, r, http.StatusCreated, p, err)

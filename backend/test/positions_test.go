@@ -12,6 +12,8 @@ type positionJSON struct {
 	ID          string
 	Title       string
 	HeadOfUnit  bool
+	Seats       int
+	Holders     []holdingJSON
 	ReportsToID *string
 	DottedTo    []string
 	ArchivedOn  *string

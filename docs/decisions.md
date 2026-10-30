@@ -95,3 +95,17 @@ entry with the account's address, which then takes on the realm's issuer and
 link never keeps anybody out; the next sign-in tries again. Somebody signed
 in keeps the fields of their own entry that administrators allow, by default
 phone, location and photo. The database enforces this as well.
+
+## Holdings end with the person and the position
+
+A holding is a person holding a position from a day, until a day or for
+good, at a share of their week. A position has seats, one unless it says
+otherwise; the database refuses more holders on any day than there are
+seats, under a lock, so two holdings given at once cannot together take a
+seat too many. A position nobody holds on a day is vacant then. Shares are
+not capped across a person's holdings: an overbooked week is something to
+show, not to refuse. When a person leaves or a position is archived, its
+holdings end that day and those planned later go; taking the leaving or the
+archiving back does not bring them back, since the seat may have been given
+to somebody else meanwhile. A share that changes from a day is the holding
+ended there and a new one.

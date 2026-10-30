@@ -212,3 +212,36 @@ func TestPeopleInputKindsAndPhotos(t *testing.T) {
 		t.Error("other refusals")
 	}
 }
+
+func TestHoldingInputAndRefusals(t *testing.T) {
+	s := &Service{}
+	d := DayOf(time.Now())
+	for name, in := range map[string]HoldingInput{
+		"no share":        {Share: ptr(0), From: d},
+		"too much":        {Share: ptr(101), From: d},
+		"ends as it does": {From: d, To: &d},
+	} {
+		var invalid Invalid
+		if _, _, err := s.GiveHolding(t.Context(), in); !errors.As(err, &invalid) {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	if _, _, err := s.SetShare(t.Context(), uuid.New(), 150); err == nil {
+		t.Error("a share above the week was taken")
+	}
+	if _, _, err := s.CreatePosition(t.Context(), uuid.New(), PositionInput{Title: ptr("Pool"), Seats: ptr(0)}, d); err == nil {
+		t.Error("a position without seats was taken")
+	}
+	for constraint, want := range map[string]error{"holding_once": ErrHoldingOverlaps, "holding_within_seats": ErrSeatsTaken} {
+		if got := holdingError(&pgconn.PgError{ConstraintName: constraint}); !errors.Is(got, want) {
+			t.Errorf("%s became %v", constraint, got)
+		}
+	}
+	if got := positionError(&pgconn.PgError{ConstraintName: "holding_within_seats"}); !errors.Is(got, ErrTooFewSeats) {
+		t.Errorf("fewer seats than holders became %v", got)
+	}
+	other := errors.New("boom")
+	if holdingError(other) != other || holdingError(&pgconn.PgError{ConstraintName: "x"}) == nil {
+		t.Error("other errors")
+	}
+}

@@ -28,12 +28,16 @@ type Position struct {
 	Title       string
 	Description string
 	HeadOfUnit  bool
-	ExistsFrom  Day
-	ArchivedOn  *Day
+	// Seats is how many people may hold it at once.
+	Seats      int
+	ExistsFrom Day
+	ArchivedOn *Day
 	// ReportsTo is the position it reports to by a solid line on the day asked about.
 	ReportsTo *uuid.UUID
 	// DottedTo are the positions it reports to by dotted lines on that day.
 	DottedTo []uuid.UUID
+	// Holders are the holdings of it on that day; none means it is vacant then.
+	Holders []Holding
 	// Lines are every line it has had and will have, oldest first; filled when one position is asked for.
 	Lines []Line
 }
@@ -52,6 +56,7 @@ type PositionInput struct {
 	Title       *string
 	Description *string
 	HeadOfUnit  *bool
+	Seats       *int
 }
 
 var (
@@ -68,6 +73,7 @@ var (
 	ErrHasReports          = errors.New("positions still report to it on that day or after; give them another line first")
 	ErrHeadTaken           = errors.New("the unit has a head already")
 	ErrHasPositions        = errors.New("positions in it still exist on that day or after; archive them first")
+	ErrTooFewSeats         = errors.New("more people hold the position from today on than it would have seats")
 )
 
 func (in *PositionInput) check(creating bool) error {
@@ -80,10 +86,13 @@ func (in *PositionInput) check(creating bool) error {
 	if in.Description != nil && utf8.RuneCountInString(*in.Description) > 4000 {
 		return Invalid{"description", "Keep it to 4000 characters."}
 	}
+	if in.Seats != nil && (*in.Seats < 1 || *in.Seats > 1000) {
+		return Invalid{"seats", "Give from 1 to 1000 seats."}
+	}
 	return nil
 }
 
-const positionColumns = `p.id, p.unit_id, p.title, p.description, p.head_of_unit, p.exists_from, p.archived_on,
+const positionColumns = `p.id, p.unit_id, p.title, p.description, p.head_of_unit, p.seats, p.exists_from, p.archived_on,
 	(SELECT l.reports_to_id FROM reporting_line l WHERE l.position_id = p.id AND l.kind = 'solid'
 		AND l.valid_from <= $1 AND (l.valid_to IS NULL OR l.valid_to > $1)),
 	coalesce((SELECT array_agg(l.reports_to_id ORDER BY l.reports_to_id) FROM reporting_line l WHERE l.position_id = p.id
@@ -93,25 +102,50 @@ func scanPosition(row pgx.CollectableRow) (Position, error) {
 	var p Position
 	var from time.Time
 	var archived *time.Time
-	err := row.Scan(&p.ID, &p.UnitID, &p.Title, &p.Description, &p.HeadOfUnit, &from, &archived, &p.ReportsTo, &p.DottedTo)
+	err := row.Scan(&p.ID, &p.UnitID, &p.Title, &p.Description, &p.HeadOfUnit, &p.Seats, &from, &archived, &p.ReportsTo, &p.DottedTo)
 	p.ExistsFrom, p.ArchivedOn = DayOf(from), dayPtr(archived)
 	return p, err
 }
 
-// Positions lists the positions that exist on a day, in one unit or in all, heads first.
-func (s *Service) Positions(ctx context.Context, asOf Day, unitID *uuid.UUID) ([]Position, error) {
+// Positions lists the positions that exist on a day, in one unit or in all, heads first; vacant keeps to those
+// nobody holds then.
+func (s *Service) Positions(ctx context.Context, asOf Day, unitID *uuid.UUID, vacant bool) ([]Position, error) {
 	var out []Position
 	err := s.DB.Read(ctx, func(ctx context.Context, q db.DBTX) error {
 		rows, err := q.Query(ctx, `SELECT `+positionColumns+` FROM position p
 			WHERE p.exists_from <= $1 AND (p.archived_on IS NULL OR p.archived_on > $1) AND ($2::uuid IS NULL OR p.unit_id = $2)
-			ORDER BY p.head_of_unit DESC, lower(p.title), p.id`, asOf.Time(), unitID)
+			  AND (NOT $3 OR NOT EXISTS (SELECT 1 FROM holding h WHERE h.position_id = p.id
+			      AND h.valid_from <= $1 AND (h.valid_to IS NULL OR h.valid_to > $1)))
+			ORDER BY p.head_of_unit DESC, lower(p.title), p.id`, asOf.Time(), unitID, vacant)
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectRows(rows, scanPosition)
-		return err
+		if out, err = pgx.CollectRows(rows, scanPosition); err != nil {
+			return err
+		}
+		return fillHolders(ctx, q, asOf, out)
 	})
 	return out, err
+}
+
+// fillHolders reads who holds the positions on a day.
+func fillHolders(ctx context.Context, q db.DBTX, asOf Day, positions []Position) error {
+	ids := make([]uuid.UUID, len(positions))
+	at := make(map[uuid.UUID]int, len(positions))
+	for i, p := range positions {
+		ids[i], at[p.ID] = p.ID, i
+	}
+	rows, err := q.Query(ctx, `SELECT `+holdingColumns+` FROM holding WHERE position_id = ANY ($1)
+		AND valid_from <= $2 AND (valid_to IS NULL OR valid_to > $2) ORDER BY valid_from, id`, ids, asOf.Time())
+	if err != nil {
+		return err
+	}
+	holdings, err := pgx.CollectRows(rows, scanHolding)
+	for _, h := range holdings {
+		p := &positions[at[h.PositionID]]
+		p.Holders = append(p.Holders, h)
+	}
+	return err
 }
 
 // Position is one position as it stands on a day, with every line it has had and will have.
@@ -135,6 +169,11 @@ func (s *Service) position(ctx context.Context, q db.DBTX, id uuid.UUID, asOf Da
 	if err != nil {
 		return err
 	}
+	holders := []Position{*out}
+	if err := fillHolders(ctx, q, asOf, holders); err != nil {
+		return err
+	}
+	*out = holders[0]
 	rows, err = q.Query(ctx, `SELECT reports_to_id, kind, valid_from, valid_to FROM reporting_line
 		WHERE position_id = $1 ORDER BY valid_from, kind, reports_to_id`, id)
 	if err != nil {
@@ -174,9 +213,9 @@ func (s *Service) CreatePosition(ctx context.Context, unitID uuid.UUID, in Posit
 			return err
 		}
 		var id uuid.UUID
-		err := q.QueryRow(ctx, `INSERT INTO position (unit_id, title, description, head_of_unit, exists_from)
-			VALUES ($1, $2, coalesce($3, ''), coalesce($4, false), $5) RETURNING id`,
-			unitID, in.Title, in.Description, in.HeadOfUnit, from.Time()).Scan(&id)
+		err := q.QueryRow(ctx, `INSERT INTO position (unit_id, title, description, head_of_unit, seats, exists_from)
+			VALUES ($1, $2, coalesce($3, ''), coalesce($4, false), coalesce($5, 1), $6) RETURNING id`,
+			unitID, in.Title, in.Description, in.HeadOfUnit, in.Seats, from.Time()).Scan(&id)
 		if err != nil {
 			return positionError(err)
 		}
@@ -193,7 +232,8 @@ func (s *Service) UpdatePosition(ctx context.Context, id uuid.UUID, in PositionI
 	var out Position
 	lsn, err := s.DB.Write(ctx, func(ctx context.Context, q db.DBTX) error {
 		tag, err := q.Exec(ctx, `UPDATE position SET title = coalesce($2, title), description = coalesce($3, description),
-			head_of_unit = coalesce($4, head_of_unit) WHERE id = $1`, id, in.Title, in.Description, in.HeadOfUnit)
+			head_of_unit = coalesce($4, head_of_unit), seats = coalesce($5, seats) WHERE id = $1`,
+			id, in.Title, in.Description, in.HeadOfUnit, in.Seats)
 		if err != nil {
 			return positionError(err)
 		}
@@ -373,8 +413,8 @@ func (s *Service) EndDottedLine(ctx context.Context, id, target uuid.UUID, on Da
 	return out, lsn, err
 }
 
-// ArchivePosition ends a position from a day, as an editor. Its own lines end there; positions still reporting to it
-// then must be given another line first.
+// ArchivePosition ends a position from a day, as an editor. Its own lines and its holdings end there; positions still
+// reporting to it then must be given another line first.
 func (s *Service) ArchivePosition(ctx context.Context, id uuid.UUID, on Day) (Position, db.LSN, error) {
 	var out Position
 	lsn, err := s.DB.Write(ctx, func(ctx context.Context, q db.DBTX) error {
@@ -395,6 +435,9 @@ func (s *Service) ArchivePosition(ctx context.Context, id uuid.UUID, on Day) (Po
 		}
 		if reported {
 			return ErrHasReports
+		}
+		if err := endHoldings(ctx, q, "position_id", id, on); err != nil {
+			return err
 		}
 		for _, stmt := range []string{
 			`DELETE FROM reporting_line WHERE position_id = $1 AND valid_from >= $2`,
@@ -453,6 +496,8 @@ func positionError(err error) error {
 		return ErrLineExists
 	case "position_one_head":
 		return ErrHeadTaken
+	case "holding_within_seats":
+		return ErrTooFewSeats
 	case "position_unit_id_fkey":
 		return ErrUnitNotThere
 	case "reporting_line_reports_to_id_fkey":

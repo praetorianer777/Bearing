@@ -95,6 +95,12 @@ var mayCall = map[string]auth.Role{
 	"deleteMyPhoto":        auth.RoleMember,
 	"linkAccount":          auth.RoleAdministrator,
 	"setSelfEditable":      auth.RoleAdministrator,
+	"holdings":             "",
+	"holding":              "",
+	"giveHolding":          auth.RoleEditor,
+	"updateHolding":        auth.RoleEditor,
+	"endHolding":           auth.RoleEditor,
+	"removeHolding":        auth.RoleEditor,
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {
@@ -283,6 +289,38 @@ func TestUnitRefusalsSayWhatToDo(t *testing.T) {
 	}
 }
 
+func TestHoldingRefusalsSayWhatToDo(t *testing.T) {
+	for err, want := range map[error]int{
+		org.ErrHoldingNotFound:   http.StatusNotFound,
+		org.ErrPersonNotFound:    http.StatusUnprocessableEntity,
+		org.ErrPositionNotFound:  http.StatusUnprocessableEntity,
+		org.ErrPositionNotThere:  http.StatusConflict,
+		org.ErrPersonNotThere:    http.StatusConflict,
+		org.ErrHoldingOverlaps:   http.StatusConflict,
+		org.ErrSeatsTaken:        http.StatusConflict,
+		org.ErrHoldingNotStarted: http.StatusConflict,
+		org.ErrHoldingEnded:      http.StatusConflict,
+		org.ErrTooFewSeats:       http.StatusConflict,
+	} {
+		refusal := holdingError(err)
+		if err == org.ErrTooFewSeats {
+			refusal = positionError(err)
+		}
+		var apiErr *APIError
+		if !errors.As(refusal, &apiErr) || apiErr.Status != want || apiErr.Message == "" {
+			t.Errorf("%v became %v, want status %d", err, refusal, want)
+		}
+	}
+	h := org.Holding{ID: uuid.New(), Share: 50}
+	p := toPosition(org.Position{Seats: 2, Holders: []org.Holding{h}})
+	if len(p.Holders) != 1 || p.Holders[0].ID != h.ID || p.Holders[0].Share != 50 || p.Seats != 2 {
+		t.Errorf("the position's holders are %+v", p.Holders)
+	}
+	if empty := toPosition(org.Position{}); empty.Holders == nil {
+		t.Error("a vacant position's holders are null, not empty")
+	}
+}
+
 func TestUnitRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
 	s := signedInServer()
 	editorSessions := s.Accounts.(fakeSessions)
@@ -368,6 +406,16 @@ func TestPeopleRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
 	}{
 		{http.MethodGet, "/people?asOf=x", "bert", "", http.StatusUnprocessableEntity},
 		{http.MethodGet, "/people/nope", "bert", "", http.StatusNotFound},
+		{http.MethodGet, "/holdings", "bert", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/holdings?personId=x", "bert", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/holdings?positionId=" + uuid.NewString() + "&asOf=x", "bert", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/holdings/nope", "bert", "", http.StatusNotFound},
+		{http.MethodPatch, "/holdings/nope", "eve", `{}`, http.StatusNotFound},
+		{http.MethodPost, "/holdings/nope/end", "eve", `{}`, http.StatusNotFound},
+		{http.MethodDelete, "/holdings/nope", "eve", ``, http.StatusNotFound},
+		{http.MethodPost, "/holdings", "eve", `{"person":"x"}`, http.StatusBadRequest},
+		{http.MethodPatch, "/holdings/" + uuid.NewString(), "eve", `{"share":"half"}`, http.StatusBadRequest},
+		{http.MethodPost, "/holdings/" + uuid.NewString() + "/end", "eve", `{"on":"x"}`, http.StatusBadRequest},
 		{http.MethodGet, "/people/nope/photo", "bert", "", http.StatusNotFound},
 		{http.MethodPatch, "/people/nope", "eve", `{}`, http.StatusNotFound},
 		{http.MethodPut, "/people/nope/account", "ada", `{}`, http.StatusNotFound},
