@@ -123,6 +123,8 @@ var mayCall = map[string]auth.Role{
 	"positionAudit":        auth.RoleEditor,
 	"personAudit":          auth.RoleEditor,
 	"roleAudit":            auth.RoleEditor,
+	"demo":                 auth.RoleAdministrator,
+	"loadDemo":             auth.RoleAdministrator,
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {

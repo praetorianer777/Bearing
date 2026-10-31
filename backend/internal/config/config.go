@@ -96,6 +96,8 @@ type Bootstrap struct {
 	AdminPassword string
 	// Members are let in ahead of their first single sign-on: "email=role" pairs, separated by commas.
 	Members string
+	// Demo has the seed load the demo organisation into an installation without one, as the first administrator.
+	Demo bool
 }
 
 // HTTP is how the api listens.
@@ -183,6 +185,7 @@ func Load() (Config, error) {
 		AdminPassword: os.Getenv("BEARING_BOOTSTRAP_ADMIN_PASSWORD"),
 	}
 	cfg.Bootstrap.Members = l.str("BEARING_BOOTSTRAP_MEMBERS", "")
+	cfg.Bootstrap.Demo = l.boolean("BEARING_DEMO", false)
 	cfg.OIDC = OIDC{
 		Issuer:       strings.TrimRight(l.str("BEARING_OIDC_ISSUER", ""), "/"),
 		ClientID:     l.str("BEARING_OIDC_CLIENT_ID", ""),

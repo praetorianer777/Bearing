@@ -105,6 +105,14 @@ export const en = {
     inUse: (n: number) => (n === 0 ? "No units of this type" : n === 1 ? "1 unit of this type" : `${n} units of this type`),
     icons: { unit: "Unit", organisation: "Organisation", division: "Division", department: "Department", team: "Team", project: "Project" },
   },
+  demo: {
+    title: "Demo organisation",
+    intro:
+      "Kestrel Works, a made-up maker of industrial sensors: about sixty people in four levels, with dotted lines, two vacancies, deputies and a few roles. The suite's alice, bob, carol and dave are in it and are linked when they sign in.",
+    load: "Load the demo organisation",
+    loaded: "The demo organisation is loaded.",
+    notEmpty: "This installation has an organisation of its own, so the demo cannot go in.",
+  },
   themes: {
     title: "Themes",
     intro:

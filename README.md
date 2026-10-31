@@ -57,6 +57,14 @@ administrator `admin@bearing.test` / `bearing admin password`; mail goes to
 Mailpit. Without `BEARING_BOOTSTRAP_ADMIN_EMAIL` nothing is seeded, and whoever
 opens the web client first sets the installation up.
 
+The seed also loads the demo organisation, Kestrel Works: about sixty people
+in four levels of units, with dotted lines, two vacancies, deputies, a few
+roles and a Head of Product who changed in April 2026, to read as of a day.
+`alice`, `bob`, `carol` and `dave` are in it by address and are linked to their
+entries when they first sign in. `make seed` runs the seed again and changes
+nothing; `BEARING_DEMO=false make up` starts empty. An administrator can load
+the demo into an installation without units under Settings, Unit types.
+
 "Continue with single sign-on" signs in through the stack's Keycloak. The seed
 lets `alice` in as an administrator and `bob` as a member ahead of time
 (`BEARING_BOOTSTRAP_MEMBERS`); `carol` and `dave` ask to join, and an

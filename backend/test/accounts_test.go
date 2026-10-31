@@ -378,11 +378,13 @@ func TestAWriteFromAnotherSiteIsRefused(t *testing.T) {
 	}
 }
 
-// Setting up runs on a database of its own, made and migrated for the test, since the stack's is set up already.
-func TestSettingUpHappensOnce(t *testing.T) {
+// freshCluster is a database of its own, made and migrated for the test and dropped after, for what needs an
+// installation the stack's is not: one not set up yet, or one without an organisation.
+func freshCluster(t *testing.T, prefix string) *db.Cluster {
+	t.Helper()
 	ctx := context.Background()
 	super := superuser(t, "BEARING_TEST_SUPERUSER_URL")
-	name := fmt.Sprintf("bearing_setup_%d", time.Now().UnixNano())
+	name := fmt.Sprintf("%s_%d", prefix, time.Now().UnixNano())
 	if _, err := super.Exec(ctx, `CREATE DATABASE `+name); err != nil {
 		t.Fatal(err)
 	}
@@ -413,6 +415,13 @@ func TestSettingUpHappensOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(cluster.Close)
+	return cluster
+}
+
+// Setting up runs on a database of its own, since the stack's is set up already.
+func TestSettingUpHappensOnce(t *testing.T) {
+	ctx := context.Background()
+	cluster := freshCluster(t, "bearing_setup")
 	accounts := &auth.Service{DB: cluster, Params: auth.DefaultPasswordParams()}
 
 	if in, err := accounts.Installation(ctx); err != nil || in.SetUp {

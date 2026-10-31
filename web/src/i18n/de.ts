@@ -105,6 +105,14 @@ export const de: Messages = {
     inUse: (n: number) => (n === 0 ? "Keine Einheiten dieses Typs" : n === 1 ? "1 Einheit dieses Typs" : `${n} Einheiten dieses Typs`),
     icons: { unit: "Einheit", organisation: "Organisation", division: "Bereich", department: "Abteilung", team: "Team", project: "Projekt" },
   },
+  demo: {
+    title: "Demo-Organisation",
+    intro:
+      "Kestrel Works, ein erfundener Hersteller von Industriesensoren: etwa sechzig Personen auf vier Ebenen, mit gepunkteten Linien, zwei offenen Stellen, Vertretungen und einigen Rollen. alice, bob, carol und dave aus der Suite gehören dazu und werden bei ihrer Anmeldung verknüpft.",
+    load: "Demo-Organisation laden",
+    loaded: "Die Demo-Organisation ist geladen.",
+    notEmpty: "Diese Installation hat eine eigene Organisation, daher kann die Demo nicht hinein.",
+  },
   themes: {
     title: "Themes",
     intro:

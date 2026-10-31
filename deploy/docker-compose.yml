@@ -33,6 +33,8 @@ x-bootstrap-env: &bootstrap-env
   BEARING_BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-bearing admin password}
   # Let in ahead of their first single sign-on, as the suite's realm names them; carol and dave ask to join.
   BEARING_BOOTSTRAP_MEMBERS: alice@suite.test=administrator,bob@suite.test=member
+  # Kestrel Works, the demo organisation, with alice, bob, carol and dave in it; false starts empty.
+  BEARING_DEMO: ${BEARING_DEMO:-true}
 
 # Every Go service runs the same image, which migrate alone builds: two builds racing to tag one name would fail the
 # stack's start.

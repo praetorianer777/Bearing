@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from "react";
+import { useDemo, useLoadDemo } from "@/api/demo";
 import { type UnitType, useCreateUnitType, useDeleteUnitType, useUnitTypes, useUpdateUnitType } from "@/api/units";
 import { UNIT_ICONS, type UnitIconName } from "@/components/icons";
 import { Button, Field, FormError, fieldError } from "@/components/ui";
@@ -116,6 +117,33 @@ function CreateForm() {
   );
 }
 
+function DemoPanel() {
+  const demo = useDemo();
+  const load = useLoadDemo();
+  if (!demo.data) return null;
+  const { loaded, empty } = demo.data;
+  return (
+    <section aria-labelledby="demo-heading" className="rounded-xl border border-border bg-surface p-5">
+      <h2 id="demo-heading" className="text-lg font-semibold">
+        {t.demo.title}
+      </h2>
+      <p className="mt-1 text-sm text-ink-muted">{t.demo.intro}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        {loaded ? (
+          <p className="text-sm text-ink">{t.demo.loaded}</p>
+        ) : empty ? (
+          <Button onClick={() => load.mutate()} disabled={load.isPending}>
+            {t.demo.load}
+          </Button>
+        ) : (
+          <p className="text-sm text-ink-muted">{t.demo.notEmpty}</p>
+        )}
+        <FormError error={load.error} />
+      </div>
+    </section>
+  );
+}
+
 export function UnitTypesPage() {
   useLanguage();
   const types = useUnitTypes();
@@ -135,6 +163,7 @@ export function UnitTypesPage() {
         </ul>
       )}
       <CreateForm />
+      <DemoPanel />
     </div>
   );
 }

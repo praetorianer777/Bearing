@@ -18,7 +18,7 @@ import (
 
 // Service keeps the organisation model.
 type Service struct {
-	DB *db.Cluster
+	DB Store
 }
 
 // UnitType is a kind of unit, such as a division or a team.
