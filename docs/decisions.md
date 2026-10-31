@@ -163,3 +163,14 @@ demo people are entered by address, not by `sub`: Keycloak gives users their
 ids when it imports the realm, and the realm file is Dynamo's, so the ids
 cannot be known ahead. The first sign-in links each one, as it would anybody
 entered ahead of signing in.
+
+## The org chart is laid out in the browser, and moved cards are each viewer's own
+
+The chart draws positions, not people, as cards, with their holders on
+them, from the units, positions and people of one day. ELK lays out the
+tree of solid lines alone, so it stays a tree; dotted lines and deputies
+are drawn across it afterwards. A card someone drags stays where they put
+it, in that browser only, until they reset the layout: an arrangement is
+a way of looking, not a fact about the organisation, so it is not shared
+or audited. Folding is by unit, into the unit's head. The day and the
+focus live in the address, so a chart can be linked to as it was seen.

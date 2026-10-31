@@ -25,3 +25,6 @@ export const SIDEBAR_RAIL_WIDTH = 56;
 
 /** Below this viewport width the sidebar starts as a rail, unless the person chose otherwise. */
 export const SIDEBAR_RAIL_BELOW_PX = 1024;
+
+/** Where the org chart remembers the cards a person moved, so the layout keeps them where they were put. */
+export const CHART_PLACES_STORAGE_KEY = "bearing.chart.places";

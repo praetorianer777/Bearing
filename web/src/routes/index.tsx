@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, createRoute, createRouter, Outlet, redirect, type RouterHistory } from "@tanstack/react-router";
 import { installationQuery, meQuery } from "@/api/auth";
 import { AcceptInvitationPage, ForgotPasswordPage, ResetPasswordPage, SetUpPage, SignInPage } from "@/features/auth/pages";
+import { type ChartSearch, OrgChartPage } from "@/features/chart/OrgChart";
 import { Home } from "@/features/home/Home";
 import { AccountsPage } from "@/features/settings/Accounts";
 import { ProfilePage } from "@/features/settings/Profile";
@@ -76,7 +77,15 @@ const homeRoute = createRoute({ getParentRoute: () => appRoute, path: "/", compo
 const organisationRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/organisation",
-  component: () => <ComingSoon title={() => t.nav.organisation} />,
+  validateSearch: (search: Record<string, unknown>): ChartSearch => ({
+    ...(typeof search.asOf === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search.asOf) ? { asOf: search.asOf } : {}),
+    ...(typeof search.focus === "string" ? { focus: search.focus } : {}),
+  }),
+  component: function Organisation() {
+    const search = organisationRoute.useSearch();
+    const navigate = organisationRoute.useNavigate();
+    return <OrgChartPage search={search} onSearch={(next) => navigate({ search: next })} />;
+  },
 });
 const peopleRoute = createRoute({ getParentRoute: () => appRoute, path: "/people", component: () => <ComingSoon title={() => t.nav.people} /> });
 const processesRoute = createRoute({
