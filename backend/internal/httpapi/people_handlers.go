@@ -110,8 +110,30 @@ func (s *Server) handlePerson(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	day, ok := s.asOf(w, r)
+	if !ok {
+		return
+	}
 	p, err := s.Org.Person(r.Context(), id)
-	s.respondPerson(w, r, http.StatusOK, p, err)
+	s.respondPersonOn(w, r, day, p, err)
+}
+
+// respondPersonOn answers a person with what they hold on a day.
+func (s *Server) respondPersonOn(w http.ResponseWriter, r *http.Request, day org.Day, p org.Person, err error) {
+	if err != nil {
+		respondError(w, r, s.Log, personError(err))
+		return
+	}
+	holdings, err := s.Org.Holdings(r.Context(), org.HoldingFilter{PersonID: &p.ID, AsOf: &day})
+	if err != nil {
+		respondError(w, r, s.Log, err)
+		return
+	}
+	out := make([]holdingResponse, len(holdings))
+	for i, h := range holdings {
+		out[i] = toHolding(h)
+	}
+	respondJSON(w, http.StatusOK, env{"asOf": day, "person": toPerson(p), "holdings": out})
 }
 
 func (s *Server) handleCreatePerson(w http.ResponseWriter, r *http.Request) {
@@ -181,8 +203,12 @@ func (s *Server) handleReturn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleMyEntry(w http.ResponseWriter, r *http.Request) {
+	day, ok := s.asOf(w, r)
+	if !ok {
+		return
+	}
 	p, err := s.Org.Me(r.Context())
-	s.respondPerson(w, r, http.StatusOK, p, err)
+	s.respondPersonOn(w, r, day, p, err)
 }
 
 func (s *Server) handleUpdateMyEntry(w http.ResponseWriter, r *http.Request) {

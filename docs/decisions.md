@@ -137,3 +137,16 @@ sub-select the planner runs once, not once per row. A 5000-person
 organisation answers every question within 50 ms; `make test-timing`
 holds it to that, without the race detector, which slows the code it
 watches too much for times to mean anything.
+
+## The audit log is written by the database, read by editors
+
+Every insert, update and delete on the organisation model's tables gets an
+entry in the same transaction: who it was made for, when, and the row
+before and after, without timestamps or a photo's bytes. A trigger writes
+it, so no code path can change the model without its entry, and nobody may
+change the log afterwards. Each entry names the units, positions, people,
+roles and holdings it concerns, so each has its own view of the log,
+including the relations naming it. The log tells who changed what, which
+is for editors and administrators, not for every member. Dated relations
+answer what held on a day; the log answers who changed it and when.
+Accounts and settings are not part of the model and are not in this log.
