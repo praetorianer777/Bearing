@@ -15,6 +15,7 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { Link } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useOrganisation } from "@/api/org";
 import { Button } from "@/components/ui";
@@ -25,14 +26,14 @@ import { layout, type Point, readPlaces, writePlaces } from "./layout";
 
 type CardNode = Node<Card, "position">;
 
-/** What a card can ask of the chart around it: to fold its unit, or to focus on somebody holding it. */
-const ChartActions = createContext<{ toggle: (unitId: string) => void; focusOn: (personId: string) => void }>({
+/** What a card can ask of the chart around it: to fold its unit, or to focus on somebody holding it; and the day its links read. */
+const ChartActions = createContext<{ toggle: (unitId: string) => void; focusOn: (personId: string) => void; asOf?: string }>({
   toggle: () => {},
   focusOn: () => {},
 });
 
 function PositionCard({ data }: NodeProps<CardNode>) {
-  const { toggle, focusOn } = useContext(ChartActions);
+  const { toggle, focusOn, asOf } = useContext(ChartActions);
   const open = data.seats - data.holders.length;
   return (
     <article
@@ -43,7 +44,14 @@ function PositionCard({ data }: NodeProps<CardNode>) {
       <Handle type="target" position={Side.Top} className="opacity-0" />
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-ink">{data.title}</p>
+          <Link
+            to="/positions/$positionId"
+            params={{ positionId: data.id }}
+            search={{ asOf }}
+            className="nodrag block truncate text-sm font-semibold text-ink hover:underline"
+          >
+            {data.title}
+          </Link>
           <p className="truncate text-xs text-ink-subtle">{data.unitName}</p>
         </div>
         {data.vacant && <span className="shrink-0 rounded bg-warning-subtle px-1.5 py-0.5 text-xs font-medium text-ink">{t.chart.vacant}</span>}
@@ -163,6 +171,7 @@ function Chart({ search, onSearch }: { search: ChartSearch; onSearch: (next: Cha
           return next;
         }),
       focusOn: (personId: string) => onSearch({ ...search, focus: `person:${personId}` }),
+      asOf: search.asOf,
     }),
     [onSearch, search],
   );

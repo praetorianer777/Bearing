@@ -6,7 +6,6 @@ import type { components } from "./schema";
 export type Holding = components["schemas"]["HoldingResponse"];
 export type Link = components["schemas"]["LinkResponse"];
 export type OrgRole = components["schemas"]["OrgRoleResponse"];
-export type AuditEvent = components["schemas"]["EventResponse"];
 
 /** Who is in the organisation on a day, or with left, who has left by then; q narrows to names and addresses. */
 export const usePeople = (asOf: string, q: string, left: boolean) =>
@@ -58,12 +57,4 @@ export const usePersonPage = (personID: string, asOf: string) =>
         roles: unwrap(roles).roles,
       };
     },
-  });
-
-/** The changes to a person's entry and everything naming it, newest first; for editors and administrators. */
-export const usePersonAudit = (personID: string, enabled: boolean) =>
-  useQuery({
-    queryKey: ["person-audit", personID],
-    enabled,
-    queryFn: async () => unwrap(await api.GET("/people/{personID}/audit", { params: { path: { personID }, query: { limit: "20" } } })).events,
   });

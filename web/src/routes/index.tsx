@@ -4,6 +4,8 @@ import { installationQuery, meQuery } from "@/api/auth";
 import { AcceptInvitationPage, ForgotPasswordPage, ResetPasswordPage, SetUpPage, SignInPage } from "@/features/auth/pages";
 import { type ChartSearch, OrgChartPage } from "@/features/chart/OrgChart";
 import { Home } from "@/features/home/Home";
+import { PositionPage } from "@/features/org/PositionPage";
+import { type DaySearch, UnitPage } from "@/features/org/UnitPage";
 import { type PeopleSearch, PeoplePage } from "@/features/people/PeoplePage";
 import { type PersonSearch, PersonPage } from "@/features/people/PersonPage";
 import { AccountsPage } from "@/features/settings/Accounts";
@@ -121,6 +123,28 @@ const processesRoute = createRoute({
   path: "/processes",
   component: () => <ComingSoon title={() => t.nav.processes} />,
 });
+const unitRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/units/$unitId",
+  validateSearch: (search: Record<string, unknown>): DaySearch => (isDay(search.asOf) ? { asOf: search.asOf } : {}),
+  component: function Unit() {
+    const { unitId } = unitRoute.useParams();
+    const search = unitRoute.useSearch();
+    const navigate = unitRoute.useNavigate();
+    return <UnitPage unitId={unitId} search={search} onSearch={(next) => navigate({ search: next })} />;
+  },
+});
+const positionRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/positions/$positionId",
+  validateSearch: (search: Record<string, unknown>): DaySearch => (isDay(search.asOf) ? { asOf: search.asOf } : {}),
+  component: function Position() {
+    const { positionId } = positionRoute.useParams();
+    const search = positionRoute.useSearch();
+    const navigate = positionRoute.useNavigate();
+    return <PositionPage positionId={positionId} search={search} onSearch={(next) => navigate({ search: next })} />;
+  },
+});
 const accountsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings/accounts",
@@ -153,7 +177,19 @@ const routeTree = rootRoute.addChildren([
   forgotRoute,
   resetRoute,
   invitationRoute,
-  appRoute.addChildren([homeRoute, organisationRoute, peopleRoute, personRoute, processesRoute, accountsRoute, themesRoute, unitTypesRoute, profileRoute]),
+  appRoute.addChildren([
+    homeRoute,
+    organisationRoute,
+    peopleRoute,
+    personRoute,
+    unitRoute,
+    positionRoute,
+    processesRoute,
+    accountsRoute,
+    themesRoute,
+    unitTypesRoute,
+    profileRoute,
+  ]),
 ]);
 
 export function buildRouter(queryClient: QueryClient, history?: RouterHistory) {
