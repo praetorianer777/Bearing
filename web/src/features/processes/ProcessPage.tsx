@@ -21,19 +21,20 @@ import { t, useLanguage } from "@/i18n";
 import { arrange } from "./arrange";
 import { type Edit, edit, type Flow, start } from "./editor";
 import { FlowCanvas, Palette, type Selection } from "./FlowCanvas";
+import { type Party, useParties } from "./raci";
+import { NodeResponsibilities, RaciMatrix } from "./Responsibilities";
 
-export type ProcessSearch = { version?: number };
+export type ProcessSearch = { version?: number; view?: "matrix" };
 
 const inputClass = "w-full rounded-md border border-border-strong bg-surface px-2 py-1.5 text-sm text-ink";
 
-function Problems({ problems, flow, onPick }: { problems: Problem[]; flow: Flow; onPick: (s: Selection) => void }) {
+function ProblemList({ problems, flow, onPick }: { problems: Problem[]; flow: Flow; onPick: (s: Selection) => void }) {
   const name = (key?: string) => flow.nodes.find((n) => n.key === key)?.name || t.process.unnamed;
   const where = (p: Problem) => {
     if (p.node) return name(p.node);
     const arrow = flow.arrows.find((a) => a.key === p.arrow);
     return arrow ? `${name(arrow.from)} → ${name(arrow.to)}` : undefined;
   };
-  if (problems.length === 0) return <p className="text-sm text-success">{t.process.publishable}</p>;
   return (
     <ul className="space-y-1 text-sm">
       {problems.map((p) => {
@@ -55,12 +56,35 @@ function Problems({ problems, flow, onPick }: { problems: Problem[]; flow: Flow;
   );
 }
 
-/** What is picked: a node's name, description and subprocess, or an arrow's condition; read only outside the draft. */
+/** What keeps the draft from being published, and apart from it what is only worth a look. */
+function Problems({ problems, flow, onPick }: { problems: Problem[]; flow: Flow; onPick: (s: Selection) => void }) {
+  const blocking = problems.filter((p) => !p.warning);
+  const warnings = problems.filter((p) => p.warning);
+  return (
+    <div className="flex flex-col gap-3">
+      {blocking.length === 0 ? (
+        <p className="text-sm text-success">{t.process.publishable}</p>
+      ) : (
+        <ProblemList problems={blocking} flow={flow} onPick={onPick} />
+      )}
+      {warnings.length > 0 && (
+        <div>
+          <h3 className="mb-1 text-xs text-ink-muted">{t.process.warnings}</h3>
+          <ProblemList problems={warnings} flow={flow} onPick={onPick} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** What is picked: a node's name, description, subprocess and responsibilities, or an arrow's condition; read only outside the draft. */
 function Inspector({
   flow,
   selection,
   editable,
   others,
+  parties,
+  nameOf,
   onEdit,
   onRemove,
 }: {
@@ -68,6 +92,8 @@ function Inspector({
   selection: Selection;
   editable: boolean;
   others: Process[];
+  parties: Party[];
+  nameOf: (key: string) => string;
   onEdit: (e: Edit) => void;
   onRemove: () => void;
 }) {
@@ -159,6 +185,7 @@ function Inspector({
           </select>
         </div>
       )}
+      {n.kind !== "start" && n.kind !== "end" && <NodeResponsibilities node={n} editable={editable} parties={parties} nameOf={nameOf} onEdit={onEdit} />}
       {editable && (
         <Button variant="secondary" onClick={onRemove} className="self-start">
           {t.process.removeNode}
@@ -254,6 +281,7 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
   const [editingDetails, setEditingDetails] = useState(false);
   // Each arrangement fits the view anew, so the whole flow is in sight where the layout put it.
   const [arranged, setArranged] = useState(0);
+  const parties = useParties();
   const save = useSaveDraft(process.id);
   const publish = usePublish(process.id);
 
@@ -344,7 +372,7 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
             value={viewing ?? ""}
             onChange={(e) => {
               setSelection(null);
-              onSearch({ version: e.target.value ? Number(e.target.value) : undefined });
+              onSearch({ ...search, version: e.target.value ? Number(e.target.value) : undefined });
             }}
             className="h-9 rounded-md border border-border-strong bg-surface px-2 text-sm text-ink"
           >
@@ -356,6 +384,20 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
             ))}
           </select>
         </div>
+        <fieldset className="flex h-9 overflow-hidden rounded-md border border-border-strong text-sm">
+          <legend className="sr-only">{t.process.viewAs}</legend>
+          {(["canvas", "matrix"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={(search.view ?? "canvas") === v}
+              onClick={() => onSearch({ ...search, view: v === "matrix" ? "matrix" : undefined })}
+              className={`px-3 ${(search.view ?? "canvas") === v ? "bg-primary text-on-primary" : "bg-surface text-ink hover:bg-surface-sunken"}`}
+            >
+              {t.process.views[v]}
+            </button>
+          ))}
+        </fieldset>
         {editable && (
           <>
             <Button variant="secondary" onClick={() => dispatch({ type: "undo" })} disabled={history.past.length === 0}>
@@ -382,16 +424,28 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
       {editable && <Palette flow={history.present} onEdit={dispatch} />}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <div className="relative min-h-[60vh] flex-1 md:min-h-0">
-          <FlowCanvas
-            flow={flow}
-            editable={editable}
-            selection={selection}
-            onSelect={setSelection}
-            onEdit={dispatch}
-            flagged={flagged}
-            subprocesses={names}
-            fitKey={`${process.id}|${viewing ?? "draft"}|${flow.nodes.length > 0}|${arranged}`}
-          />
+          {search.view === "matrix" ? (
+            <RaciMatrix
+              flow={flow}
+              nameOf={parties.nameOf}
+              onPick={(key) => {
+                setSelection({ kind: "node", key });
+                onSearch({ ...search, view: undefined });
+              }}
+            />
+          ) : (
+            <FlowCanvas
+              flow={flow}
+              editable={editable}
+              selection={selection}
+              onSelect={setSelection}
+              onEdit={dispatch}
+              flagged={flagged}
+              subprocesses={names}
+              fitKey={`${process.id}|${viewing ?? "draft"}|${flow.nodes.length > 0}|${arranged}`}
+              parties={parties.names}
+            />
+          )}
         </div>
         <aside className="flex w-full flex-col gap-5 overflow-y-auto border-t border-border bg-surface p-5 md:w-80 md:border-t-0 md:border-l">
           <section aria-labelledby={`${process.id}-picked`}>
@@ -403,6 +457,8 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
               selection={selection}
               editable={editable}
               others={(processes.data ?? []).filter((p) => p.id !== process.id)}
+              parties={parties.list}
+              nameOf={parties.nameOf}
               onEdit={dispatch}
               onRemove={removePicked}
             />
@@ -426,7 +482,7 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
                 {t.process.note}
               </label>
               <input id={`${process.id}-note`} value={note} onChange={(e) => setNote(e.target.value)} className={inputClass} />
-              <Button onClick={onPublish} disabled={dirty || problems.length > 0 || publish.isPending} className="self-start">
+              <Button onClick={onPublish} disabled={dirty || problems.some((p) => !p.warning) || publish.isPending} className="self-start">
                 {t.process.publish}
               </Button>
               {dirty && <p className="text-xs text-ink-subtle">{t.process.saveFirst}</p>}
@@ -443,7 +499,7 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
               <ol className="space-y-2 text-sm">
                 {versions.map((v) => (
                   <li key={v.number}>
-                    <button type="button" onClick={() => onSearch({ version: v.number })} className="font-medium text-ink hover:underline">
+                    <button type="button" onClick={() => onSearch({ ...search, version: v.number })} className="font-medium text-ink hover:underline">
                       {t.process.version(v.number)}
                     </button>
                     <span className="text-ink-subtle">

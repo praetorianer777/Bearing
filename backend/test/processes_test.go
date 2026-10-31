@@ -19,6 +19,15 @@ type nodeJSON struct {
 	X            float64 `json:"x"`
 	Y            float64 `json:"y"`
 	SubprocessID *string `json:"subprocessId"`
+	// Responsibilities left out of a save are none.
+	Responsibilities []responsibilityJSON `json:"responsibilities,omitempty"`
+}
+
+type responsibilityJSON struct {
+	Kind       string `json:"kind"`
+	RoleID     string `json:"roleId,omitempty"`
+	PositionID string `json:"positionId,omitempty"`
+	UnitID     string `json:"unitId,omitempty"`
 }
 
 type arrowJSON struct {
@@ -39,7 +48,10 @@ type processJSON struct {
 		Nodes    []nodeJSON
 		Arrows   []arrowJSON
 		Revision int
-		Problems []struct{ Code, Node, Arrow string }
+		Problems []struct {
+			Code, Node, Arrow string
+			Warning           bool
+		}
 	}
 	Versions []struct {
 		Number        int
@@ -79,10 +91,13 @@ func saveDraft(b *browser, id string, revision int, nodes []nodeJSON, arrows []a
 	return b.do(http.MethodPut, "/processes/"+id+"/draft", map[string]any{"revision": revision, "nodes": nodes, "arrows": arrows}, into)
 }
 
+// problemCodes are the problems keeping a draft from being published; warnings are left out.
 func problemCodes(p processJSON) []string {
 	var out []string
 	for _, pr := range p.Draft.Problems {
-		out = append(out, pr.Code)
+		if !pr.Warning {
+			out = append(out, pr.Code)
+		}
 	}
 	return out
 }
@@ -228,7 +243,7 @@ func TestAProcessHasAnOwnerAndOtherProcessesAsSubprocesses(t *testing.T) {
 	nodes := []nodeJSON{{Key: "s", Kind: "start"}, {Key: "p", Kind: "subprocess", Name: "Find the cause", SubprocessID: &inner.ID}, {Key: "e", Kind: "end"}}
 	arrows := []arrowJSON{{Key: "a1", From: "s", To: "p"}, {Key: "a2", From: "p", To: "e"}}
 	var saved processBody
-	if status := saveDraft(editor, outer.ID, outer.Draft.Revision, nodes, arrows, &saved); status != http.StatusOK || len(saved.Process.Draft.Problems) != 0 {
+	if status := saveDraft(editor, outer.ID, outer.Draft.Revision, nodes, arrows, &saved); status != http.StatusOK || len(problemCodes(saved.Process)) != 0 {
 		t.Fatalf("saving a draft with a subprocess answered %d %+v", status, saved.Process.Draft.Problems)
 	}
 	var r refusal
@@ -284,5 +299,89 @@ func TestTheDemoHasItsProcesses(t *testing.T) {
 	admin.do(http.MethodGet, "/processes/"+release.ID, nil, &one)
 	if !slices.Contains(problemCodes(one.Process), "decision_ways") {
 		t.Errorf("the product release draft has problems %v", problemCodes(one.Process))
+	}
+	warned := false
+	for _, p := range one.Process.Draft.Problems {
+		warned = warned || p.Warning && p.Code == "no_accountable" && p.Node == "ship"
+	}
+	if !warned {
+		t.Errorf("the product release does not warn that nobody is accountable for shipping: %+v", one.Process.Draft.Problems)
+	}
+	var invoice processBody
+	admin.do(http.MethodGet, "/processes/"+byKey["supplier-invoice"].ID, nil, &invoice)
+	for _, n := range invoice.Process.Draft.Nodes {
+		if n.Key == "approve" && (len(n.Responsibilities) != 2 || n.Responsibilities[0].Kind != "responsible" || n.Responsibilities[0].RoleID == "") {
+			t.Errorf("approving the invoice has responsibilities %+v", n.Responsibilities)
+		}
+	}
+}
+
+// The case the issue names: a step's parties are saved with the draft, kept by the published version, and warned of
+// when a step lacks its accountable or responsible, without keeping the draft from being published.
+func TestAStepSaysWhoIsResponsibleAccountableConsultedAndInformed(t *testing.T) {
+	editor, unit := orgFixture(t)
+	head := positions(t, editor, unit, "Head of Finance")[0]
+	approver := orgRole(t, editor, "Invoice approver")
+	made := process(t, editor, "Invoices", nil)
+	nodes := []nodeJSON{
+		{Key: "s", Kind: "start"},
+		{Key: "approve", Kind: "step", Name: "Approve", Responsibilities: []responsibilityJSON{
+			{Kind: "responsible", RoleID: approver.ID}, {Kind: "accountable", PositionID: head}, {Kind: "informed", UnitID: unit},
+		}},
+		{Key: "book", Kind: "step", Name: "Book", Responsibilities: []responsibilityJSON{{Kind: "consulted", PositionID: head}}},
+		{Key: "e", Kind: "end"},
+	}
+	arrows := []arrowJSON{{Key: "a1", From: "s", To: "approve"}, {Key: "a2", From: "approve", To: "book"}, {Key: "a3", From: "book", To: "e"}}
+	var saved processBody
+	if status := saveDraft(editor, made.ID, made.Draft.Revision, nodes, arrows, &saved); status != http.StatusOK {
+		t.Fatalf("saving responsibilities answered %d", status)
+	}
+	var warnings []string
+	for _, p := range saved.Process.Draft.Problems {
+		if !p.Warning {
+			t.Errorf("a blocking problem: %+v", p)
+		}
+		warnings = append(warnings, p.Code+"@"+p.Node)
+	}
+	slices.Sort(warnings)
+	if !slices.Equal(warnings, []string{"no_accountable@book", "no_responsible@book"}) {
+		t.Errorf("the warnings are %v", warnings)
+	}
+	for _, n := range saved.Process.Draft.Nodes {
+		if n.Key == "approve" && len(n.Responsibilities) != 3 {
+			t.Errorf("approving has %+v", n.Responsibilities)
+		}
+	}
+
+	var published struct{ Version versionJSON }
+	if status := editor.do(http.MethodPost, "/processes/"+made.ID+"/publish", map[string]any{"note": "With warnings"}, &published); status != http.StatusCreated {
+		t.Fatalf("publishing a draft with warnings only answered %d", status)
+	}
+	var first struct{ Version versionJSON }
+	editor.do(http.MethodGet, "/processes/"+made.ID+"/versions/1", nil, &first)
+	kept := 0
+	for _, n := range first.Version.Nodes {
+		kept += len(n.Responsibilities)
+	}
+	if kept != 4 {
+		t.Errorf("the published version keeps %d responsibilities", kept)
+	}
+
+	var r refusal
+	if status := editor.do(http.MethodDelete, "/roles/"+approver.ID, nil, &r); status != http.StatusConflict || r.Error.Code != "role_in_use" {
+		t.Errorf("removing a role a process names answered %d %+v", status, r)
+	}
+	start := []nodeJSON{{Key: "s", Kind: "start", Responsibilities: []responsibilityJSON{{Kind: "informed", UnitID: unit}}}, {Key: "e", Kind: "end"}}
+	if status := saveDraft(editor, made.ID, saved.Process.Draft.Revision+1, start, nil, &r); status != http.StatusUnprocessableEntity || r.Error.Fields["nodes"] == "" {
+		t.Errorf("a start with a responsibility answered %d %+v", status, r)
+	}
+	gone := []nodeJSON{{Key: "s", Kind: "start"}, {Key: "x", Kind: "step", Name: "X", Responsibilities: []responsibilityJSON{{Kind: "responsible", RoleID: uuid.NewString()}}}}
+	if status := saveDraft(editor, made.ID, saved.Process.Draft.Revision+1, gone, nil, &r); status != http.StatusUnprocessableEntity || r.Error.Fields["nodes"] == "" {
+		t.Errorf("a role that does not exist answered %d %+v", status, r)
+	}
+	super := superuser(t, "BEARING_TEST_SUPERUSER_URL")
+	if _, err := super.Exec(context.Background(), `DELETE FROM process_responsibility r USING process_version v
+		WHERE v.id = r.version_id AND v.process_id = $1 AND v.number = 1`, made.ID); err == nil {
+		t.Error("a published version's responsibility was removed")
 	}
 }

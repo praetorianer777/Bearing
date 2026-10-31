@@ -47,7 +47,7 @@ type RoleInput struct {
 var (
 	ErrRoleNotFound   = errors.New("there is no such role")
 	ErrRoleKeyTaken   = errors.New("another role has that key")
-	ErrRoleInUse      = errors.New("the role is or was held or carried; it stays for the history")
+	ErrRoleInUse      = errors.New("the role is or was held or carried, or a process names it; it stays for the history")
 	ErrRoleCarried    = errors.New("the position carries that role then already")
 	ErrRoleNotCarried = errors.New("the position does not carry that role on that day")
 	ErrDeputyNotThere = errors.New("a deputy must be another position that exists today, named once")

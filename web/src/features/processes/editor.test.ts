@@ -2,7 +2,16 @@ import { describe, expect, it } from "vitest";
 import type { FlowNode } from "@/api/processes";
 import { edit, type Flow, freeSpot, freshKey, type History, mayConnect, start } from "./editor";
 
-const node = (key: string, kind: FlowNode["kind"], name = key): FlowNode => ({ key, kind, name, description: "", x: 0, y: 0, subprocessId: null });
+const node = (key: string, kind: FlowNode["kind"], name = key): FlowNode => ({
+  key,
+  kind,
+  name,
+  description: "",
+  x: 0,
+  y: 0,
+  subprocessId: null,
+  responsibilities: [],
+});
 const flow: Flow = {
   nodes: [node("s", "start"), node("check", "step"), node("e", "end")],
   arrows: [{ key: "a1", from: "s", to: "check", label: "" }],

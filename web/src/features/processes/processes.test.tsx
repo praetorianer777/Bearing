@@ -11,7 +11,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const node = (key: string, kind: string, name: string, extra: object = {}) => ({ key, kind, name, description: "", x: 0, y: 0, subprocessId: null, ...extra });
+const node = (key: string, kind: string, name: string, extra: object = {}) => ({
+  key,
+  kind,
+  name,
+  description: "",
+  x: 0,
+  y: 0,
+  subprocessId: null,
+  responsibilities: [] as object[],
+  ...extra,
+});
 const arrow = (key: string, from: string, to: string, label = "") => ({ key, from, to, label });
 
 const listed = (id: string, name: string, area: string, latest: number | null, changed: boolean) => ({
@@ -30,11 +40,25 @@ const invoice = {
   ...listed("inv", "Supplier invoice", "Finance", 1, false),
   ownerId: "hof",
   draft: {
-    nodes: [node("in", "start", "Invoice arrives"), node("big", "decision", "Over the limit?", { y: 100 }), node("out", "end", "Paid", { y: 200 })],
-    arrows: [arrow("a1", "in", "big"), arrow("a2", "big", "out", "No")],
+    nodes: [
+      node("in", "start", "Invoice arrives"),
+      node("big", "decision", "Over the limit?", { y: 100 }),
+      node("book", "step", "Book it", {
+        y: 150,
+        responsibilities: [
+          { kind: "accountable", positionId: "hof" },
+          { kind: "informed", unitId: "fin" },
+        ],
+      }),
+      node("out", "end", "Paid", { y: 200 }),
+    ],
+    arrows: [arrow("a1", "in", "big"), arrow("a2", "big", "out", "No"), arrow("a3", "big", "book", "Yes"), arrow("a4", "book", "out")],
     revision: 4,
     savedAt: "2026-10-01T09:00:00Z",
-    problems: [{ code: "decision_ways", message: "A decision needs two ways out or more.", node: "big" }],
+    problems: [
+      { code: "decision_ways", message: "A decision needs two ways out or more.", node: "big", warning: false },
+      { code: "no_responsible", message: "Nobody is responsible for this step.", node: "book", warning: true },
+    ],
   },
   versions: [{ number: 1, publishedAt: "2026-10-01T09:00:00Z", publishedBy: null, publisherName: "Ada Admin", note: "First version." }],
 };
@@ -57,7 +81,8 @@ function serve(role = "editor", answers: Record<string, unknown> = {}) {
     "PUT /processes/inv/draft": (body) => {
       saves.push(body);
       const b = body as { nodes: unknown[]; arrows: unknown[] };
-      return { body: { process: { ...invoice, changed: true, draft: { ...invoice.draft, ...b, revision: 5, problems: [] } } } };
+      const warnings = invoice.draft.problems.filter((p) => p.warning);
+      return { body: { process: { ...invoice, changed: true, draft: { ...invoice.draft, ...b, revision: 5, problems: warnings } } } };
     },
     "POST /processes/inv/publish": (body) => {
       publishes.push(body);
@@ -72,7 +97,10 @@ function serve(role = "editor", answers: Record<string, unknown> = {}) {
         },
       },
     }),
-    "GET /units": () => ({ body: { asOf: "2026-10-31", units: [] } }),
+    "GET /units": () => ({
+      body: { asOf: "2026-10-31", units: [{ id: "fin", name: "Finance", parentId: null, typeId: "d", shortName: null, description: "", archivedOn: null }] },
+    }),
+    "GET /roles": () => ({ body: { roles: [{ id: "clerk", key: "clerk", name: "Invoice clerk", description: "" }] } }),
     "GET /positions": () => ({
       body: {
         asOf: "2026-10-31",
@@ -261,5 +289,57 @@ describe("the process editor", () => {
     fakeAPI(signedInAs());
     renderApp("/processes/nowhere");
     expect(await screen.findByText(/This process could not be read/)).toBeInTheDocument();
+  });
+});
+
+describe("responsibilities on steps", () => {
+  it("names who is accountable on the canvas, adds and removes parties, and warns without keeping the draft from publishing", async () => {
+    const { saves } = serve();
+    const user = userEvent.setup();
+    renderApp("/processes/inv");
+    const card = await nodeCard("Step: Book it");
+    expect(await within(card).findByText("A · Head of Finance")).toBeInTheDocument();
+    const warnings = screen.getByRole("region", { name: "Before publishing" });
+    expect(within(warnings).getByText(/Worth a look/)).toBeInTheDocument();
+
+    await user.click(within(warnings).getByRole("button", { name: /Book it: Nobody is responsible/ }));
+    const picked = within(screen.getByRole("region", { name: "Node" })).getByRole("region", { name: "Responsibilities" });
+    const named = within(picked).getByRole("list");
+    expect(within(named).getByText("Head of Finance")).toBeInTheDocument();
+    expect(within(named).getByText("Finance")).toBeInTheDocument();
+    await user.selectOptions(within(picked).getByLabelText("How they stand to it"), "responsible");
+    await user.selectOptions(within(picked).getByLabelText("Who"), "role:clerk");
+    await user.click(within(picked).getByRole("button", { name: "Add" }));
+    expect(within(named).getByText("Invoice clerk")).toBeInTheDocument();
+    await user.click(within(picked).getByRole("button", { name: "Remove Informed: Finance" }));
+    expect(within(named).queryByText("Finance")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(saves).toHaveLength(1));
+    const book = (saves[0] as { nodes: { key: string; responsibilities: object[] }[] }).nodes.find((n) => n.key === "book");
+    expect(book?.responsibilities).toEqual([
+      { kind: "accountable", positionId: "hof" },
+      { kind: "responsible", roleId: "clerk" },
+    ]);
+    expect(await screen.findByText("Nothing keeps the draft from being published.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Publish as the next version" })).toBeEnabled();
+  });
+
+  it("shows the RACI matrix and leads from a step back to the canvas", async () => {
+    serve("member");
+    const user = userEvent.setup();
+    const { router } = renderApp("/processes/inv?view=matrix");
+    const table = await screen.findByRole("table");
+    expect(await within(table).findByRole("columnheader", { name: /Head of Finance/ })).toBeInTheDocument();
+    const row = within(table).getByRole("row", { name: /Book it/ });
+    expect(within(row).getByTitle("Accountable")).toHaveTextContent("A");
+    expect(within(row).getByTitle("Informed")).toHaveTextContent("I");
+    expect(within(row).getByText("incomplete")).toBeInTheDocument();
+    await user.click(within(row).getByRole("button", { name: "Book it" }));
+    expect(await nodeCard("Step: Book it")).toBeInTheDocument();
+    expect(router.state.location.search).toEqual({});
+    expect(within(within(screen.getByRole("region", { name: "Node" })).getByRole("list")).getByText("Head of Finance")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "RACI matrix" }));
+    expect(await screen.findByRole("table")).toBeInTheDocument();
   });
 });

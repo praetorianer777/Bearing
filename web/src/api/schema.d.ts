@@ -1079,7 +1079,7 @@ export interface paths {
         put?: never;
         /**
          * Publish the draft as the process's next version, which never changes again.
-         * @description Refused as not_publishable while the draft has problems, and as nothing_changed when it is as the newest version has it.
+         * @description Refused as not_publishable while the draft has problems other than warnings, and as nothing_changed when it is as the newest version has it.
          */
         post: operations["publish"];
         delete?: never;
@@ -1769,6 +1769,7 @@ export interface components {
             /** @enum {string} */
             kind: "start" | "step" | "decision" | "subprocess" | "end";
             name: string;
+            responsibilities: components["schemas"]["ResponsibilityBody"][];
             /** Format: uuid */
             subprocessId: string | null;
             x: number;
@@ -1885,6 +1886,7 @@ export interface components {
             code: string;
             message: string;
             node?: string;
+            warning: boolean;
         };
         ProcessRequest: {
             area?: string;
@@ -1932,6 +1934,16 @@ export interface components {
             from?: string;
             /** Format: uuid */
             reportsToId?: string;
+        };
+        ResponsibilityBody: {
+            /** @enum {string} */
+            kind: "responsible" | "accountable" | "consulted" | "informed";
+            /** Format: uuid */
+            positionId?: string;
+            /** Format: uuid */
+            roleId?: string;
+            /** Format: uuid */
+            unitId?: string;
         };
         RoleRequest: {
             /** @enum {string} */

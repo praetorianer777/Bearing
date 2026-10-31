@@ -1,4 +1,4 @@
-import type { FlowArrow, FlowNode, NodeKind } from "@/api/processes";
+import type { FlowArrow, FlowNode, NodeKind, Responsibility } from "@/api/processes";
 
 export type Flow = { nodes: FlowNode[]; arrows: FlowArrow[] };
 export type Point = { x: number; y: number };
@@ -15,6 +15,7 @@ export type Edit =
   | { type: "connect"; key: string; from: string; to: string }
   | { type: "node"; key: string; change: Partial<Pick<FlowNode, "name" | "description" | "subprocessId">> }
   | { type: "label"; key: string; label: string }
+  | { type: "responsibilities"; key: string; list: Responsibility[] }
   | { type: "remove"; nodes: string[]; arrows: string[] }
   | { type: "arrange"; places: Record<string, Point> }
   | { type: "settle" }
@@ -67,7 +68,10 @@ function apply(flow: Flow, edit: Edit): Flow {
     case "add":
       return {
         ...flow,
-        nodes: [...flow.nodes, { key: edit.key, kind: edit.kind, name: edit.name, description: "", x: edit.at.x, y: edit.at.y, subprocessId: null }],
+        nodes: [
+          ...flow.nodes,
+          { key: edit.key, kind: edit.kind, name: edit.name, description: "", x: edit.at.x, y: edit.at.y, subprocessId: null, responsibilities: [] },
+        ],
       };
     case "move":
       return { ...flow, nodes: flow.nodes.map((n) => (n.key === edit.key ? { ...n, x: edit.to.x, y: edit.to.y } : n)) };
@@ -78,6 +82,8 @@ function apply(flow: Flow, edit: Edit): Flow {
       return { ...flow, nodes: flow.nodes.map((n) => (n.key === edit.key ? { ...n, ...edit.change } : n)) };
     case "label":
       return { ...flow, arrows: flow.arrows.map((a) => (a.key === edit.key ? { ...a, label: edit.label } : a)) };
+    case "responsibilities":
+      return { ...flow, nodes: flow.nodes.map((n) => (n.key === edit.key ? { ...n, responsibilities: edit.list } : n)) };
     case "remove": {
       const nodes = new Set(edit.nodes);
       const arrows = new Set(edit.arrows);

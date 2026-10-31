@@ -9,6 +9,19 @@ async function connect(page: Page, from: string, to: string) {
   await node(page, from).locator(".react-flow__handle-bottom").dragTo(node(page, to).locator(".react-flow__handle-top"));
 }
 
+/** Arranges the flow and waits until the view has stopped moving to fit it, so drags start where the nodes are. */
+async function arrange(page: Page) {
+  await page.getByRole("button", { name: "Arrange" }).click();
+  const viewport = page.locator(".react-flow__viewport");
+  let last = "";
+  await expect(async () => {
+    const now = (await viewport.getAttribute("style")) ?? "";
+    const settled = now === last;
+    last = now;
+    expect(settled).toBe(true);
+  }).toPass({ intervals: [150] });
+}
+
 async function rename(page: Page, label: string, name: string) {
   await node(page, label).click();
   const field = page.getByRole("region", { name: "Node" }).getByLabel("Name");
@@ -41,17 +54,26 @@ test("an editor draws a process with a decision and publishes it", async ({ page
   await rename(page, "Decision: Decide?", "Over the limit?");
   await page.getByRole("button", { name: "Step", exact: true }).click();
   await rename(page, "Step: New step", "Approve");
-  await page.getByRole("button", { name: "Arrange" }).click();
+  const responsibilities = page.getByRole("region", { name: "Node" }).getByRole("region", { name: "Responsibilities" });
+  await responsibilities.getByLabel("How they stand to it").selectOption({ label: "Accountable" });
+  await responsibilities.getByLabel("Who").selectOption({ label: "Head of Finance and People" });
+  await responsibilities.getByRole("button", { name: "Add" }).click();
+  await responsibilities.getByLabel("How they stand to it").selectOption({ label: "Responsible" });
+  await responsibilities.getByLabel("Who").selectOption({ label: "Invoice approver" });
+  await responsibilities.getByRole("button", { name: "Add" }).click();
+  await expect(node(page, "Step: Approve")).toContainText("A · Head of Finance and People");
+  await arrange(page);
 
   await connect(page, "Start: Start", "Decision: Over the limit?");
   await connect(page, "Decision: Over the limit?", "Step: Approve");
   await connect(page, "Decision: Over the limit?", "End: End");
   await connect(page, "Step: Approve", "End: End");
-  await page.getByRole("button", { name: "Arrange" }).click();
+  await arrange(page);
   await condition(page, "Arrow from Over the limit? to Approve", "Yes");
   await condition(page, "Arrow from Over the limit? to End", "No");
 
   await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
   await expect(page.getByText("Nothing keeps the draft from being published.")).toBeVisible();
   await page.getByLabel("What changed").fill("First version.");
   await page.getByRole("button", { name: "Publish as the next version" }).click();
@@ -61,7 +83,7 @@ test("an editor draws a process with a decision and publishes it", async ({ page
   expect((await new AxeBuilder({ page }).include("main").analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
   await page.reload();
-  await expect(node(page, "Step: Approve")).toBeVisible();
+  await expect(node(page, "Step: Approve")).toContainText("A · Head of Finance and People");
   await expect(page.getByLabel("Arrow from Over the limit? to Approve", { exact: true })).toBeVisible();
   await page.goto("/processes");
   await expect(page.getByRole("region", { name: "Browser tests" }).getByText("Version 1").first()).toBeVisible();
@@ -79,4 +101,19 @@ test("the demo's processes read as they were published", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Save draft" })).toHaveCount(0);
   await page.getByRole("link", { name: "Production run" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Production run" })).toBeVisible();
+});
+
+test("the demo's supplier invoice says who does what in a RACI matrix", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/processes");
+  await page.getByRole("link", { name: "Supplier invoice" }).click();
+  await page.getByRole("button", { name: "RACI matrix" }).click();
+  const table = page.getByRole("table");
+  await expect(table.getByRole("columnheader", { name: /Invoice approver/ })).toBeVisible();
+  const approve = table.getByRole("row", { name: /Approve the invoice/ });
+  await expect(approve.getByTitle("Responsible")).toHaveText("R");
+  await expect(approve.getByTitle("Accountable")).toHaveText("A");
+  expect((await new AxeBuilder({ page }).include("main").analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  await approve.getByRole("button", { name: "Approve the invoice" }).click();
+  await expect(node(page, "Step: Approve the invoice")).toContainText("A · Head of Finance and People");
 });

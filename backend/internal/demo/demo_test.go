@@ -155,8 +155,23 @@ func maxOf(m map[string]int) int {
 func TestTheDemoProcessesHangTogether(t *testing.T) {
 	ids := map[string]uuid.UUID{}
 	titles := map[string]bool{}
+	known := parties{positions: map[string]uuid.UUID{}, units: map[string]uuid.UUID{}, roles: map[string]uuid.UUID{}}
 	for _, p := range positions {
 		titles[p.title] = true
+		known.positions[p.title] = uuid.New()
+	}
+	for _, u := range units {
+		known.units[u.name] = uuid.New()
+	}
+	for _, r := range roles {
+		known.roles[r.key] = uuid.New()
+	}
+	graph := func(f flow) org.Graph {
+		g, err := f.graph(ids, known)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return g
 	}
 	for _, p := range processes {
 		ids[p.key] = uuid.New()
@@ -167,22 +182,22 @@ func TestTheDemoProcessesHangTogether(t *testing.T) {
 	unpublished := 0
 	for _, p := range processes {
 		for i, f := range p.versions {
-			g := f.graph(ids)
-			if problems := org.Check(ids[p.key], g); len(problems) > 0 {
+			if problems := org.Check(ids[p.key], graph(f)); len(problems) > 0 {
 				t.Errorf("version %d of %s has %+v", i+1, p.key, problems)
 			}
 		}
 		if len(p.versions) == 0 {
 			unpublished++
-			if problems := org.Check(ids[p.key], p.draft.graph(ids)); len(problems) == 0 {
-				t.Errorf("the draft-only %s has nothing keeping it from being published", p.key)
+			problems := org.Check(ids[p.key], graph(*p.draft))
+			if !org.Blocking(problems) || !slices.ContainsFunc(problems, func(pr org.Problem) bool { return pr.Code == "no_accountable" }) {
+				t.Errorf("the draft-only %s should both be kept from publishing and warn of a step nobody answers for: %+v", p.key, problems)
 			}
 		}
 	}
 	if unpublished != 1 {
 		t.Errorf("%d processes are never published, want 1", unpublished)
 	}
-	g := processes[1].versions[1].graph(ids)
+	g := graph(processes[1].versions[1])
 	for _, n := range g.Nodes {
 		if n.Kind == org.Subprocess && (n.SubprocessID == nil || *n.SubprocessID != ids["production-run"]) {
 			t.Errorf("the subprocess node %s stands for %v", n.Key, n.SubprocessID)

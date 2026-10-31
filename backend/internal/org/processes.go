@@ -74,6 +74,7 @@ var (
 	ErrNothingChanged   = errors.New("the draft is as the newest version has it")
 	ErrOwnerNotThere    = errors.New("there is no such position")
 	ErrSubprocessGone   = errors.New("a subprocess node names a process that does not exist")
+	ErrPartyGone        = errors.New("a responsibility names a role, position or unit that does not exist")
 )
 
 // Unpublishable is a draft refused for publishing, with what keeps it from it.
@@ -189,6 +190,24 @@ func graph(ctx context.Context, q db.DBTX, version uuid.UUID) (Graph, error) {
 		return n, err
 	})
 	if err != nil {
+		return g, err
+	}
+	at := make(map[string]int, len(g.Nodes))
+	for i, n := range g.Nodes {
+		at[n.Key] = i
+	}
+	rows, err = q.Query(ctx, `SELECT node_key, kind, role_id, position_id, unit_id FROM process_responsibility
+		WHERE version_id = $1 ORDER BY node_key, kind, role_id, position_id, unit_id`, version)
+	if err != nil {
+		return g, err
+	}
+	var key string
+	var r Responsibility
+	if _, err := pgx.ForEachRow(rows, []any{&key, &r.Kind, &r.RoleID, &r.PositionID, &r.UnitID}, func() error {
+		n := &g.Nodes[at[key]]
+		n.Responsibilities = append(n.Responsibilities, r)
+		return nil
+	}); err != nil {
 		return g, err
 	}
 	rows, err = q.Query(ctx, `SELECT key, from_key, to_key, label FROM process_arrow WHERE version_id = $1 ORDER BY key`, version)
@@ -379,6 +398,21 @@ func writeGraph(ctx context.Context, q db.DBTX, version uuid.UUID, g Graph) erro
 		version, keys, kinds, names, descriptions, xs, ys, subs); err != nil {
 		return processError(err)
 	}
+	var nodeKeys, raci []string
+	var roles, positions, units []*uuid.UUID
+	for _, node := range g.Nodes {
+		for _, r := range node.Responsibilities {
+			nodeKeys, raci = append(nodeKeys, node.Key), append(raci, string(r.Kind))
+			roles, positions, units = append(roles, r.RoleID), append(positions, r.PositionID), append(units, r.UnitID)
+		}
+	}
+	if len(nodeKeys) > 0 {
+		if _, err := q.Exec(ctx, `INSERT INTO process_responsibility (version_id, node_key, kind, role_id, position_id, unit_id)
+			SELECT $1, k, r::raci, role, pos, unit FROM unnest($2::text[], $3::text[], $4::uuid[], $5::uuid[], $6::uuid[])
+				AS t(k, r, role, pos, unit)`, version, nodeKeys, raci, roles, positions, units); err != nil {
+			return processError(err)
+		}
+	}
 	m := len(g.Arrows)
 	arrowKeys, froms, tos, labels := make([]string, m), make([]string, m), make([]string, m), make([]string, m)
 	for i, a := range g.Arrows {
@@ -406,7 +440,7 @@ func (s *Service) Publish(ctx context.Context, id uuid.UUID, note string) (Versi
 		if err := process(ctx, q, id, &p); err != nil {
 			return err
 		}
-		if problems := Check(id, p.Draft.Graph); len(problems) > 0 {
+		if problems := Check(id, p.Draft.Graph); Blocking(problems) {
 			return Unpublishable{problems}
 		}
 		if !p.Changed {
@@ -446,6 +480,8 @@ func processError(err error) error {
 		return ErrProcessKeyTaken
 	case "process_owner_id_fkey":
 		return ErrOwnerNotThere
+	case "process_responsibility_role_id_fkey", "process_responsibility_position_id_fkey", "process_responsibility_unit_id_fkey":
+		return ErrPartyGone
 	}
 	return err
 }

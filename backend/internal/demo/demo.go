@@ -207,14 +207,30 @@ func unitTypes(ctx context.Context, s *org.Service) (map[string]uuid.UUID, error
 // loadProcesses adds the demo's processes, publishing their versions in turn, each owned by the position of its
 // owner's title today.
 func loadProcesses(ctx context.Context, s *org.Service) error {
-	positions, err := s.Positions(ctx, org.DayOf(time.Now()), nil, false)
+	today := org.DayOf(time.Now())
+	positions, err := s.Positions(ctx, today, nil, false)
 	if err != nil {
 		return err
 	}
-	owners := map[string]uuid.UUID{}
-	for _, p := range positions {
-		owners[p.Title] = p.ID
+	units, err := s.Units(ctx, today)
+	if err != nil {
+		return err
 	}
+	roles, err := s.Roles(ctx)
+	if err != nil {
+		return err
+	}
+	known := parties{positions: map[string]uuid.UUID{}, units: map[string]uuid.UUID{}, roles: map[string]uuid.UUID{}}
+	for _, p := range positions {
+		known.positions[p.Title] = p.ID
+	}
+	for _, u := range units {
+		known.units[u.Name] = u.ID
+	}
+	for _, r := range roles {
+		known.roles[r.Key] = r.ID
+	}
+	owners := known.positions
 	ids := map[string]uuid.UUID{}
 	for _, p := range processes {
 		in := org.ProcessInput{Key: ptr(p.key), Name: ptr(p.name), Area: ptr(p.area), Description: ptr(p.description)}
@@ -234,7 +250,11 @@ func loadProcesses(ctx context.Context, s *org.Service) error {
 			if err != nil {
 				return err
 			}
-			_, _, err = s.SaveDraft(ctx, id, current.Draft.Revision, f.graph(ids))
+			g, err := f.graph(ids, known)
+			if err != nil {
+				return err
+			}
+			_, _, err = s.SaveDraft(ctx, id, current.Draft.Revision, g)
 			return err
 		}
 		for i, f := range p.versions {
@@ -257,9 +277,34 @@ func loadProcesses(ctx context.Context, s *org.Service) error {
 // widths are those the web client draws each kind of node at, so a row's nodes share a centre line.
 var widths = map[org.NodeKind]float64{org.Start: 160, org.End: 160, org.Step: 180, org.Subprocess: 180, org.Decision: 180}
 
+// parties are the positions by title, the units by name and the roles by key a demo responsibility may name.
+type parties struct{ positions, units, roles map[string]uuid.UUID }
+
+func (p parties) responsibility(r demoRACI) (org.Responsibility, error) {
+	out := org.Responsibility{Kind: r.kind}
+	kind, name, scoped := strings.Cut(r.party, ":")
+	var id uuid.UUID
+	var ok bool
+	switch {
+	case scoped && kind == "role":
+		id, ok = p.roles[name]
+		out.RoleID = &id
+	case scoped && kind == "unit":
+		id, ok = p.units[name]
+		out.UnitID = &id
+	default:
+		id, ok = p.positions[r.party]
+		out.PositionID = &id
+	}
+	if !ok {
+		return out, fmt.Errorf("no such party as %s", r.party)
+	}
+	return out, nil
+}
+
 // graph lays a flow out top to bottom: each node a row below the nearest node leading to it, the nodes of a row side
 // by side in the order they are named.
-func (f flow) graph(ids map[string]uuid.UUID) org.Graph {
+func (f flow) graph(ids map[string]uuid.UUID, known parties) (org.Graph, error) {
 	next := map[string][]string{}
 	for _, a := range f.arrows {
 		next[a.from] = append(next[a.from], a.to)
@@ -297,12 +342,19 @@ func (f flow) graph(ids map[string]uuid.UUID) org.Graph {
 			id := ids[n.sub]
 			node.SubprocessID = &id
 		}
+		for _, r := range n.raci {
+			resp, err := known.responsibility(r)
+			if err != nil {
+				return g, fmt.Errorf("%s: %w", n.key, err)
+			}
+			node.Responsibilities = append(node.Responsibilities, resp)
+		}
 		g.Nodes = append(g.Nodes, node)
 	}
 	for _, a := range f.arrows {
 		g.Arrows = append(g.Arrows, org.Arrow{Key: a.from + "-" + a.to, From: a.from, To: a.to, Label: a.label})
 	}
-	return g
+	return g, nil
 }
 
 func mustDay(s string) org.Day {

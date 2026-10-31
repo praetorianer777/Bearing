@@ -3,6 +3,7 @@ package org
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -22,6 +23,41 @@ const (
 // NodeKinds are the kinds a node may be, in the order an editor offers them.
 var NodeKinds = []NodeKind{Start, Step, Decision, Subprocess, End}
 
+// RACI is how a party stands to a node: responsible does the work, accountable answers for it, consulted is asked
+// before and informed is told after.
+type RACI string
+
+const (
+	Responsible RACI = "responsible"
+	Accountable RACI = "accountable"
+	Consulted   RACI = "consulted"
+	Informed    RACI = "informed"
+)
+
+// RACIs are the kinds in the order a matrix shows them.
+var RACIs = []RACI{Responsible, Accountable, Consulted, Informed}
+
+// Responsibility is a party's part in a node: a role, a position or a unit, exactly one of them.
+type Responsibility struct {
+	Kind       RACI
+	RoleID     *uuid.UUID
+	PositionID *uuid.UUID
+	UnitID     *uuid.UUID
+}
+
+// party is the one of role, position and unit a responsibility names, as a comparable key.
+func (r Responsibility) party() string {
+	switch {
+	case r.RoleID != nil:
+		return "role:" + r.RoleID.String()
+	case r.PositionID != nil:
+		return "position:" + r.PositionID.String()
+	case r.UnitID != nil:
+		return "unit:" + r.UnitID.String()
+	}
+	return ""
+}
+
 // Node is one node of a process graph.
 type Node struct {
 	// Key names the node within its version; the editor chooses it.
@@ -33,6 +69,8 @@ type Node struct {
 	X, Y float64
 	// SubprocessID is the process a subprocess node stands for.
 	SubprocessID *uuid.UUID
+	// Responsibilities say who does, answers for, is asked about and is told of what the node stands for.
+	Responsibilities []Responsibility
 }
 
 // Arrow leads from one node to the next; out of a decision, Label is the condition it is taken on.
@@ -49,17 +87,30 @@ type Graph struct {
 	Arrows []Arrow
 }
 
-// Problem is something keeping a draft from being published, on a node or an arrow when it is about one.
+// Problem is something keeping a draft from being published, on a node or an arrow when it is about one. A warning
+// does not keep it from being published; it is worth a look first.
 type Problem struct {
 	Code    string
 	Message string
 	Node    string
 	Arrow   string
+	Warning bool
+}
+
+// Blocking says whether any of the problems keeps a draft from being published.
+func Blocking(problems []Problem) bool {
+	for _, p := range problems {
+		if !p.Warning {
+			return true
+		}
+	}
+	return false
 }
 
 const (
-	maxNodes  = 500
-	maxArrows = 1000
+	maxNodes            = 500
+	maxArrows           = 1000
+	maxResponsibilities = 50
 )
 
 var graphKey = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
@@ -89,6 +140,9 @@ func checkShape(g Graph) error {
 		case n.SubprocessID != nil && n.Kind != Subprocess:
 			return Invalid{"nodes", "Only a subprocess node names another process."}
 		}
+		if err := checkResponsibilities(n); err != nil {
+			return err
+		}
 		nodes[n.Key] = true
 	}
 	arrows := make(map[string]bool, len(g.Arrows))
@@ -114,6 +168,38 @@ func checkShape(g Graph) error {
 	return nil
 }
 
+func checkResponsibilities(n Node) error {
+	if len(n.Responsibilities) == 0 {
+		return nil
+	}
+	switch {
+	case n.Kind == Start || n.Kind == End:
+		return Invalid{"nodes", "A start or an end has no responsibilities."}
+	case len(n.Responsibilities) > maxResponsibilities:
+		return Invalid{"nodes", fmt.Sprintf("Keep a node to %d responsibilities.", maxResponsibilities)}
+	}
+	seen := map[string]bool{}
+	for _, r := range n.Responsibilities {
+		party := r.party()
+		named := 0
+		for _, id := range []*uuid.UUID{r.RoleID, r.PositionID, r.UnitID} {
+			if id != nil {
+				named++
+			}
+		}
+		switch {
+		case !slices.Contains(RACIs, r.Kind):
+			return Invalid{"nodes", "A responsibility is responsible, accountable, consulted or informed."}
+		case named != 1:
+			return Invalid{"nodes", "A responsibility names one role, position or unit."}
+		case seen[string(r.Kind)+party]:
+			return Invalid{"nodes", "The node " + n.Key + " names the same responsibility twice."}
+		}
+		seen[string(r.Kind)+party] = true
+	}
+	return nil
+}
+
 func validKind(k NodeKind) bool {
 	for _, known := range NodeKinds {
 		if k == known {
@@ -125,11 +211,15 @@ func validKind(k NodeKind) bool {
 
 // Check finds what keeps a graph from being published as a version of the process self: it needs one start, every
 // node reachable from it and an end reachable from every node, names on what is not a start or an end, two ways or
-// more out of a decision, each with its condition, and another process behind each subprocess node.
+// more out of a decision, each with its condition, and another process behind each subprocess node. It warns of a
+// step without exactly one accountable or without anyone responsible.
 func Check(self uuid.UUID, g Graph) []Problem {
 	var problems []Problem
 	add := func(code, node, arrow, format string, args ...any) {
 		problems = append(problems, Problem{Code: code, Message: fmt.Sprintf(format, args...), Node: node, Arrow: arrow})
+	}
+	warn := func(code, node, message string) {
+		problems = append(problems, Problem{Code: code, Message: message, Node: node, Warning: true})
 	}
 	outOf := map[string][]Arrow{}
 	into := map[string][]Arrow{}
@@ -157,6 +247,25 @@ func Check(self uuid.UUID, g Graph) []Problem {
 			}
 		}
 		switch n.Kind {
+		case Step:
+			accountable, responsible := 0, 0
+			for _, r := range n.Responsibilities {
+				switch r.Kind {
+				case Accountable:
+					accountable++
+				case Responsible:
+					responsible++
+				}
+			}
+			switch {
+			case accountable == 0:
+				warn("no_accountable", n.Key, "Nobody is accountable for this step.")
+			case accountable > 1:
+				warn("many_accountable", n.Key, "One party only is accountable for a step.")
+			}
+			if responsible == 0 {
+				warn("no_responsible", n.Key, "Nobody is responsible for this step.")
+			}
 		case Decision:
 			if len(outOf[n.Key]) < 2 {
 				add("decision_ways", n.Key, "", "A decision needs two ways out or more.")

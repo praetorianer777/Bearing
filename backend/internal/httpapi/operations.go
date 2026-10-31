@@ -284,7 +284,7 @@ var operations = []operation{
 		role:        editor, request: draftRequest{}, responses: map[int]any{http.StatusOK: env{"process": processResponse{}}}},
 	{method: http.MethodPost, path: "/processes/{processID}/publish", id: "publish", handle: (*Server).handlePublish, tag: "processes",
 		summary:     "Publish the draft as the process's next version, which never changes again.",
-		description: "Refused as not_publishable while the draft has problems, and as nothing_changed when it is as the newest version has it.",
+		description: "Refused as not_publishable while the draft has problems other than warnings, and as nothing_changed when it is as the newest version has it.",
 		role:        editor, request: publishRequest{}, responses: map[int]any{http.StatusCreated: env{"version": versionResponse{}}}},
 	{method: http.MethodGet, path: "/processes/{processID}/versions/{number}", id: "processVersion", handle: (*Server).handleProcessVersion, tag: "processes",
 		summary: "One published version of a process with its graph.", responses: map[int]any{http.StatusOK: env{"version": versionResponse{}}}},

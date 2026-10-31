@@ -4051,7 +4051,7 @@
       "post": {
         "operationId": "publish",
         "summary": "Publish the draft as the process's next version, which never changes again.",
-        "description": "Refused as not_publishable while the draft has problems, and as nothing_changed when it is as the newest version has it.",
+        "description": "Refused as not_publishable while the draft has problems other than warnings, and as nothing_changed when it is as the newest version has it.",
         "tags": [
           "processes"
         ],
@@ -6483,6 +6483,12 @@
           "name": {
             "type": "string"
           },
+          "responsibilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponsibilityBody"
+            }
+          },
           "subprocessId": {
             "type": [
               "string",
@@ -6504,7 +6510,8 @@
           "description",
           "x",
           "y",
-          "subprocessId"
+          "subprocessId",
+          "responsibilities"
         ]
       },
       "OrgRoleHolderResponse": {
@@ -6873,11 +6880,15 @@
           },
           "node": {
             "type": "string"
+          },
+          "warning": {
+            "type": "boolean"
           }
         },
         "required": [
           "code",
-          "message"
+          "message",
+          "warning"
         ]
       },
       "ProcessRequest": {
@@ -7035,6 +7046,35 @@
             "format": "uuid"
           }
         }
+      },
+      "ResponsibilityBody": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "responsible",
+              "accountable",
+              "consulted",
+              "informed"
+            ]
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "kind"
+        ]
       },
       "RoleRequest": {
         "type": "object",

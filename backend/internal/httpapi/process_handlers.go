@@ -22,6 +22,14 @@ type processRequest struct {
 	OwnerID *string `json:"ownerId,omitempty"`
 }
 
+type responsibilityBody struct {
+	Kind org.RACI `json:"kind"`
+	// RoleID, PositionID and UnitID name the party; exactly one of them.
+	RoleID     *uuid.UUID `json:"roleId,omitempty"`
+	PositionID *uuid.UUID `json:"positionId,omitempty"`
+	UnitID     *uuid.UUID `json:"unitId,omitempty"`
+}
+
 type nodeBody struct {
 	Key         string       `json:"key"`
 	Kind        org.NodeKind `json:"kind"`
@@ -31,6 +39,8 @@ type nodeBody struct {
 	Y           float64      `json:"y"`
 	// SubprocessID is the process a subprocess node stands for.
 	SubprocessID *uuid.UUID `json:"subprocessId"`
+	// Responsibilities are on steps, decisions and subprocesses; a start or an end has none.
+	Responsibilities []responsibilityBody `json:"responsibilities"`
 }
 
 type arrowBody struct {
@@ -43,12 +53,15 @@ type arrowBody struct {
 
 type problemResponse struct {
 	// Code says which rule: no_start, many_starts, no_end, into_start, out_of_end, unreachable, dead_end, unnamed,
-	// decision_ways, unlabelled_way, no_subprocess or own_subprocess.
+	// decision_ways, unlabelled_way, no_subprocess or own_subprocess; and as warnings no_accountable,
+	// many_accountable or no_responsible.
 	Code    string `json:"code"`
 	Message string `json:"message"`
 	// Node and Arrow name what the problem is on, when it is on one.
 	Node  string `json:"node,omitempty"`
 	Arrow string `json:"arrow,omitempty"`
+	// Warning says the problem does not keep the draft from being published.
+	Warning bool `json:"warning"`
 }
 
 type draftResponse struct {
@@ -57,7 +70,7 @@ type draftResponse struct {
 	// Revision is what the next save names.
 	Revision int       `json:"revision"`
 	SavedAt  time.Time `json:"savedAt"`
-	// Problems keep the draft from being published; none means it may be.
+	// Problems keep the draft from being published, but for the warnings, which are worth a look first.
 	Problems []problemResponse `json:"problems"`
 }
 
@@ -105,7 +118,11 @@ type publishRequest struct {
 func toNodes(nodes []org.Node) []nodeBody {
 	out := make([]nodeBody, len(nodes))
 	for i, n := range nodes {
-		out[i] = nodeBody{Key: n.Key, Kind: n.Kind, Name: n.Name, Description: n.Description, X: n.X, Y: n.Y, SubprocessID: n.SubprocessID}
+		out[i] = nodeBody{Key: n.Key, Kind: n.Kind, Name: n.Name, Description: n.Description, X: n.X, Y: n.Y, SubprocessID: n.SubprocessID,
+			Responsibilities: make([]responsibilityBody, len(n.Responsibilities))}
+		for j, r := range n.Responsibilities {
+			out[i].Responsibilities[j] = responsibilityBody(r)
+		}
 	}
 	return out
 }
@@ -121,7 +138,7 @@ func toArrows(arrows []org.Arrow) []arrowBody {
 func toProblems(problems []org.Problem) []problemResponse {
 	out := make([]problemResponse, len(problems))
 	for i, p := range problems {
-		out[i] = problemResponse{Code: p.Code, Message: p.Message, Node: p.Node, Arrow: p.Arrow}
+		out[i] = problemResponse{Code: p.Code, Message: p.Message, Node: p.Node, Arrow: p.Arrow, Warning: p.Warning}
 	}
 	return out
 }
@@ -177,7 +194,7 @@ func processError(err error) error {
 			Fields: map[string]string{"key": sentence(err.Error())}}
 	case errors.Is(err, org.ErrOwnerNotThere):
 		return ErrValidation(map[string]string{"ownerId": sentence(err.Error())})
-	case errors.Is(err, org.ErrSubprocessGone):
+	case errors.Is(err, org.ErrSubprocessGone), errors.Is(err, org.ErrPartyGone):
 		return ErrValidation(map[string]string{"nodes": sentence(err.Error())})
 	}
 	for code, refusal := range map[string]error{
@@ -284,6 +301,9 @@ func (s *Server) handleSaveDraft(w http.ResponseWriter, r *http.Request) {
 	g := org.Graph{Nodes: make([]org.Node, len(req.Nodes)), Arrows: make([]org.Arrow, len(req.Arrows))}
 	for i, n := range req.Nodes {
 		g.Nodes[i] = org.Node{Key: n.Key, Kind: n.Kind, Name: n.Name, Description: n.Description, X: n.X, Y: n.Y, SubprocessID: n.SubprocessID}
+		for _, r := range n.Responsibilities {
+			g.Nodes[i].Responsibilities = append(g.Nodes[i].Responsibilities, org.Responsibility(r))
+		}
 	}
 	for i, a := range req.Arrows {
 		g.Arrows[i] = org.Arrow{Key: a.Key, From: a.From, To: a.To, Label: a.Label}

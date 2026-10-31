@@ -7,16 +7,21 @@ import (
 	"github.com/google/uuid"
 )
 
-func codes(problems []Problem) []string {
-	out := make([]string, len(problems))
-	for i, p := range problems {
-		out[i] = p.Code
+// codes are the problems that keep a graph from being published, or with warnings, those that do not.
+func codes(problems []Problem, warnings ...bool) []string {
+	out := []string{}
+	for _, p := range problems {
+		if p.Warning != (len(warnings) > 0 && warnings[0]) {
+			continue
+		}
+		code := p.Code
 		if p.Node != "" {
-			out[i] += "@" + p.Node
+			code += "@" + p.Node
 		}
 		if p.Arrow != "" {
-			out[i] += "@" + p.Arrow
+			code += "@" + p.Arrow
 		}
+		out = append(out, code)
 	}
 	slices.Sort(out)
 	return out
@@ -37,7 +42,7 @@ func approval() Graph {
 }
 
 func TestAWholeFlowHasNoProblems(t *testing.T) {
-	if got := Check(uuid.New(), approval()); len(got) != 0 {
+	if got := Check(uuid.New(), approval()); Blocking(got) {
 		t.Errorf("a whole flow has %v", codes(got))
 	}
 	if got := Check(uuid.New(), Graph{Nodes: []Node{{Key: "s", Kind: Start}, {Key: "e", Kind: End}},
@@ -69,7 +74,7 @@ func TestEveryNodeLiesOnAWayFromTheStartToAnEnd(t *testing.T) {
 	}
 	g = approval()
 	g.Arrows = append(g.Arrows, Arrow{Key: "back", From: "approve", To: "check"})
-	if got := Check(uuid.New(), g); len(got) != 0 {
+	if got := Check(uuid.New(), g); Blocking(got) {
 		t.Errorf("a loop back that still leads on has %v", codes(got))
 	}
 }
@@ -135,5 +140,53 @@ func TestAProcessIsMadeWithAKeyAndAName(t *testing.T) {
 	}
 	if (&ProcessInput{}).check(false) != nil {
 		t.Error("a change of nothing was refused")
+	}
+}
+
+func TestEveryStepHasOneAccountableAndSomeoneResponsible(t *testing.T) {
+	role, position, unit := uuid.New(), uuid.New(), uuid.New()
+	g := approval()
+	g.Nodes[1].Responsibilities = []Responsibility{{Kind: Responsible, RoleID: &role}, {Kind: Accountable, PositionID: &position}}
+	g.Nodes[3].Responsibilities = []Responsibility{
+		{Kind: Accountable, PositionID: &position}, {Kind: Accountable, UnitID: &unit}, {Kind: Informed, UnitID: &unit},
+	}
+	got := Check(uuid.New(), g)
+	if want := []string{"many_accountable@approve", "no_responsible@approve"}; !slices.Equal(codes(got, true), want) {
+		t.Errorf("warnings %v, want %v", codes(got, true), want)
+	}
+	if Blocking(got) {
+		t.Errorf("warnings keep the flow from being published: %v", codes(got))
+	}
+	g.Nodes[3].Responsibilities = nil
+	if got := codes(Check(uuid.New(), g), true); !slices.Equal(got, []string{"no_accountable@approve", "no_responsible@approve"}) {
+		t.Errorf("a step nobody answers for warns %v", got)
+	}
+}
+
+func TestAResponsibilityNamesOnePartyOnceOnANodeThatHasThem(t *testing.T) {
+	role, position := uuid.New(), uuid.New()
+	cases := map[string][]Responsibility{
+		"no party":     {{Kind: Responsible}},
+		"two parties":  {{Kind: Responsible, RoleID: &role, PositionID: &position}},
+		"unknown kind": {{Kind: "owner", RoleID: &role}},
+		"twice":        {{Kind: Consulted, RoleID: &role}, {Kind: Consulted, RoleID: &role}},
+		"too many":     make([]Responsibility, maxResponsibilities+1),
+	}
+	for name, list := range cases {
+		g := approval()
+		g.Nodes[1].Responsibilities = list
+		if checkShape(g) == nil {
+			t.Errorf("%s was taken", name)
+		}
+	}
+	g := approval()
+	g.Nodes[0].Responsibilities = []Responsibility{{Kind: Informed, RoleID: &role}}
+	if checkShape(g) == nil {
+		t.Error("a start with a responsibility was taken")
+	}
+	g = approval()
+	g.Nodes[2].Responsibilities = []Responsibility{{Kind: Accountable, RoleID: &role}, {Kind: Consulted, RoleID: &role}}
+	if err := checkShape(g); err != nil {
+		t.Errorf("a decision with responsibilities was refused: %v", err)
 	}
 }
