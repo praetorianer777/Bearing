@@ -7,20 +7,26 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/demo"
 )
 
-type demoResponse struct {
-	// Loaded says the demo organisation was loaded once; it is not loaded again.
+type demoPartResponse struct {
+	// Loaded says the part was loaded once; it is not loaded again.
 	Loaded bool `json:"loaded"`
-	// Empty says the installation has no units, so the demo may go in.
+	// Empty says the installation has nothing of that part of its own: no units, or no processes.
 	Empty bool `json:"empty"`
 }
 
+type demoResponse struct {
+	Organisation demoPartResponse `json:"organisation"`
+	// Processes go in where there are none and the organisation is the demo's.
+	Processes demoPartResponse `json:"processes"`
+}
+
 func (s *Server) respondDemo(w http.ResponseWriter, r *http.Request, status int) {
-	loaded, empty, err := s.Org.DemoState(r.Context())
+	d, err := s.Org.DemoState(r.Context())
 	if err != nil {
 		respondError(w, r, s.Log, err)
 		return
 	}
-	respondJSON(w, status, demoResponse{Loaded: loaded, Empty: empty})
+	respondJSON(w, status, demoResponse{Organisation: demoPartResponse(d.Organisation), Processes: demoPartResponse(d.Processes)})
 }
 
 func (s *Server) handleDemo(w http.ResponseWriter, r *http.Request) {

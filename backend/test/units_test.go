@@ -29,7 +29,10 @@ type unitJSON struct {
 type unitBody struct{ Unit unitJSON }
 
 type refusal struct {
-	Error struct{ Code, Message string }
+	Error struct {
+		Code, Message string
+		Fields        map[string]string
+	}
 }
 
 func day(offset int) string { return time.Now().AddDate(0, 0, offset).Format("2006-01-02") }

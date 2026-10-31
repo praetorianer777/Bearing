@@ -61,9 +61,12 @@ The seed also loads the demo organisation, Kestrel Works: about sixty people
 in four levels of units, with dotted lines, two vacancies, deputies, a few
 roles and a Head of Product who changed in April 2026, to read as of a day.
 `alice`, `bob`, `carol` and `dave` are in it by address and are linked to their
-entries when they first sign in. `make seed` runs the seed again and changes
-nothing; `BEARING_DEMO=false make up` starts empty. An administrator can load
-the demo into an installation without units under Settings, Unit types.
+entries when they first sign in. Its six processes come along: from an order
+to its delivery to a new colleague's onboarding, with decisions, a
+subprocess, two versions of one process and a draft not yet publishable.
+`make seed` runs the seed again and changes nothing; `BEARING_DEMO=false make
+up` starts empty. An administrator loads what of it may still go in under
+Settings, Example data, or from the empty organisation chart.
 
 "Continue with single sign-on" signs in through the stack's Keycloak. The seed
 lets `alice` in as an administrator and `bob` as a member ahead of time

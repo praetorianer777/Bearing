@@ -75,38 +75,3 @@ describe("the unit types page", () => {
     expect(screen.getByRole("link", { name: "Unit types" })).toHaveAttribute("aria-current", "page");
   });
 });
-
-describe("the demo organisation", () => {
-  it("loads into an empty installation once, and says when it cannot", async () => {
-    let state = { loaded: false, empty: true };
-    let loads = 0;
-    fakeAPI({
-      ...signedInAs(),
-      "GET /unit-types": () => ({ body: { unitTypes: [] } }),
-      "GET /demo": () => ({ body: state }),
-      "POST /demo": () => {
-        loads++;
-        state = { loaded: true, empty: false };
-        return { status: 201, body: state };
-      },
-    });
-    const user = userEvent.setup();
-    renderApp("/settings/unit-types");
-    const panel = await screen.findByRole("region", { name: "Demo organisation" });
-    await user.click(await within(panel).findByRole("button", { name: "Load the demo organisation" }));
-    expect(await within(panel).findByText("The demo organisation is loaded.")).toBeInTheDocument();
-    expect(loads).toBe(1);
-  });
-
-  it("stays out of an installation with an organisation of its own", async () => {
-    fakeAPI({
-      ...signedInAs(),
-      "GET /unit-types": () => ({ body: { unitTypes: [] } }),
-      "GET /demo": () => ({ body: { loaded: false, empty: false } }),
-    });
-    renderApp("/settings/unit-types");
-    const panel = await screen.findByRole("region", { name: "Demo organisation" });
-    expect(within(panel).getByText(/has an organisation of its own/)).toBeInTheDocument();
-    expect(within(panel).queryByRole("button")).not.toBeInTheDocument();
-  });
-});

@@ -19,13 +19,14 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/org"
 )
 
-type demoJSON struct{ Loaded, Empty bool }
+type demoJSON struct{ Organisation, Processes struct{ Loaded, Empty bool } }
 
 // The stack's seed loads the demo organisation; asked again, by the seed or an administrator, nothing changes.
 func TestTheDemoOrganisationLoadsOnce(t *testing.T) {
 	admin := signedIn(t, adminEmail, adminPassword)
 	var state demoJSON
-	if status := admin.do(http.MethodGet, "/demo", nil, &state); status != http.StatusOK || !state.Loaded || state.Empty {
+	if status := admin.do(http.MethodGet, "/demo", nil, &state); status != http.StatusOK || !state.Organisation.Loaded || state.Organisation.Empty ||
+		!state.Processes.Loaded || state.Processes.Empty {
 		t.Fatalf("the demo answered %d %+v, want it loaded by the seed", status, state)
 	}
 	count := func() (units, people int) {
@@ -71,29 +72,49 @@ func TestTheDemoGoesIntoAnEmptyInstallationOnly(t *testing.T) {
 	}
 	as := db.WithUser(ctx, ada.ID)
 	s := &org.Service{DB: cluster}
-	if loaded, empty, err := s.DemoState(as); err != nil || loaded || !empty {
-		t.Fatalf("a fresh installation's demo state is %v %v %v", loaded, empty, err)
+	if state, err := s.DemoState(as); err != nil || state.Organisation != (org.DemoPart{Empty: true}) || state.Processes != (org.DemoPart{Empty: true}) {
+		t.Fatalf("a fresh installation's demo state is %+v %v", state, err)
 	}
 	if _, err := demo.Load(as, s); err != nil {
 		t.Fatalf("loading the demo: %v", err)
 	}
-	var units, people, holdings, events int
-	count := func() {
+	var units, people, holdings, events, processes, versions int
+	count := func() [6]int {
 		_ = cluster.ReadAdmin(ctx, func(ctx context.Context, q db.DBTX) error {
 			return q.QueryRow(ctx, `SELECT (SELECT count(*) FROM unit), (SELECT count(*) FROM person), (SELECT count(*) FROM holding),
-				(SELECT count(*) FROM audit_event WHERE actor_id = $1)`, ada.ID).Scan(&units, &people, &holdings, &events)
+				(SELECT count(*) FROM audit_event WHERE actor_id = $1), (SELECT count(*) FROM process),
+				(SELECT count(*) FROM process_version WHERE number IS NOT NULL)`, ada.ID).
+				Scan(&units, &people, &holdings, &events, &processes, &versions)
 		})
+		return [6]int{units, people, holdings, events, processes, versions}
 	}
-	count()
-	if units != 19 || people < 55 || holdings < people || events == 0 {
-		t.Errorf("the demo brought %d units, %d people, %d holdings and %d audited changes", units, people, holdings, events)
+	before := count()
+	if units != 19 || people < 55 || holdings < people || events == 0 || processes != 6 || versions != 6 {
+		t.Errorf("the demo brought %d units, %d people, %d holdings, %d audited changes, %d processes and %d versions",
+			units, people, holdings, events, processes, versions)
 	}
-	before := [4]int{units, people, holdings, events}
 	if _, err := demo.Load(as, s); !errors.Is(err, demo.ErrLoaded) {
 		t.Errorf("a second load = %v", err)
 	}
-	if count(); [4]int{units, people, holdings, events} != before {
-		t.Errorf("a second load changed things: %v, were %v", [4]int{units, people, holdings, events}, before)
+	if after := count(); after != before {
+		t.Errorf("a second load changed things: %v, were %v", after, before)
+	}
+
+	// An installation whose demo organisation came before the processes did gets them on asking.
+	if _, err := cluster.WriteAdmin(ctx, func(ctx context.Context, q db.DBTX) error {
+		if _, err := q.Exec(ctx, `DELETE FROM process`); err != nil {
+			return err
+		}
+		_, err := q.Exec(ctx, `UPDATE installation SET demo_processes_loaded_at = NULL`)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := demo.Load(as, s); err != nil {
+		t.Fatalf("loading the processes after the organisation: %v", err)
+	}
+	if after := count(); after[0] != before[0] || after[1] != before[1] || after[4] != 6 || after[5] != 6 {
+		t.Errorf("loading the processes alone left %v, were %v", after, before)
 	}
 
 	other := freshCluster(t, "bearing_demo_own")

@@ -106,12 +106,24 @@ export const de: Messages = {
     icons: { unit: "Einheit", organisation: "Organisation", division: "Bereich", department: "Abteilung", team: "Team", project: "Projekt" },
   },
   demo: {
-    title: "Demo-Organisation",
+    title: "Beispieldaten",
     intro:
-      "Kestrel Works, ein erfundener Hersteller von Industriesensoren: etwa sechzig Personen auf vier Ebenen, mit gepunkteten Linien, zwei offenen Stellen, Vertretungen und einigen Rollen. alice, bob, carol und dave aus der Suite gehören dazu und werden bei ihrer Anmeldung verknüpft.",
-    load: "Demo-Organisation laden",
-    loaded: "Die Demo-Organisation ist geladen.",
-    notEmpty: "Diese Installation hat eine eigene Organisation, daher kann die Demo nicht hinein.",
+      "Kestrel Works, ein erfundener Hersteller von Industriesensoren, zum Umsehen und Ausprobieren. Jeder Teil kommt einmal hinein, und nur dort, wo die Installation nichts Eigenes dieser Art hat.",
+    organisation: "Organisation",
+    organisationIntro:
+      "Etwa sechzig Personen auf vier Ebenen, mit gepunkteten Linien, zwei offenen Stellen, Vertretungen und einigen Rollen. alice, bob, carol und dave aus der Suite gehören dazu und werden bei ihrer Anmeldung verknüpft.",
+    processes: "Prozesse",
+    processesIntro:
+      "Sechs Prozesse, vom Auftrag bis zur Lieferung bis zum Einarbeiten neuer Kolleginnen und Kollegen, mit Entscheidungen, einem Teilprozess, Versionen und einem noch nicht veröffentlichbaren Entwurf. Sie kommen mit der Beispielorganisation hinein oder nach ihr.",
+    state: {
+      loaded: "Geladen",
+      ready: "Bereit zum Laden",
+      taken: "Diese Installation hat eigene",
+      needsOrganisation: "Braucht die Beispielorganisation",
+    },
+    load: "Beispieldaten laden",
+    done: "Alle Beispieldaten sind geladen.",
+    nothing: "Keine der Beispieldaten kann hier hinein.",
   },
   themes: {
     title: "Themes",
@@ -199,7 +211,7 @@ export const de: Messages = {
     folded: (n: number) => (n === 1 ? "1 Stelle eingeklappt" : `${n} Stellen eingeklappt`),
     collapse: (unit: string) => `${unit} einklappen`,
     expand: (unit: string) => `${unit} ausklappen`,
-    empty: "Noch keine Organisation. Legen Sie Einheiten und Stellen an oder laden Sie die Demo-Organisation unter Einstellungen, Einheitentypen.",
+    empty: "Noch keine Organisation. Legen Sie Einheiten und Stellen an oder laden Sie die Beispieldaten.",
     unreachable: "Die Organisation ließ sich nicht lesen. Versuchen Sie es gleich noch einmal.",
   },
   people: {

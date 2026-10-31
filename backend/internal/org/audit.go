@@ -20,7 +20,7 @@ type Event struct {
 	ActorID   *uuid.UUID
 	ActorName *string
 	// Table is what changed: unit, unit_placement, position, reporting_line, person, person_photo, holding, role,
-	// position_role, deputy or unit_type.
+	// position_role, deputy, unit_type, process or process_version.
 	Table     string
 	Operation string
 	// Before and After are the row as it was and as it became; nil before an insert and after a delete.

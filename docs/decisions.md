@@ -164,6 +164,11 @@ ids when it imports the realm, and the realm file is Dynamo's, so the ids
 cannot be known ahead. The first sign-in links each one, as it would anybody
 entered ahead of signing in.
 
+The demo's processes are a second part, loaded the same way and noted
+apart: into an installation without processes whose organisation is the
+demo's, since they are owned by its positions. An installation that had
+the demo organisation before there were processes gets them on asking.
+
 ## The org chart is laid out in the browser, and moved cards are each viewer's own
 
 The chart draws positions, not people, as cards, with their holders on
@@ -174,3 +179,20 @@ it, in that browser only, until they reset the layout: an arrangement is
 a way of looking, not a fact about the organisation, so it is not shared
 or audited. Folding is by unit, into the unit's head. The day and the
 focus live in the address, so a chart can be linked to as it was seen.
+
+## A process is a draft and numbered versions, stored as rows
+
+A process is a flow graph of nodes (start, step, decision, subprocess,
+end) and arrows, kept as rows rather than one document, so later steps
+can name roles, positions and units by key and searches can reach every
+step. The draft is the version without a number. Saving replaces the
+draft's graph whole and names the revision it was made from, so two
+editors do not overwrite each other unseen. Publishing numbers the draft
+and copies it into a new one; a trigger keeps published versions from
+changing, so whatever later hangs off a node is copied along and kept
+as it was. The draft takes anything the store can hold, and what keeps
+it from being published (one start, every node on a way from the start
+to an end, decisions with two or more labelled ways, subprocesses
+naming another process) comes back with it as problems, so the editor
+can show them while drawing. The log keeps processes and each
+publishing, not every save of a draft.
