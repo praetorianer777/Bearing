@@ -118,6 +118,11 @@ var mayCall = map[string]auth.Role{
 	"positionReports":      "",
 	"personChain":          "",
 	"personReports":        "",
+	"audit":                auth.RoleEditor,
+	"unitAudit":            auth.RoleEditor,
+	"positionAudit":        auth.RoleEditor,
+	"personAudit":          auth.RoleEditor,
+	"roleAudit":            auth.RoleEditor,
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {
@@ -469,6 +474,15 @@ func TestPeopleRequestsAreCheckedBeforeTheModelIsAsked(t *testing.T) {
 		{http.MethodGet, "/holdings/nope", "bert", "", http.StatusNotFound},
 		{http.MethodGet, "/holdings?roleId=x", "bert", "", http.StatusUnprocessableEntity},
 		{http.MethodGet, "/roles/nope", "bert", "", http.StatusNotFound},
+		{http.MethodGet, "/people/" + uuid.NewString() + "?asOf=x", "bert", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/people/me?asOf=x", "bert", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/audit?before=x", "eve", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/audit?limit=x", "eve", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/audit?limit=500", "eve", "", http.StatusUnprocessableEntity},
+		{http.MethodGet, "/units/nope/audit", "eve", "", http.StatusNotFound},
+		{http.MethodGet, "/positions/nope/audit", "eve", "", http.StatusNotFound},
+		{http.MethodGet, "/people/nope/audit", "eve", "", http.StatusNotFound},
+		{http.MethodGet, "/roles/nope/audit", "eve", "", http.StatusNotFound},
 		{http.MethodGet, "/units/nope/members", "bert", "", http.StatusNotFound},
 		{http.MethodGet, "/units/" + uuid.NewString() + "/members?asOf=x", "bert", "", http.StatusUnprocessableEntity},
 		{http.MethodGet, "/positions/nope/chain", "bert", "", http.StatusNotFound},

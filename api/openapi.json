@@ -16,6 +16,9 @@
       "name": "accounts"
     },
     {
+      "name": "audit"
+    },
+    {
       "name": "health"
     },
     {
@@ -291,6 +294,74 @@
           }
         },
         "x-bearing-role": "administrator"
+      }
+    },
+    "/audit": {
+      "get": {
+        "operationId": "audit",
+        "summary": "Every change to the organisation model, newest first: who made it, when, and the row before and after.",
+        "description": "Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.",
+        "tags": [
+          "audit"
+        ],
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EventResponse"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "next"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
       }
     },
     "/auth/me": {
@@ -1683,9 +1754,18 @@
     "/people/me": {
       "get": {
         "operationId": "myEntry",
-        "summary": "Your own entry in the organisation, linked to your account when you sign in.",
+        "summary": "Your own entry in the organisation, linked to your account when you sign in, with what you hold on a day.",
         "tags": [
           "people"
+        ],
+        "parameters": [
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -1695,11 +1775,24 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "holdings": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/HoldingResponse"
+                      }
+                    },
                     "person": {
                       "$ref": "#/components/schemas/PersonResponse"
                     }
                   },
                   "required": [
+                    "asOf",
+                    "holdings",
                     "person"
                   ]
                 }
@@ -1899,7 +1992,8 @@
     "/people/{personID}": {
       "get": {
         "operationId": "person",
-        "summary": "One person.",
+        "summary": "One person, with what they hold on a day.",
+        "description": "asOf is a day written 2006-01-02, today when left out.",
         "tags": [
           "people"
         ],
@@ -1912,6 +2006,13 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1922,11 +2023,24 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "holdings": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/HoldingResponse"
+                      }
+                    },
                     "person": {
                       "$ref": "#/components/schemas/PersonResponse"
                     }
                   },
                   "required": [
+                    "asOf",
+                    "holdings",
                     "person"
                   ]
                 }
@@ -2064,6 +2178,83 @@
           }
         },
         "x-bearing-role": "administrator"
+      }
+    },
+    "/people/{personID}/audit": {
+      "get": {
+        "operationId": "personAudit",
+        "summary": "The changes to a person and to every relation naming it, newest first: who made each, when, and the row before and after.",
+        "description": "Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.",
+        "tags": [
+          "audit"
+        ],
+        "parameters": [
+          {
+            "name": "personID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EventResponse"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "next"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
       }
     },
     "/people/{personID}/chain": {
@@ -2730,6 +2921,83 @@
                   },
                   "required": [
                     "position"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/positions/{positionID}/audit": {
+      "get": {
+        "operationId": "positionAudit",
+        "summary": "The changes to a position and to every relation naming it, newest first: who made each, when, and the row before and after.",
+        "description": "Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.",
+        "tags": [
+          "audit"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EventResponse"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "next"
                   ]
                 }
               }
@@ -3635,6 +3903,83 @@
         "x-bearing-role": "editor"
       }
     },
+    "/roles/{roleID}/audit": {
+      "get": {
+        "operationId": "roleAudit",
+        "summary": "The changes to a role and to every relation naming it, newest first: who made each, when, and the row before and after.",
+        "description": "Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.",
+        "tags": [
+          "audit"
+        ],
+        "parameters": [
+          {
+            "name": "roleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EventResponse"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "next"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
     "/themes": {
       "get": {
         "operationId": "themes",
@@ -4366,6 +4711,83 @@
         "x-bearing-role": "editor"
       }
     },
+    "/units/{unitID}/audit": {
+      "get": {
+        "operationId": "unitAudit",
+        "summary": "The changes to a unit and to every relation naming it, newest first: who made each, when, and the row before and after.",
+        "description": "Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.",
+        "tags": [
+          "audit"
+        ],
+        "parameters": [
+          {
+            "name": "unitID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EventResponse"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "next"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
     "/units/{unitID}/members": {
       "get": {
         "operationId": "members",
@@ -4840,6 +5262,60 @@
         },
         "required": [
           "error"
+        ]
+      },
+      "EventResponse": {
+        "type": "object",
+        "properties": {
+          "actorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "actorName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "after": {
+            "type": "object",
+            "additionalProperties": {
+              "description": "A JSON value."
+            }
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "before": {
+            "type": "object",
+            "additionalProperties": {
+              "description": "A JSON value."
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "table": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "actorId",
+          "actorName",
+          "table",
+          "operation",
+          "before",
+          "after"
         ]
       },
       "GroupGrant": {

@@ -90,6 +90,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every change to the organisation model, newest first: who made it, when, and the row before and after.
+         * @description Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.
+         */
+        get: operations["audit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/me": {
         parameters: {
             query?: never;
@@ -511,7 +531,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Your own entry in the organisation, linked to your account when you sign in. */
+        /** Your own entry in the organisation, linked to your account when you sign in, with what you hold on a day. */
         get: operations["myEntry"];
         put?: never;
         post?: never;
@@ -565,7 +585,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** One person. */
+        /**
+         * One person, with what they hold on a day.
+         * @description asOf is a day written 2006-01-02, today when left out.
+         */
         get: operations["person"];
         put?: never;
         post?: never;
@@ -586,6 +609,26 @@ export interface paths {
         get?: never;
         /** Link a person to an account here, or unlink them; the account's holder then keeps the fields of the entry administrators allow. */
         put: operations["linkAccount"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{personID}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The changes to a person and to every relation naming it, newest first: who made each, when, and the row before and after.
+         * @description Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.
+         */
+        get: operations["personAudit"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -736,6 +779,26 @@ export interface paths {
         put?: never;
         /** End a position from a day. Its lines and holdings end there; positions still reporting to it must be given another line first. */
         post: operations["archivePosition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/positions/{positionID}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The changes to a position and to every relation naming it, newest first: who made each, when, and the row before and after.
+         * @description Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.
+         */
+        get: operations["positionAudit"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -964,6 +1027,26 @@ export interface paths {
         patch: operations["updateRole"];
         trace?: never;
     };
+    "/roles/{roleID}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The changes to a role and to every relation naming it, newest first: who made each, when, and the row before and after.
+         * @description Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.
+         */
+        get: operations["roleAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/themes": {
         parameters: {
             query?: never;
@@ -1161,6 +1244,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/units/{unitID}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The changes to a unit and to every relation naming it, newest first: who made each, when, and the row before and after.
+         * @description Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.
+         */
+        get: operations["unitAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/units/{unitID}/members": {
         parameters: {
             query?: never;
@@ -1321,6 +1424,23 @@ export interface components {
         };
         ErrorEnvelope: {
             error: components["schemas"]["APIError"];
+        };
+        EventResponse: {
+            /** Format: uuid */
+            actorId: string | null;
+            actorName: string | null;
+            after: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            at: string;
+            before: {
+                [key: string]: unknown;
+            };
+            /** Format: uuid */
+            id: string;
+            operation: string;
+            table: string;
         };
         GroupGrant: {
             group: string;
@@ -1940,6 +2060,42 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    audit: {
+        parameters: {
+            query?: {
+                before?: string;
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: components["schemas"]["EventResponse"][];
+                        /** Format: uuid */
+                        next: string | null;
+                    };
+                };
             };
             /** @description An error, in the one shape every endpoint uses. */
             default: {
@@ -2962,7 +3118,9 @@ export interface operations {
     };
     myEntry: {
         parameters: {
-            query?: never;
+            query?: {
+                asOf?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2976,6 +3134,12 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        holdings: components["schemas"]["HoldingResponse"][];
                         person: components["schemas"]["PersonResponse"];
                     };
                 };
@@ -3148,7 +3312,9 @@ export interface operations {
     };
     person: {
         parameters: {
-            query?: never;
+            query?: {
+                asOf?: string;
+            };
             header?: never;
             path: {
                 personID: string;
@@ -3164,6 +3330,12 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        holdings: components["schemas"]["HoldingResponse"][];
                         person: components["schemas"]["PersonResponse"];
                     };
                 };
@@ -3239,6 +3411,44 @@ export interface operations {
                 content: {
                     "application/json": {
                         person: components["schemas"]["PersonResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    personAudit: {
+        parameters: {
+            query?: {
+                before?: string;
+                limit?: string;
+            };
+            header?: never;
+            path: {
+                personID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: components["schemas"]["EventResponse"][];
+                        /** Format: uuid */
+                        next: string | null;
                     };
                 };
             };
@@ -3672,6 +3882,44 @@ export interface operations {
                 content: {
                     "application/json": {
                         position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    positionAudit: {
+        parameters: {
+            query?: {
+                before?: string;
+                limit?: string;
+            };
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: components["schemas"]["EventResponse"][];
+                        /** Format: uuid */
+                        next: string | null;
                     };
                 };
             };
@@ -4236,6 +4484,44 @@ export interface operations {
             };
         };
     };
+    roleAudit: {
+        parameters: {
+            query?: {
+                before?: string;
+                limit?: string;
+            };
+            header?: never;
+            path: {
+                roleID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: components["schemas"]["EventResponse"][];
+                        /** Format: uuid */
+                        next: string | null;
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     themes: {
         parameters: {
             query?: never;
@@ -4729,6 +5015,44 @@ export interface operations {
                 content: {
                     "application/json": {
                         unit: components["schemas"]["UnitResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    unitAudit: {
+        parameters: {
+            query?: {
+                before?: string;
+                limit?: string;
+            };
+            header?: never;
+            path: {
+                unitID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: components["schemas"]["EventResponse"][];
+                        /** Format: uuid */
+                        next: string | null;
                     };
                 };
             };
