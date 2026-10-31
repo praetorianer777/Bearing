@@ -150,3 +150,16 @@ including the relations naming it. The log tells who changed what, which
 is for editors and administrators, not for every member. Dated relations
 answer what held on a day; the log answers who changed it and when.
 Accounts and settings are not part of the model and are not in this log.
+
+## The demo organisation goes only into an empty installation, once
+
+The demo organisation is code, loaded through the model's own service in one
+transaction, so it obeys every rule real changes obey and is audited as the
+administrator who loaded it. It goes only into an installation without
+units, since it brings its own root, and only once: the installation notes
+when it was loaded, so neither the seed run again nor an administrator's
+second try adds it twice, even after its units were changed. The realm's
+demo people are entered by address, not by `sub`: Keycloak gives users their
+ids when it imports the realm, and the realm file is Dynamo's, so the ids
+cannot be known ahead. The first sign-in links each one, as it would anybody
+entered ahead of signing in.

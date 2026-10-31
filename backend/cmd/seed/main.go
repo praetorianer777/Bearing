@@ -1,5 +1,6 @@
 // Command seed sets the installation up with its name and first administrator from BEARING_NAME and
-// BEARING_BOOTSTRAP_ADMIN_*, when it is not set up yet. Run again, it changes nothing.
+// BEARING_BOOTSTRAP_ADMIN_*, when it is not set up yet, and with BEARING_DEMO loads the demo organisation as that
+// administrator. Run again, it changes nothing.
 package main
 
 import (
@@ -10,10 +11,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
 	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/config"
 	"github.com/praetorianer777/bearing/backend/internal/db"
+	"github.com/praetorianer777/bearing/backend/internal/demo"
 	"github.com/praetorianer777/bearing/backend/internal/logging"
+	"github.com/praetorianer777/bearing/backend/internal/org"
 )
 
 func main() {
@@ -53,13 +59,43 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("BEARING_BOOTSTRAP_MEMBERS: %w", err)
 	}
-	if len(members) == 0 {
+	if len(members) > 0 {
+		if err := accounts.Prepare(ctx, members); err != nil {
+			return err
+		}
+		log.Info("members let in ahead of their first single sign-on", "members", len(members))
+	}
+	if cfg.Bootstrap.Demo {
+		return loadDemo(ctx, cluster, cfg.Bootstrap.AdminEmail, log)
+	}
+	return nil
+}
+
+// loadDemo loads the demo organisation as the first administrator, leaving an installation that has it, or one of
+// its own, as it is.
+func loadDemo(ctx context.Context, cluster *db.Cluster, email string, log *slog.Logger) error {
+	var admin uuid.UUID
+	err := cluster.ReadAdmin(ctx, func(ctx context.Context, q db.DBTX) error {
+		return q.QueryRow(ctx, `SELECT id FROM account WHERE email = $1 AND role = 'administrator' AND disabled_at IS NULL`, email).Scan(&admin)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		log.Info("the first administrator is gone; no demo organisation loaded", "administrator", email)
 		return nil
 	}
-	if err := accounts.Prepare(ctx, members); err != nil {
+	if err != nil {
 		return err
 	}
-	log.Info("members let in ahead of their first single sign-on", "members", len(members))
+	_, err = demo.Load(db.WithUser(ctx, admin), &org.Service{DB: cluster})
+	switch {
+	case errors.Is(err, demo.ErrLoaded):
+		log.Info("the demo organisation is loaded already")
+	case errors.Is(err, demo.ErrNotEmpty):
+		log.Info("the installation has an organisation of its own; no demo organisation loaded")
+	case err != nil:
+		return fmt.Errorf("load the demo organisation: %w", err)
+	default:
+		log.Info("demo organisation loaded")
+	}
 	return nil
 }
 

@@ -230,6 +230,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether the demo organisation was loaded, and whether the installation is empty enough for it. */
+        get: operations["demo"];
+        put?: never;
+        /**
+         * Load the demo organisation, Kestrel Works: about sixty people in four levels, with dotted lines, vacancies, deputies and roles.
+         * @description It goes only into an installation without units, all of it or nothing, and only once. The suite realm's alice, bob, carol and dave are in it by address, so their first sign-in links them.
+         */
+        post: operations["loadDemo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/group-grants": {
         parameters: {
             query?: never;
@@ -1403,6 +1424,10 @@ export interface components {
             /** Format: uuid */
             themeId: string | null;
         };
+        DemoResponse: {
+            empty: boolean;
+            loaded: boolean;
+        };
         DeputiesRequest: {
             deputyIds: string[];
         };
@@ -2348,6 +2373,64 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    demo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    loadDemo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoResponse"];
+                };
             };
             /** @description An error, in the one shape every endpoint uses. */
             default: {

@@ -682,6 +682,69 @@
         }
       }
     },
+    "/demo": {
+      "get": {
+        "operationId": "demo",
+        "summary": "Whether the demo organisation was loaded, and whether the installation is empty enough for it.",
+        "tags": [
+          "units"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      },
+      "post": {
+        "operationId": "loadDemo",
+        "summary": "Load the demo organisation, Kestrel Works: about sixty people in four levels, with dotted lines, vacancies, deputies and roles.",
+        "description": "It goes only into an installation without units, all of it or nothing, and only once. The suite realm's alice, bob, carol and dave are in it by address, so their first sign-in links them.",
+        "tags": [
+          "units"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      }
+    },
     "/group-grants": {
       "get": {
         "operationId": "groupGrants",
@@ -5209,6 +5272,21 @@
         },
         "required": [
           "themeId"
+        ]
+      },
+      "DemoResponse": {
+        "type": "object",
+        "properties": {
+          "empty": {
+            "type": "boolean"
+          },
+          "loaded": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "loaded",
+          "empty"
         ]
       },
       "DeputiesRequest": {
