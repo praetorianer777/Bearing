@@ -1,8 +1,12 @@
 import {
   Background,
+  BaseEdge,
   type Connection,
   Controls,
   type Edge,
+  EdgeLabelRenderer,
+  type EdgeProps,
+  getSmoothStepPath,
   Handle,
   MarkerType,
   type Node,
@@ -20,21 +24,40 @@ import { t } from "@/i18n";
 import { NODE_SIZE } from "./arrange";
 import { type Edit, type Flow, freeSpot, freshKey, mayConnect } from "./editor";
 import { partyOf } from "./raci";
+import { routePath, sides } from "./routing";
 
 /** What is picked on the canvas: one node or one arrow, by key. */
 export type Selection = { kind: "node" | "arrow"; key: string } | null;
 
 type NodeData = { node: FlowNode; flagged: boolean; subprocess?: { id: string; name: string }; accountable?: string };
+type Tone = "plain" | "picked" | "lit" | "dim" | "flagged";
+type ArrowData = { route: number[]; label: string; tone: Tone };
+type FlowEdgeView = Edge<ArrowData, "flow">;
 type FlowNodeView = Node<NodeData>;
 
 const tone = (flagged: boolean, selected: boolean) =>
   selected ? "border-accent ring-2 ring-accent/40" : flagged ? "border-warning border-dashed" : "border-border-strong";
 
+// The sides are for the canvas to route arrows by; people draw from the bottom to the top.
+const sideHandle = "opacity-0! pointer-events-none";
+
 function Ends({ kind }: { kind: NodeKind }) {
   return (
     <>
-      {kind !== "start" && <Handle type="target" position={Side.Top} className="size-2.5! bg-ink-muted!" />}
-      {kind !== "end" && <Handle type="source" position={Side.Bottom} className="size-2.5! bg-ink-muted!" />}
+      {kind !== "start" && (
+        <>
+          <Handle id="top" type="target" position={Side.Top} className="size-2.5! bg-ink-muted!" />
+          <Handle id="left-in" type="target" position={Side.Left} isConnectable={false} className={sideHandle} />
+          <Handle id="right-in" type="target" position={Side.Right} isConnectable={false} className={sideHandle} />
+        </>
+      )}
+      {kind !== "end" && (
+        <>
+          <Handle id="bottom" type="source" position={Side.Bottom} className="size-2.5! bg-ink-muted!" />
+          <Handle id="left" type="source" position={Side.Left} isConnectable={false} className={sideHandle} />
+          <Handle id="right" type="source" position={Side.Right} isConnectable={false} className={sideHandle} />
+        </>
+      )}
     </>
   );
 }
@@ -114,6 +137,41 @@ function DecisionNode({ data, selected }: NodeProps<FlowNodeView>) {
 
 const nodeTypes = { start: TerminalNode, end: TerminalNode, step: StepNode, subprocess: StepNode, decision: DecisionNode };
 
+const toneColour: Record<Tone, string> = {
+  plain: "var(--color-ink-muted)",
+  picked: "var(--color-accent)",
+  lit: "var(--color-accent)",
+  dim: "var(--color-border-strong)",
+  flagged: "var(--color-warning)",
+};
+
+/** An arrow along the route the layout gave it, or without one, a stepped line between the sides the canvas chose. */
+function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, markerEnd, style }: EdgeProps<FlowEdgeView>) {
+  const routed = data && data.route.length >= 4 ? routePath(data.route) : undefined;
+  const [stepped, stepX, stepY] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 8, offset: 24 });
+  const path = routed?.path ?? stepped;
+  const labelX = routed?.labelX ?? stepX;
+  const labelY = routed?.labelY ?? stepY;
+  const tone = data?.tone ?? "plain";
+  return (
+    <>
+      <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} interactionWidth={16} />
+      {data?.label && (
+        <EdgeLabelRenderer>
+          <div
+            className={`nodrag nopan pointer-events-none absolute rounded border bg-surface px-1.5 py-0.5 text-xs ${tone === "lit" || tone === "picked" ? "border-accent font-medium text-ink" : "border-border text-ink"} ${tone === "dim" ? "opacity-30" : ""}`}
+            style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+          >
+            {data.label}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  );
+}
+
+const edgeTypes = { flow: FlowEdge };
+
 /** The kinds an editor adds from the palette; a draft begins with its start. */
 const PALETTE: NodeKind[] = ["step", "decision", "subprocess", "end", "start"];
 
@@ -169,6 +227,25 @@ export function FlowCanvas({
   const view = useReactFlow();
   // React Flow measures each node once drawn and hides it until then; the sizes are kept apart from the flow.
   const [measured, setMeasured] = useState<Record<string, { width: number; height: number }>>({});
+  const [hovered, setHovered] = useState<string | undefined>();
+
+  // A node pointed at or picked brings its arrows and neighbours forward; a picked arrow, the two nodes it joins.
+  const focusNode = hovered ?? (selection?.kind === "node" ? selection.key : undefined);
+  const focusArrow = !hovered && selection?.kind === "arrow" ? selection.key : undefined;
+  const { litArrows, litNodes } = useMemo(() => {
+    const arrows = new Set<string>();
+    const nodes = new Set<string>();
+    for (const a of flow.arrows) {
+      if ((focusNode && (a.from === focusNode || a.to === focusNode)) || a.key === focusArrow) {
+        arrows.add(a.key);
+        nodes.add(a.from).add(a.to);
+      }
+    }
+    if (focusNode) nodes.add(focusNode);
+    return { litArrows: arrows, litNodes: nodes };
+  }, [flow.arrows, focusNode, focusArrow]);
+  const focused = litNodes.size > 0;
+  const chosen = useMemo(() => sides(flow), [flow]);
 
   const nodes: FlowNodeView[] = useMemo(
     () =>
@@ -178,6 +255,7 @@ export function FlowCanvas({
         position: { x: n.x, y: n.y },
         selected: selection?.kind === "node" && selection.key === n.key,
         measured: measured[n.key],
+        style: focused && !litNodes.has(n.key) ? { opacity: 0.35 } : undefined,
         data: {
           node: n,
           flagged: flagged.has(n.key),
@@ -190,26 +268,31 @@ export function FlowCanvas({
               .join(", ") || undefined,
         },
       })),
-    [flow.nodes, selection, measured, flagged, subprocesses, parties],
+    [flow.nodes, selection, measured, flagged, subprocesses, parties, focused, litNodes],
   );
 
   const nameOf = new Map(flow.nodes.map((n) => [n.key, n.name || t.process.unnamed]));
-  const edges: Edge[] = flow.arrows.map((a) => {
+  const edges: FlowEdgeView[] = flow.arrows.map((a) => {
     const picked = selection?.kind === "arrow" && selection.key === a.key;
-    const colour = picked ? "var(--color-accent)" : flagged.has(a.key) ? "var(--color-warning)" : "var(--color-ink-muted)";
+    const tone: Tone = picked ? "picked" : litArrows.has(a.key) ? "lit" : focused ? "dim" : flagged.has(a.key) ? "flagged" : "plain";
+    const colour = toneColour[tone];
+    const ends = chosen[a.key];
     return {
       id: a.key,
       source: a.from,
       target: a.to,
-      type: "smoothstep",
-      label: a.label || undefined,
+      sourceHandle: ends?.source ?? "bottom",
+      targetHandle: ends?.target ?? "top",
+      type: "flow",
       selected: picked,
-      style: { stroke: colour, strokeWidth: picked ? 2.5 : 1.5, strokeDasharray: flagged.has(a.key) ? "5 3" : undefined },
+      zIndex: tone === "lit" || tone === "picked" ? 1 : 0,
+      data: { route: a.route, label: a.label, tone },
+      style: {
+        stroke: colour,
+        strokeWidth: tone === "lit" || tone === "picked" ? 2.5 : 1.5,
+        strokeDasharray: flagged.has(a.key) ? "5 3" : undefined,
+      },
       markerEnd: { type: MarkerType.ArrowClosed, color: colour },
-      labelBgPadding: [6, 3],
-      labelBgBorderRadius: 4,
-      labelStyle: { fill: "var(--color-ink)", fontSize: 12 },
-      labelBgStyle: { fill: "var(--color-surface)" },
       ariaLabel: t.process.arrowFromTo(nameOf.get(a.from) ?? a.from, nameOf.get(a.to) ?? a.to),
     };
   });
@@ -241,7 +324,10 @@ export function FlowCanvas({
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
+      onNodeMouseEnter={(_, n) => setHovered(n.id)}
+      onNodeMouseLeave={() => setHovered(undefined)}
       onConnect={editable ? connect : undefined}
       isValidConnection={(c) => mayConnect(flow, c.source, c.target)}
       onNodeClick={(_, n) => onSelect({ kind: "node", key: n.id })}

@@ -31,10 +31,11 @@ type responsibilityJSON struct {
 }
 
 type arrowJSON struct {
-	Key   string `json:"key"`
-	From  string `json:"from"`
-	To    string `json:"to"`
-	Label string `json:"label"`
+	Key   string    `json:"key"`
+	From  string    `json:"from"`
+	To    string    `json:"to"`
+	Label string    `json:"label"`
+	Route []float64 `json:"route,omitempty"`
 }
 
 type processJSON struct {
@@ -588,7 +589,17 @@ func TestWhatSomebodyIsResponsibleForAndWhoDoesItInTheDemo(t *testing.T) {
 		!slices.Contains(got, "production-run/test:accountable") {
 		t.Errorf("the Test lab lead answers for %v", got)
 	}
-	if got := dutyKeys(duties(t, admin, "roleId="+approver)); !slices.Equal(got, []string{"supplier-invoice/approve:responsible", "supplier-invoice/pay:informed"}) {
+	// Other tests and browser runs on the same stack name the role in processes of their own; the demo's are counted.
+	demoOnly := func(list []dutyJSON) []dutyJSON {
+		var out []dutyJSON
+		for _, d := range list {
+			if slices.Contains([]string{"production-run", "order-to-delivery", "supplier-invoice", "complaint-handling", "onboarding", "product-release"}, d.ProcessKey) {
+				out = append(out, d)
+			}
+		}
+		return out
+	}
+	if got := dutyKeys(demoOnly(duties(t, admin, "roleId="+approver))); !slices.Equal(got, []string{"supplier-invoice/approve:responsible", "supplier-invoice/pay:informed"}) {
 		t.Errorf("the invoice approver answers for %v", got)
 	}
 	if got := dutyKeys(duties(t, admin, "unitId="+sales)); !slices.Contains(got, "order-to-delivery/produce:informed") ||
@@ -623,5 +634,39 @@ func TestWhatSomebodyIsResponsibleForAndWhoDoesItInTheDemo(t *testing.T) {
 	}
 	if status := admin.do(http.MethodGet, "/steps?q=100%25", nil, &found); status != http.StatusOK || len(found.Steps) != 0 {
 		t.Errorf("a term with a wildcard in it answered %d %+v", status, found.Steps)
+	}
+}
+
+// The case the issue names: an arrow's route is saved with the draft, kept by the published version, and refused
+// when it is not pairs of points.
+func TestAnArrowKeepsTheRouteTheLayoutGaveIt(t *testing.T) {
+	admin := signedIn(t, adminEmail, adminPassword)
+	editor, _ := withRole(t, admin, "editor")
+	made := process(t, editor, "Routed", nil)
+	nodes := []nodeJSON{{Key: "s", Kind: "start"}, {Key: "e", Kind: "end", Y: 200}}
+	route := []float64{80, 44, 80, 120.5, 90, 120.5, 90, 200}
+	var saved processBody
+	if status := saveDraft(editor, made.ID, made.Draft.Revision, nodes, []arrowJSON{{Key: "a", From: "s", To: "e", Route: route}}, &saved); status != http.StatusOK {
+		t.Fatalf("saving a routed arrow answered %d", status)
+	}
+	if got := saved.Process.Draft.Arrows[0].Route; !slices.Equal(got, route) {
+		t.Errorf("the saved route is %v", got)
+	}
+	editor.do(http.MethodPost, "/processes/"+made.ID+"/publish", map[string]any{}, nil)
+	var first struct{ Version versionJSON }
+	editor.do(http.MethodGet, "/processes/"+made.ID+"/versions/1", nil, &first)
+	if len(first.Version.Arrows) != 1 || !slices.Equal(first.Version.Arrows[0].Route, route) {
+		t.Errorf("the published route is %+v", first.Version.Arrows)
+	}
+	var r refusal
+	for name, bad := range map[string][]float64{"odd": {1, 2, 3}, "one point": {1, 2}, "too long": make([]float64, 202)} {
+		if status := saveDraft(editor, made.ID, saved.Process.Draft.Revision+1, nodes, []arrowJSON{{Key: "a", From: "s", To: "e", Route: bad}}, &r); status != http.StatusUnprocessableEntity || r.Error.Fields["arrows"] == "" {
+			t.Errorf("a route %s answered %d %+v", name, status, r)
+		}
+	}
+	var unrouted processBody
+	saveDraft(editor, made.ID, saved.Process.Draft.Revision+1, nodes, []arrowJSON{{Key: "a", From: "s", To: "e"}}, &unrouted)
+	if got := unrouted.Process.Draft.Arrows[0].Route; got == nil || len(got) != 0 {
+		t.Errorf("an arrow without a route answers %v, want an empty list", got)
 	}
 }

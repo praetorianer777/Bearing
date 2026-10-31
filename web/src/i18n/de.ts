@@ -359,6 +359,8 @@ export const de: Messages = {
     undo: "Rückgängig",
     redo: "Wiederholen",
     arrange: "Anordnen",
+    tidy: "Aufgeräumt zeigen",
+    asDrawn: "Wie gezeichnet",
     save: "Entwurf speichern",
     saved: "Gespeichert",
     problemsTitle: "Vor dem Veröffentlichen",

@@ -51,6 +51,8 @@ type arrowBody struct {
 	To   string `json:"to"`
 	// Label is the condition the way is taken on, out of a decision.
 	Label string `json:"label"`
+	// Route is the way the layout routed the arrow, x and y of each point in turn; empty when it has none.
+	Route []float64 `json:"route"`
 }
 
 type problemResponse struct {
@@ -132,7 +134,10 @@ func toNodes(nodes []org.Node) []nodeBody {
 func toArrows(arrows []org.Arrow) []arrowBody {
 	out := make([]arrowBody, len(arrows))
 	for i, a := range arrows {
-		out[i] = arrowBody{Key: a.Key, From: a.From, To: a.To, Label: a.Label}
+		out[i] = arrowBody{Key: a.Key, From: a.From, To: a.To, Label: a.Label, Route: a.Route}
+		if out[i].Route == nil {
+			out[i].Route = []float64{}
+		}
 	}
 	return out
 }
@@ -308,7 +313,7 @@ func (s *Server) handleSaveDraft(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	for i, a := range req.Arrows {
-		g.Arrows[i] = org.Arrow{Key: a.Key, From: a.From, To: a.To, Label: a.Label}
+		g.Arrows[i] = org.Arrow{Key: a.Key, From: a.From, To: a.To, Label: a.Label, Route: a.Route}
 	}
 	p, lsn, err := s.Org.SaveDraft(r.Context(), id, req.Revision, g)
 	noteWrite(r.Context(), lsn)

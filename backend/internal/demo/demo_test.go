@@ -216,3 +216,76 @@ func TestTheDemoProcessesHangTogether(t *testing.T) {
 		}
 	}
 }
+
+// Only the loops back lead up a demo flow; every other arrow leads down, so none runs back through it.
+func TestTheDemoFlowsLeadDownExceptTheirLoops(t *testing.T) {
+	loops := map[string]int{"production-run": 1, "supplier-invoice": 1}
+	for _, p := range processes {
+		flows := append([]flow(nil), p.versions...)
+		if p.draft != nil {
+			flows = append(flows, *p.draft)
+		}
+		for i, f := range flows {
+			row, order := f.rows()
+			if len(order) != len(f.nodes) {
+				t.Errorf("flow %d of %s places %d of %d nodes", i, p.key, len(order), len(f.nodes))
+			}
+			up := 0
+			for _, a := range f.arrows {
+				if row[a.to] <= row[a.from] {
+					up++
+				}
+			}
+			if up != loops[p.key] {
+				t.Errorf("flow %d of %s has %d arrows leading up, want %d", i, p.key, up, loops[p.key])
+			}
+		}
+	}
+}
+
+// The demo's routes cross no node but the two each joins, so a published version reads as it was drawn.
+func TestTheDemoRoutesCrossNoNode(t *testing.T) {
+	ids := map[string]uuid.UUID{}
+	known := parties{positions: map[string]uuid.UUID{}, units: map[string]uuid.UUID{}, roles: map[string]uuid.UUID{}}
+	for _, p := range positions {
+		known.positions[p.title] = uuid.New()
+	}
+	for _, u := range units {
+		known.units[u.name] = uuid.New()
+	}
+	for _, r := range roles {
+		known.roles[r.key] = uuid.New()
+	}
+	for _, p := range processes {
+		flows := append([]flow(nil), p.versions...)
+		if p.draft != nil {
+			flows = append(flows, *p.draft)
+		}
+		for i, f := range flows {
+			g, err := f.graph(ids, known)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, a := range g.Arrows {
+				if len(a.Route) < 4 {
+					t.Errorf("flow %d of %s: %s has no route", i, p.key, a.Key)
+				}
+				for j := 0; j+3 < len(a.Route); j += 2 {
+					x1, y1, x2, y2 := a.Route[j], a.Route[j+1], a.Route[j+2], a.Route[j+3]
+					if x1 != x2 && y1 != y2 {
+						t.Errorf("flow %d of %s: %s runs aslant", i, p.key, a.Key)
+					}
+					for _, n := range g.Nodes {
+						if n.Key == a.From || n.Key == a.To {
+							continue
+						}
+						left, top, rgt, bottom := n.X, n.Y, n.X+widths[n.Kind], n.Y+heights[n.Kind]
+						if min(x1, x2) < rgt && max(x1, x2) > left && min(y1, y2) < bottom && max(y1, y2) > top {
+							t.Errorf("flow %d of %s: %s runs through %s", i, p.key, a.Key, n.Key)
+						}
+					}
+				}
+			}
+		}
+	}
+}

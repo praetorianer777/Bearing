@@ -22,7 +22,7 @@ const node = (key: string, kind: string, name: string, extra: object = {}) => ({
   responsibilities: [] as object[],
   ...extra,
 });
-const arrow = (key: string, from: string, to: string, label = "") => ({ key, from, to, label });
+const arrow = (key: string, from: string, to: string, label = "") => ({ key, from, to, label, route: [] as number[] });
 
 const listed = (id: string, name: string, area: string, latest: number | null, changed: boolean) => ({
   id,
@@ -390,5 +390,35 @@ describe("who a step comes down to", () => {
       const later = vi.mocked(globalThis.fetch).mock.calls.map(([input]) => (input instanceof Request ? input.url : String(input)));
       expect(later.some((u) => u.includes("/processes/inv/people") && u.includes("version=1"))).toBe(true);
     });
+  });
+});
+
+describe("reading a tangled process", () => {
+  it("draws arrows along their routes, lights a node's arrows and lays a read-only version out tidily", async () => {
+    const routed = {
+      ...invoice,
+      draft: { ...invoice.draft, arrows: invoice.draft.arrows.map((a) => (a.key === "a1" ? { ...a, route: [80, 44, 80, 100] } : a)) },
+    };
+    serve("member", { "GET /processes/inv": () => ({ body: { process: routed } }) });
+    const user = userEvent.setup();
+    const { container } = renderApp("/processes/inv");
+    await nodeCard("Start: Invoice arrives");
+    await waitFor(() => expect(container.querySelector('path[d="M 80 44 L 80 100"]')).not.toBeNull());
+
+    fireEvent.mouseEnter((await nodeCard("Step: Book it")).closest(".react-flow__node") as Element);
+    await waitFor(() =>
+      expect((screen.getByRole("article", { name: "Start: Invoice arrives" }).closest(".react-flow__node") as HTMLElement).style.opacity).toBe("0.35"),
+    );
+    expect((screen.getByRole("article", { name: "Decision: Over the limit?" }).closest(".react-flow__node") as HTMLElement).style.opacity).toBe("");
+    fireEvent.mouseLeave(screen.getByRole("article", { name: "Step: Book it" }).closest(".react-flow__node") as Element);
+    await waitFor(() =>
+      expect((screen.getByRole("article", { name: "Start: Invoice arrives" }).closest(".react-flow__node") as HTMLElement).style.opacity).toBe(""),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Tidy view" }));
+    expect(await screen.findByRole("button", { name: "As drawn" })).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => expect(container.querySelector('path[d="M 80 44 L 80 100"]')).toBeNull());
+    await user.click(screen.getByRole("button", { name: "As drawn" }));
+    expect(await screen.findByRole("button", { name: "Tidy view" })).toBeInTheDocument();
   });
 });

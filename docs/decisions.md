@@ -243,3 +243,17 @@ a position for what names it, a role it carries, the unit it heads or a
 vacant position it stands in for; a role for what names it; a unit for
 what names it or one of its positions. Both answers are worked out from
 the same resolution as a step's people, so the pages never disagree.
+
+## Arrows keep the routes the layout gave them
+
+A process drawn by hand soon has arrows crossing nodes and each other, and
+a published version cannot be rearranged. Arrange therefore asks ELK for
+the routes as well as the places, and each arrow keeps its route in the
+draft and in every version published from it. Moving a node drops the
+routes of its own arrows only; the others keep theirs. An arrow without a
+route is drawn between the sides the canvas chooses: back up the flow
+round the side, down and well aside from the side facing its target.
+Pointing at or picking a node brings its arrows forward and fades the
+rest, and a version nobody may change can be laid out for reading
+without changing it. The demo routes its own arrows so that none crosses
+a node, as its unit test holds it to.

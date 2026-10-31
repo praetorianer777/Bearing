@@ -14,7 +14,7 @@ const node = (key: string, kind: FlowNode["kind"], name = key): FlowNode => ({
 });
 const flow: Flow = {
   nodes: [node("s", "start"), node("check", "step"), node("e", "end")],
-  arrows: [{ key: "a1", from: "s", to: "check", label: "" }],
+  arrows: [{ key: "a1", from: "s", to: "check", label: "", route: [] }],
 };
 
 const run = (h: History, ...edits: Parameters<typeof edit>[1][]) => edits.reduce(edit, h);
@@ -80,14 +80,14 @@ describe("editing a draft", () => {
   });
 
   it("arranges nodes where the layout puts them and picks keys nothing has", () => {
-    const h = edit(start(flow), { type: "arrange", places: { s: { x: 100, y: 0 }, e: { x: 100, y: 200 } } });
+    const h = edit(start(flow), { type: "arrange", places: { s: { x: 100, y: 0 }, e: { x: 100, y: 200 } }, routes: { a1: [0, 0, 0, 10] } });
     expect(h.present.nodes.map((n) => [n.key, n.x, n.y])).toEqual([
       ["s", 100, 0],
       ["check", 0, 0],
       ["e", 100, 200],
     ]);
     const keys = ["a1", "a1", "fresh"];
-    expect(freshKey("a", { nodes: [], arrows: [{ key: "a-a1", from: "x", to: "y", label: "" }] }, () => keys.shift() as string)).toBe("a-fresh");
+    expect(freshKey("a", { nodes: [], arrows: [{ key: "a-a1", from: "x", to: "y", label: "", route: [] }] }, () => keys.shift() as string)).toBe("a-fresh");
   });
 });
 

@@ -83,8 +83,16 @@ test("an editor draws a process with a decision and publishes it", async ({ page
   expect((await new AxeBuilder({ page }).include("main").analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
   await page.reload();
+  // Arranged before saving, every arrow keeps the route the layout gave it.
+  const id = new URL(page.url()).pathname.split("/").at(-1);
+  const saved = await page.evaluate(async (processId) => {
+    const answer = await fetch(`/api/v1/processes/${processId}`);
+    return ((await answer.json()) as { process: { draft: { arrows: { route: number[] }[] } } }).process.draft.arrows.map((a) => a.route.length);
+  }, id);
+  expect(saved.length).toBe(4);
+  expect(saved.every((n) => n >= 4)).toBe(true);
   await expect(node(page, "Step: Approve")).toContainText("A · Head of Finance and People");
-  await expect(page.getByLabel("Arrow from Over the limit? to Approve", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Arrow from Over the limit? to Approve", { exact: true })).toBeAttached();
   await page.goto("/processes");
   await expect(page.getByRole("region", { name: "Browser tests" }).getByText("Version 1").first()).toBeVisible();
 });
@@ -157,4 +165,17 @@ test("who does what: a step found by a term, a person's duties and a role's page
   await expect(page.getByRole("heading", { level: 1, name: "Invoice approver" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Responsible for" }).getByRole("link", { name: "Approve the invoice" })).toBeVisible();
   expect((await new AxeBuilder({ page }).include("main").analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+});
+
+test("a published version reads tidily without changing it", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/processes");
+  await page.getByRole("link", { name: "Supplier invoice" }).click();
+  await page.getByRole("region", { name: "Versions" }).getByRole("button", { name: "Version 1" }).click();
+  await expect(node(page, "Decision: Does it match?")).toBeVisible();
+  await page.getByRole("button", { name: "Tidy view" }).click();
+  await expect(page.getByRole("button", { name: "As drawn" })).toHaveAttribute("aria-pressed", "true");
+  await expect(node(page, "Step: Clarify with the supplier")).toBeVisible();
+  await page.getByRole("button", { name: "As drawn" }).click();
+  await expect(page.getByRole("button", { name: "Tidy view" })).toBeVisible();
 });

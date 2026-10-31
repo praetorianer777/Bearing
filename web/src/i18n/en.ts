@@ -358,6 +358,8 @@ export const en = {
     undo: "Undo",
     redo: "Redo",
     arrange: "Arrange",
+    tidy: "Tidy view",
+    asDrawn: "As drawn",
     save: "Save draft",
     saved: "Saved",
     problemsTitle: "Before publishing",

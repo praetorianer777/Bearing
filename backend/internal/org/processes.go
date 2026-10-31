@@ -3,6 +3,8 @@ package org
 import (
 	"context"
 	"errors"
+	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -210,13 +212,13 @@ func graph(ctx context.Context, q db.DBTX, version uuid.UUID) (Graph, error) {
 	}); err != nil {
 		return g, err
 	}
-	rows, err = q.Query(ctx, `SELECT key, from_key, to_key, label FROM process_arrow WHERE version_id = $1 ORDER BY key`, version)
+	rows, err = q.Query(ctx, `SELECT key, from_key, to_key, label, route FROM process_arrow WHERE version_id = $1 ORDER BY key`, version)
 	if err != nil {
 		return g, err
 	}
 	g.Arrows, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (Arrow, error) {
 		var a Arrow
-		err := row.Scan(&a.Key, &a.From, &a.To, &a.Label)
+		err := row.Scan(&a.Key, &a.From, &a.To, &a.Label, &a.Route)
 		return a, err
 	})
 	return g, err
@@ -414,14 +416,23 @@ func writeGraph(ctx context.Context, q db.DBTX, version uuid.UUID, g Graph) erro
 		}
 	}
 	m := len(g.Arrows)
-	arrowKeys, froms, tos, labels := make([]string, m), make([]string, m), make([]string, m), make([]string, m)
+	arrowKeys, froms, tos, labels, routes := make([]string, m), make([]string, m), make([]string, m), make([]string, m), make([]string, m)
 	for i, a := range g.Arrows {
-		arrowKeys[i], froms[i], tos[i], labels[i] = a.Key, a.From, a.To, a.Label
+		arrowKeys[i], froms[i], tos[i], labels[i], routes[i] = a.Key, a.From, a.To, a.Label, arrayLiteral(a.Route)
 	}
-	_, err := q.Exec(ctx, `INSERT INTO process_arrow (version_id, key, from_key, to_key, label)
-		SELECT $1, k, f, t, l FROM unnest($2::text[], $3::text[], $4::text[], $5::text[]) AS a(k, f, t, l)`,
-		version, arrowKeys, froms, tos, labels)
+	// Routes are arrays of their own lengths, which unnest would flatten; each goes as its array literal.
+	_, err := q.Exec(ctx, `INSERT INTO process_arrow (version_id, key, from_key, to_key, label, route)
+		SELECT $1, k, f, t, l, r::float8[] FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::text[]) AS a(k, f, t, l, r)`,
+		version, arrowKeys, froms, tos, labels, routes)
 	return err
+}
+
+func arrayLiteral(values []float64) string {
+	parts := make([]string, len(values))
+	for i, v := range values {
+		parts[i] = strconv.FormatFloat(v, 'g', -1, 64)
+	}
+	return "{" + strings.Join(parts, ",") + "}"
 }
 
 // Publish makes the draft the process's next version, as an editor, when nothing keeps it from it. The draft goes on

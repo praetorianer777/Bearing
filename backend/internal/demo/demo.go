@@ -274,8 +274,20 @@ func loadProcesses(ctx context.Context, s *org.Service) error {
 	return s.MarkDemoProcessesLoaded(ctx)
 }
 
-// widths are those the web client draws each kind of node at, so a row's nodes share a centre line.
-var widths = map[org.NodeKind]float64{org.Start: 160, org.End: 160, org.Step: 180, org.Subprocess: 180, org.Decision: 180}
+// widths and heights are those the web client draws each kind of node at, so a row's nodes share a centre line and
+// the routes meet their nodes' edges.
+var (
+	widths  = map[org.NodeKind]float64{org.Start: 160, org.End: 160, org.Step: 180, org.Subprocess: 180, org.Decision: 180}
+	heights = map[org.NodeKind]float64{org.Start: 44, org.End: 44, org.Step: 56, org.Subprocess: 60, org.Decision: 90}
+)
+
+const (
+	rowHeight = 150
+	halfSpan  = 150
+	// elbow is how far above its target a route turns across, below the row before.
+	elbow = 30
+	lane  = 40
+)
 
 // parties are the positions by title, the units by name and the roles by key a demo responsibility may name.
 type parties struct{ positions, units, roles map[string]uuid.UUID }
@@ -302,41 +314,80 @@ func (p parties) responsibility(r demoRACI) (org.Responsibility, error) {
 	return out, nil
 }
 
-// graph lays a flow out top to bottom: each node a row below the nearest node leading to it, the nodes of a row side
-// by side in the order they are named.
-func (f flow) graph(ids map[string]uuid.UUID, known parties) (org.Graph, error) {
+// rows lays a flow out in rows: a walk from the start finds the arrows leading back up, and each node goes a row
+// below the farthest node leading to it by the others, so a loop back never runs down through the flow. The nodes
+// come in the order the walk reaches them, which puts each row's nodes side by side in the order their ways leave.
+func (f flow) rows() (map[string]int, []demoNode) {
 	next := map[string][]string{}
 	for _, a := range f.arrows {
 		next[a.from] = append(next[a.from], a.to)
 	}
-	row := map[string]int{}
-	var queue []string
+	const (
+		unseen = iota
+		open
+		done
+	)
+	state := map[string]int{}
+	back := map[[2]string]bool{}
+	var reached, finished []string
+	var walk func(string)
+	walk = func(k string) {
+		state[k] = open
+		reached = append(reached, k)
+		for _, to := range next[k] {
+			switch state[to] {
+			case open:
+				back[[2]string{k, to}] = true
+			case unseen:
+				walk(to)
+			}
+		}
+		state[k] = done
+		finished = append(finished, k)
+	}
 	for _, n := range f.nodes {
 		if n.kind == org.Start {
-			row[n.key] = 0
-			queue = append(queue, n.key)
+			walk(n.key)
 		}
 	}
-	for len(queue) > 0 {
-		k := queue[0]
-		queue = queue[1:]
+	row := map[string]int{}
+	for i := len(finished) - 1; i >= 0; i-- {
+		k := finished[i]
 		for _, to := range next[k] {
-			if _, seen := row[to]; !seen {
+			if !back[[2]string{k, to}] && row[to] < row[k]+1 {
 				row[to] = row[k] + 1
-				queue = append(queue, to)
 			}
 		}
 	}
+	byKey := map[string]demoNode{}
+	for _, n := range f.nodes {
+		byKey[n.key] = n
+	}
+	order := make([]demoNode, 0, len(f.nodes))
+	for _, k := range reached {
+		order = append(order, byKey[k])
+	}
+	for _, n := range f.nodes {
+		if state[n.key] == unseen {
+			order = append(order, n)
+		}
+	}
+	return row, order
+}
+
+// graph lays a flow out top to bottom, row by row, the nodes of a row side by side.
+func (f flow) graph(ids map[string]uuid.UUID, known parties) (org.Graph, error) {
+	row, order := f.rows()
 	across := map[int]int{}
 	for _, n := range f.nodes {
 		across[row[n.key]]++
 	}
 	placed := map[int]int{}
 	var g org.Graph
-	for _, n := range f.nodes {
+	for _, n := range order {
 		r := row[n.key]
-		centre := float64(placed[r]*2-across[r]+1) * 130
-		node := org.Node{Key: n.key, Kind: n.kind, Name: n.name, X: centre - widths[n.kind]/2, Y: float64(r) * 110}
+		centre := float64(placed[r]*2-across[r]+1) * halfSpan
+		node := org.Node{Key: n.key, Kind: n.kind, Name: n.name, X: centre - widths[n.kind]/2, Y: float64(r) * rowHeight}
 		placed[r]++
 		if n.sub != "" {
 			id := ids[n.sub]
@@ -351,10 +402,69 @@ func (f flow) graph(ids map[string]uuid.UUID, known parties) (org.Graph, error) 
 		}
 		g.Nodes = append(g.Nodes, node)
 	}
+	byKey := map[string]org.Node{}
+	right := 0.0
+	for _, n := range g.Nodes {
+		byKey[n.Key] = n
+		right = max(right, n.X+widths[n.Kind])
+	}
+	loops := 0
 	for _, a := range f.arrows {
-		g.Arrows = append(g.Arrows, org.Arrow{Key: a.from + "-" + a.to, From: a.from, To: a.to, Label: a.label})
+		s, t := byKey[a.from], byKey[a.to]
+		g.Arrows = append(g.Arrows, org.Arrow{Key: a.from + "-" + a.to, From: a.from, To: a.to, Label: a.label,
+			Route: route(s, t, g.Nodes, row[a.to] <= row[a.from], right+lane*float64(1+loops))})
+		if row[a.to] <= row[a.from] {
+			loops++
+		}
 	}
 	return g, nil
+}
+
+// route is the way an arrow takes between two placed nodes. Down the flow it leaves the bottom, turns across just
+// above its target and enters the top; when a node stands in that way, it turns aside just below its source and runs
+// down the nearest clear column instead, the lane right of every node at the last. A loop back leaves the right side,
+// runs up its lane and enters the target's right side. Turns lie between the rows, so no route crosses a node.
+func route(s, t org.Node, nodes []org.Node, back bool, laneX float64) []float64 {
+	sx, tx := s.X+widths[s.Kind]/2, t.X+widths[t.Kind]/2
+	bottom := s.Y + heights[s.Kind]
+	if back {
+		sy, ty := s.Y+heights[s.Kind]/2, t.Y+heights[t.Kind]/2
+		return []float64{s.X + widths[s.Kind], sy, laneX, sy, laneX, ty, t.X + widths[t.Kind], ty}
+	}
+	straight := []float64{sx, bottom, sx, t.Y - elbow, tx, t.Y - elbow, tx, t.Y}
+	if sx == tx {
+		straight = []float64{sx, bottom, tx, t.Y}
+	}
+	if clear(straight, nodes, s, t) {
+		return straight
+	}
+	for step := 1.0; step <= 4; step++ {
+		for _, x := range []float64{sx + step*halfSpan/2, sx - step*halfSpan/2} {
+			aside := []float64{sx, bottom, sx, bottom + elbow, x, bottom + elbow, x, t.Y - elbow, tx, t.Y - elbow, tx, t.Y}
+			if clear(aside, nodes, s, t) {
+				return aside
+			}
+		}
+	}
+	return []float64{sx, bottom, sx, bottom + elbow, laneX, bottom + elbow, laneX, t.Y - elbow, tx, t.Y - elbow, tx, t.Y}
+}
+
+// clear says whether a route keeps off every node but the two it joins, with a margin.
+func clear(route []float64, nodes []org.Node, s, t org.Node) bool {
+	const margin = 12
+	for j := 0; j+3 < len(route); j += 2 {
+		x1, y1, x2, y2 := route[j], route[j+1], route[j+2], route[j+3]
+		for _, n := range nodes {
+			if n.Key == s.Key || n.Key == t.Key {
+				continue
+			}
+			left, top, right, bottom := n.X-margin, n.Y-margin, n.X+widths[n.Kind]+margin, n.Y+heights[n.Kind]+margin
+			if min(x1, x2) < right && max(x1, x2) > left && min(y1, y2) < bottom && max(y1, y2) > top {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func mustDay(s string) org.Day {

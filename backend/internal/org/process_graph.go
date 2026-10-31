@@ -2,6 +2,7 @@ package org
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"slices"
 	"unicode/utf8"
@@ -79,6 +80,8 @@ type Arrow struct {
 	From  string
 	To    string
 	Label string
+	// Route is the way the layout routed it, x and y of each point in turn; empty when it has none.
+	Route []float64
 }
 
 // Graph is what a version of a process draws: its nodes and the arrows between them.
@@ -111,6 +114,7 @@ const (
 	maxNodes            = 500
 	maxArrows           = 1000
 	maxResponsibilities = 50
+	maxRoutePoints      = 100
 )
 
 var graphKey = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
@@ -161,6 +165,13 @@ func checkShape(g Graph) error {
 			return Invalid{"arrows", "Two arrows lead from " + a.From + " to " + a.To + "."}
 		case utf8.RuneCountInString(a.Label) > 200:
 			return Invalid{"arrows", "Keep an arrow's condition to 200 characters."}
+		case len(a.Route)%2 != 0 || len(a.Route) > 2*maxRoutePoints || (len(a.Route) > 0 && len(a.Route) < 4):
+			return Invalid{"arrows", fmt.Sprintf("The route of the arrow %s is pairs of x and y, from 2 to %d points.", a.Key, maxRoutePoints)}
+		}
+		for _, v := range a.Route {
+			if math.IsNaN(v) || math.IsInf(v, 0) {
+				return Invalid{"arrows", "The route of the arrow " + a.Key + " has a point that is not a number."}
+			}
 		}
 		arrows[a.Key] = true
 		pairs[[2]string{a.From, a.To}] = true
