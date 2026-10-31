@@ -126,7 +126,7 @@ const processRoute = createRoute({
   path: "/processes/$processId",
   validateSearch: (search: Record<string, unknown>): ProcessSearch => {
     const version = Number(search.version);
-    return Number.isInteger(version) && version >= 1 ? { version } : {};
+    return { ...(Number.isInteger(version) && version >= 1 ? { version } : {}), ...(search.view === "matrix" ? { view: "matrix" as const } : {}) };
   },
   component: function Process() {
     const { processId } = processRoute.useParams();

@@ -85,3 +85,6 @@ export const useDeleteProcess = (processID: string) => {
     },
   });
 };
+
+export type Responsibility = components["schemas"]["ResponsibilityBody"];
+export type RACI = Responsibility["kind"];

@@ -209,3 +209,15 @@ keystroke: a draft half drawn is no one else's business until it is
 saved, and publishing takes the saved draft only. Where a node was left
 is part of the draft, so everyone sees the flow as it was arranged;
 Arrange lays it out anew on request.
+
+## Responsibilities name roles, positions or units, and warn rather than refuse
+
+A step's responsibilities name a role, a position or a unit with its RACI
+kind, never a person: people come and go, and who answers for a step on a
+day is worked out from who holds the party then. They belong to the
+version like its nodes, so a published version keeps who answered for
+what when it was published. A step without exactly one accountable or
+without anyone responsible is a warning, not a refusal: a process is often
+published before every party is agreed, and refusing it would push
+editors to name somebody for the sake of the rule. The editor and the
+RACI matrix mark such steps so they are not forgotten.

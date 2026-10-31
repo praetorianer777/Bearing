@@ -19,11 +19,12 @@ import type { FlowNode, NodeKind } from "@/api/processes";
 import { t } from "@/i18n";
 import { NODE_SIZE } from "./arrange";
 import { type Edit, type Flow, freeSpot, freshKey, mayConnect } from "./editor";
+import { partyOf } from "./raci";
 
 /** What is picked on the canvas: one node or one arrow, by key. */
 export type Selection = { kind: "node" | "arrow"; key: string } | null;
 
-type NodeData = { node: FlowNode; flagged: boolean; subprocess?: { id: string; name: string } };
+type NodeData = { node: FlowNode; flagged: boolean; subprocess?: { id: string; name: string }; accountable?: string };
 type FlowNodeView = Node<NodeData>;
 
 const tone = (flagged: boolean, selected: boolean) =>
@@ -57,7 +58,7 @@ function TerminalNode({ data, selected }: NodeProps<FlowNodeView>) {
 }
 
 function StepNode({ data, selected }: NodeProps<FlowNodeView>) {
-  const { node, flagged, subprocess } = data;
+  const { node, flagged, subprocess, accountable } = data;
   return (
     <article
       aria-label={`${t.process.kinds[node.kind]}: ${node.name}`}
@@ -66,6 +67,11 @@ function StepNode({ data, selected }: NodeProps<FlowNodeView>) {
     >
       <Ends kind={node.kind} />
       <Label node={node} />
+      {accountable && (
+        <span className="max-w-full truncate text-xs text-ink-subtle">
+          {t.raci.letters.accountable} · {accountable}
+        </span>
+      )}
       {subprocess && (
         <Link
           to="/processes/$processId"
@@ -146,6 +152,7 @@ export function FlowCanvas({
   flagged,
   subprocesses,
   fitKey,
+  parties,
 }: {
   flow: Flow;
   editable: boolean;
@@ -156,6 +163,8 @@ export function FlowCanvas({
   subprocesses: Map<string, string>;
   /** The view is fitted anew whenever this changes: another process or version. */
   fitKey: string;
+  /** Names of the roles, positions and units responsibilities name, by party key. */
+  parties: Map<string, string>;
 }) {
   const view = useReactFlow();
   // React Flow measures each node once drawn and hides it until then; the sizes are kept apart from the flow.
@@ -173,9 +182,15 @@ export function FlowCanvas({
           node: n,
           flagged: flagged.has(n.key),
           subprocess: n.subprocessId ? { id: n.subprocessId, name: subprocesses.get(n.subprocessId) ?? "" } : undefined,
+          accountable:
+            n.responsibilities
+              .filter((r) => r.kind === "accountable")
+              .map((r) => parties.get(partyOf(r)))
+              .filter(Boolean)
+              .join(", ") || undefined,
         },
       })),
-    [flow.nodes, selection, measured, flagged, subprocesses],
+    [flow.nodes, selection, measured, flagged, subprocesses, parties],
   );
 
   const nameOf = new Map(flow.nodes.map((n) => [n.key, n.name || t.process.unnamed]));
