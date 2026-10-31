@@ -4381,6 +4381,92 @@
         ]
       }
     },
+    "/responsibilities": {
+      "get": {
+        "operationId": "duties",
+        "summary": "What a person, position, role or unit is responsible for on a day, by RACI kind, across the newest published version of every process.",
+        "description": "Name one of personId, positionId, roleId and unitId. A person's are those that come down to them by any position, role, headship or deputyship; a position's those naming it, a role it carries, a unit it heads or a vacant position it stands in for; a role's those naming it; a unit's those naming it or a position in it. asOf is a day written 2006-01-02, today when left out.",
+        "tags": [
+          "processes"
+        ],
+        "parameters": [
+          {
+            "name": "personId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "positionId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "responsibilities": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DutyResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "responsibilities"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/roles": {
       "get": {
         "operationId": "roles",
@@ -4703,6 +4789,71 @@
           }
         },
         "x-bearing-role": "editor"
+      }
+    },
+    "/steps": {
+      "get": {
+        "operationId": "whoDoes",
+        "summary": "Who does it: the steps of the newest published versions whose name, or whose process's name, holds q, with who each responsibility comes down to on a day.",
+        "description": "q needs two letters or more; asOf is a day written 2006-01-02, today when left out. Steps nobody is named for are answered too.",
+        "tags": [
+          "processes"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "steps": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PublishedStepResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "steps"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/themes": {
@@ -6083,6 +6234,78 @@
           "problems"
         ]
       },
+      "DutyResponse": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "responsible",
+              "accountable",
+              "consulted",
+              "informed"
+            ]
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResolvedResponse"
+            }
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "processKey": {
+            "type": "string"
+          },
+          "processName": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stepKey": {
+            "type": "string"
+          },
+          "stepKind": {
+            "type": "string",
+            "enum": [
+              "start",
+              "step",
+              "decision",
+              "subprocess",
+              "end"
+            ]
+          },
+          "stepName": {
+            "type": "string"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "processId",
+          "processKey",
+          "processName",
+          "version",
+          "stepKey",
+          "stepName",
+          "stepKind",
+          "kind",
+          "people"
+        ]
+      },
       "EndRequest": {
         "type": "object",
         "properties": {
@@ -7162,6 +7385,56 @@
         },
         "required": [
           "note"
+        ]
+      },
+      "PublishedStepResponse": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "start",
+              "step",
+              "decision",
+              "subprocess",
+              "end"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "processKey": {
+            "type": "string"
+          },
+          "processName": {
+            "type": "string"
+          },
+          "responsibilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResolvedResponsibilityResponse"
+            }
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "processId",
+          "processKey",
+          "processName",
+          "version",
+          "key",
+          "name",
+          "kind",
+          "responsibilities"
         ]
       },
       "ReadinessResponse": {

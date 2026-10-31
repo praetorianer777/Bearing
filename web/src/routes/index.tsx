@@ -5,11 +5,13 @@ import { AcceptInvitationPage, ForgotPasswordPage, ResetPasswordPage, SetUpPage,
 import { type ChartSearch, OrgChartPage } from "@/features/chart/OrgChart";
 import { Home } from "@/features/home/Home";
 import { PositionPage } from "@/features/org/PositionPage";
+import { RolePage } from "@/features/org/RolePage";
 import { type DaySearch, UnitPage } from "@/features/org/UnitPage";
 import { type PeopleSearch, PeoplePage } from "@/features/people/PeoplePage";
 import { type PersonSearch, PersonPage } from "@/features/people/PersonPage";
 import { type ProcessSearch, ProcessPage } from "@/features/processes/ProcessPage";
 import { ProcessesPage } from "@/features/processes/ProcessesPage";
+import { type WhoDoesSearch, WhoDoesPage } from "@/features/processes/WhoDoesPage";
 import { AccountsPage } from "@/features/settings/Accounts";
 import { ExampleDataPage } from "@/features/settings/ExampleData";
 import { ProfilePage } from "@/features/settings/Profile";
@@ -139,6 +141,30 @@ const processRoute = createRoute({
     return <ProcessPage processId={processId} search={search} onSearch={(next) => navigate({ search: next })} />;
   },
 });
+const whoDoesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/who-does",
+  validateSearch: (search: Record<string, unknown>): WhoDoesSearch => ({
+    ...(typeof search.q === "string" && search.q ? { q: search.q } : {}),
+    ...(isDay(search.asOf) ? { asOf: search.asOf } : {}),
+  }),
+  component: function WhoDoes() {
+    const search = whoDoesRoute.useSearch();
+    const navigate = whoDoesRoute.useNavigate();
+    return <WhoDoesPage search={search} onSearch={(next) => navigate({ search: next, replace: true })} />;
+  },
+});
+const roleRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/roles/$roleId",
+  validateSearch: (search: Record<string, unknown>): DaySearch => (isDay(search.asOf) ? { asOf: search.asOf } : {}),
+  component: function Role() {
+    const { roleId } = roleRoute.useParams();
+    const search = roleRoute.useSearch();
+    const navigate = roleRoute.useNavigate();
+    return <RolePage roleId={roleId} search={search} onSearch={(next) => navigate({ search: next })} />;
+  },
+});
 const unitRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/units/$unitId",
@@ -210,6 +236,8 @@ const routeTree = rootRoute.addChildren([
     positionRoute,
     processesRoute,
     processRoute,
+    whoDoesRoute,
+    roleRoute,
     accountsRoute,
     themesRoute,
     unitTypesRoute,

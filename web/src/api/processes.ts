@@ -103,3 +103,22 @@ export const useProcessPeople = (processID: string, version: number | "draft" | 
         }),
       ).steps,
   });
+
+export type Duty = components["schemas"]["DutyResponse"];
+export type PublishedStep = components["schemas"]["PublishedStepResponse"];
+export type DutySubject = { personId: string } | { positionId: string } | { roleId: string } | { unitId: string };
+
+/** What a person, position, role or unit is responsible for on a day, across the newest published versions. */
+export const useDuties = (subject: DutySubject, asOf: string) =>
+  useQuery({
+    queryKey: ["duties", subject, asOf],
+    queryFn: async () => unwrap(await api.GET("/responsibilities", { params: { query: { ...subject, asOf } } })).responsibilities,
+  });
+
+/** Who does the steps a term finds, on a day; nothing is asked for a term shorter than two letters. */
+export const useWhoDoes = (q: string, asOf: string) =>
+  useQuery({
+    queryKey: ["who-does", q, asOf],
+    enabled: q.trim().length >= 2,
+    queryFn: async () => unwrap(await api.GET("/steps", { params: { query: { q, asOf } } })).steps,
+  });

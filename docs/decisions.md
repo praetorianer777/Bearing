@@ -232,3 +232,14 @@ any, who are marked as standing in, so nobody mistakes a deputy for the
 holder. Deputies stand in once: a deputy's own deputies do not, since a
 chain of stand-ins nobody chose is no answer to who does it. A party
 nobody holds, even by deputy, says so rather than going quiet.
+
+## What somebody answers for is read from the newest published versions
+
+"What is X responsible for" and "who does it" are asked of the newest
+published version of each process, never of drafts: a draft is not yet
+how the organisation works. A person answers for whatever comes down to
+them on the day, by position, role, headship or standing in as a deputy;
+a position for what names it, a role it carries, the unit it heads or a
+vacant position it stands in for; a role for what names it; a unit for
+what names it or one of its positions. Both answers are worked out from
+the same resolution as a step's people, so the pages never disagree.

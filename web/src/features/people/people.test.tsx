@@ -148,6 +148,39 @@ function serve(role = "administrator") {
     "GET /positions": () => ({ body: { asOf: "2026-10-31", positions: data.positions.filter((p) => p.id !== "old") } }),
     "GET /positions/old": () => ({ body: { asOf: "2025-01-01", position: data.positions.find((p) => p.id === "old") } }),
     "GET /roles": () => ({ body: { roles: data.roles } }),
+    "GET /responsibilities": (_, url) => ({
+      body: {
+        asOf: "2026-10-31",
+        responsibilities: url.includes("personId=carol")
+          ? [
+              {
+                processId: "complaint",
+                processKey: "complaint-handling",
+                processName: "Customer complaint",
+                version: 1,
+                stepKey: "cause",
+                stepName: "Find the root cause",
+                stepKind: "step",
+                kind: "accountable",
+                positionId: "hoq",
+                people: [{ personId: "carol", name: "Carol Checker", share: 100, positionId: "lead", deputyFor: "hoq" }],
+              },
+              {
+                processId: "run",
+                processKey: "production-run",
+                processName: "Production run",
+                version: 1,
+                stepKey: "test",
+                stepName: "Test the batch",
+                stepKind: "step",
+                kind: "accountable",
+                positionId: "lead",
+                people: [{ personId: "carol", name: "Carol Checker", share: 100, positionId: "lead", deputyFor: null }],
+              },
+            ]
+          : [],
+      },
+    }),
     "GET /people/carol/audit": () => ({
       body: {
         events: [{ id: "e1", at: "2026-01-01T09:00:00Z", actorId: "a", actorName: "Ada Admin", table: "holding", operation: "insert", before: {}, after: {} }],
@@ -191,6 +224,12 @@ describe("the people pages", () => {
     expect(within(section("Positions and roles over time")).getByText("Junior engineer")).toBeInTheDocument();
     expect(await screen.findByText("Holding added")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Show on the org chart" })).toHaveAttribute("href", "/organisation?focus=person%3Acarol");
+    const duties = await screen.findByRole("region", { name: "Responsible for" });
+    expect(within(duties).getByText("Accountable")).toBeInTheDocument();
+    expect(within(duties).getByRole("link", { name: "Find the root cause" })).toHaveAttribute("href", "/processes/complaint");
+    expect(within(duties).getByText(/standing in for/)).toBeInTheDocument();
+    expect(within(duties).getByRole("link", { name: "Head of Quality" })).toHaveAttribute("href", "/positions/hoq");
+    expect(within(section("Roles")).getAllByRole("link")[0]).toHaveAttribute("href", expect.stringMatching(/^\/roles\//));
   });
 
   it("say so where a person has nothing to show", async () => {
