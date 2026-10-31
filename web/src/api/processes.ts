@@ -49,6 +49,7 @@ function useProcessChange<T>(processID: string, fn: (input: T) => Promise<Proces
     mutationFn: fn,
     onSuccess: (changed) => {
       client.setQueryData(processKey(processID), changed);
+      void client.invalidateQueries({ queryKey: [...processKey(processID), "people"] });
       return client.invalidateQueries({ queryKey: processesKey, exact: true });
     },
   });
@@ -88,3 +89,17 @@ export const useDeleteProcess = (processID: string) => {
 
 export type Responsibility = components["schemas"]["ResponsibilityBody"];
 export type RACI = Responsibility["kind"];
+
+export type StepPeople = components["schemas"]["StepPeopleResponse"];
+
+/** Who each node of a version comes down to on a day; version is a number, the draft, or the newest published when left out. */
+export const useProcessPeople = (processID: string, version: number | "draft" | undefined, asOf: string) =>
+  useQuery({
+    queryKey: ["processes", processID, "people", version ?? "newest", asOf],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/processes/{processID}/people", {
+          params: { path: { processID }, query: { asOf, version: version === undefined ? undefined : String(version) } },
+        }),
+      ).steps,
+  });

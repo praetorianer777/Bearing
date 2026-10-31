@@ -101,6 +101,29 @@ function serve(role = "editor", answers: Record<string, unknown> = {}) {
       body: { asOf: "2026-10-31", units: [{ id: "fin", name: "Finance", parentId: null, typeId: "d", shortName: null, description: "", archivedOn: null }] },
     }),
     "GET /roles": () => ({ body: { roles: [{ id: "clerk", key: "clerk", name: "Invoice clerk", description: "" }] } }),
+    "GET /processes/inv/people": (_: unknown, url: string) => ({
+      body: {
+        asOf: "2026-10-31",
+        version: null,
+        steps: [
+          {
+            key: "book",
+            name: "Book it",
+            kind: "step",
+            responsibilities: [
+              {
+                kind: "accountable",
+                positionId: "hof",
+                people: url.includes("asOf=2026-01-01")
+                  ? [{ personId: "hana", name: "Hana Head", share: 100, positionId: "hof", deputyFor: null }]
+                  : [{ personId: "bo", name: "Bo Deputy", share: 100, positionId: "dep", deputyFor: "hof" }],
+              },
+              { kind: "informed", unitId: "fin", people: [] },
+            ],
+          },
+        ],
+      },
+    }),
     "GET /positions": () => ({
       body: {
         asOf: "2026-10-31",
@@ -304,15 +327,15 @@ describe("responsibilities on steps", () => {
 
     await user.click(within(warnings).getByRole("button", { name: /Book it: Nobody is responsible/ }));
     const picked = within(screen.getByRole("region", { name: "Node" })).getByRole("region", { name: "Responsibilities" });
-    const named = within(picked).getByRole("list");
-    expect(within(named).getByText("Head of Finance")).toBeInTheDocument();
-    expect(within(named).getByText("Finance")).toBeInTheDocument();
+    const named = within(picked).getByRole("list", { name: "Responsibilities" });
+    expect(within(named).getByText("Head of Finance", { selector: "span" })).toBeInTheDocument();
+    expect(within(named).getByText("Finance", { selector: "span" })).toBeInTheDocument();
     await user.selectOptions(within(picked).getByLabelText("How they stand to it"), "responsible");
     await user.selectOptions(within(picked).getByLabelText("Who"), "role:clerk");
     await user.click(within(picked).getByRole("button", { name: "Add" }));
-    expect(within(named).getByText("Invoice clerk")).toBeInTheDocument();
+    expect(within(named).getByText("Invoice clerk", { selector: "span" })).toBeInTheDocument();
     await user.click(within(picked).getByRole("button", { name: "Remove Informed: Finance" }));
-    expect(within(named).queryByText("Finance")).not.toBeInTheDocument();
+    expect(within(named).queryByText("Finance", { selector: "span" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     await waitFor(() => expect(saves).toHaveLength(1));
@@ -338,8 +361,34 @@ describe("responsibilities on steps", () => {
     await user.click(within(row).getByRole("button", { name: "Book it" }));
     expect(await nodeCard("Step: Book it")).toBeInTheDocument();
     expect(router.state.location.search).toEqual({});
-    expect(within(within(screen.getByRole("region", { name: "Node" })).getByRole("list")).getByText("Head of Finance")).toBeInTheDocument();
+    expect(
+      within(within(screen.getByRole("region", { name: "Node" })).getByRole("list", { name: "Responsibilities" })).getByText("Head of Finance", {
+        selector: "span",
+      }),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "RACI matrix" }));
     expect(await screen.findByRole("table")).toBeInTheDocument();
+  });
+});
+
+describe("who a step comes down to", () => {
+  it("names the people behind each responsibility on the day, deputies standing in, and nobody where nobody is", async () => {
+    serve("member");
+    const user = userEvent.setup();
+    renderApp("/processes/inv");
+    fireEvent.click(await nodeCard("Step: Book it"));
+    const picked = within(screen.getByRole("region", { name: "Node" })).getByRole("region", { name: "Responsibilities" });
+    expect(await within(picked).findByRole("link", { name: "Bo Deputy" })).toHaveAttribute("href", "/people/bo");
+    expect(within(picked).getByText(/standing in for/)).toBeInTheDocument();
+    expect(within(picked).getByText("Nobody on this day, not even a deputy")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("As of"), { target: { value: "2026-01-01" } });
+    expect(await within(picked).findByRole("link", { name: "Hana Head" })).toBeInTheDocument();
+    const urls = vi.mocked(globalThis.fetch).mock.calls.map(([input]) => (input instanceof Request ? input.url : String(input)));
+    expect(urls.some((u) => u.includes("/processes/inv/people") && u.includes("version=draft") && u.includes("asOf=2026-01-01"))).toBe(true);
+    await user.click(within(screen.getByRole("region", { name: "Versions" })).getByRole("button", { name: "Version 1" }));
+    await waitFor(() => {
+      const later = vi.mocked(globalThis.fetch).mock.calls.map(([input]) => (input instanceof Request ? input.url : String(input)));
+      expect(later.some((u) => u.includes("/processes/inv/people") && u.includes("version=1"))).toBe(true);
+    });
   });
 });

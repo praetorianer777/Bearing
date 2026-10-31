@@ -389,6 +389,8 @@ export const en = {
     step: "Step",
     short: "incomplete",
     noSteps: "No steps yet.",
+    nobody: "Nobody on this day, not even a deputy",
+    standsInFor: "standing in for",
   },
   notFound: {
     title: "Nothing here",

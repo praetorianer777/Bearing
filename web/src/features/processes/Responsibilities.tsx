@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
-import type { FlowNode, RACI } from "@/api/processes";
+import type { FlowNode, RACI, Responsibility, StepPeople } from "@/api/processes";
+import { PersonName, PositionName } from "@/features/org/common";
 import { Button } from "@/components/ui";
 import { t } from "@/i18n";
 import type { Edit, Flow } from "./editor";
@@ -13,8 +14,10 @@ export function NodeResponsibilities({
   editable,
   parties,
   nameOf,
+  people,
   onEdit,
 }: {
+  people?: StepPeople;
   node: FlowNode;
   editable: boolean;
   parties: Party[];
@@ -44,15 +47,16 @@ export function NodeResponsibilities({
       {list.length === 0 ? (
         <p className="text-sm text-ink-subtle">{t.raci.none}</p>
       ) : (
-        <ul className="space-y-1">
+        <ul aria-label={t.raci.title} className="space-y-1">
           {list.map((r, i) => (
-            <li key={`${r.kind}-${partyOf(r)}`} className="flex items-center justify-between gap-2">
-              <span className="min-w-0 truncate">
+            <li key={`${r.kind}-${partyOf(r)}`} className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
                 <abbr title={t.raci.kinds[r.kind]} className="mr-1.5 inline-block w-4 font-semibold no-underline">
                   {t.raci.letters[r.kind]}
                 </abbr>
-                {nameOf(partyOf(r))}
-              </span>
+                <span>{nameOf(partyOf(r))}</span>
+                {people && <Holders of={r} people={people} nameOf={nameOf} />}
+              </div>
               {editable && (
                 <button
                   type="button"
@@ -102,6 +106,28 @@ export function NodeResponsibilities({
         </div>
       )}
     </section>
+  );
+}
+
+/** Who a responsibility comes down to on the day read, deputies saying whom they stand in for. */
+function Holders({ of, people, nameOf }: { of: Responsibility; people: StepPeople; nameOf: (key: string) => string }) {
+  const found = people.responsibilities.find((r) => r.kind === of.kind && partyOf(r) === partyOf(of));
+  if (!found) return null;
+  if (found.people.length === 0) return <span className="block pl-6 text-xs text-warning">{t.raci.nobody}</span>;
+  return (
+    <ul className="pl-6 text-xs text-ink-muted">
+      {found.people.map((p) => (
+        <li key={`${p.personId}-${p.positionId ?? ""}`}>
+          <PersonName id={p.personId} name={p.name} />
+          {p.deputyFor && (
+            <span className="text-ink-subtle">
+              {" "}
+              {t.raci.standsInFor} <PositionName id={p.deputyFor} title={nameOf(`position:${p.deputyFor}`)} />
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 

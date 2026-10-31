@@ -353,3 +353,96 @@ func (s *Server) handleProcessVersion(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleProcessAudit(w http.ResponseWriter, r *http.Request) {
 	s.handleSubjectAudit(w, r, "processID")
 }
+
+type resolvedResponse struct {
+	PersonID uuid.UUID `json:"personId"`
+	Name     string    `json:"name"`
+	Share    int       `json:"share"`
+	// PositionID is the position that brings them in; null when they hold the role directly.
+	PositionID *uuid.UUID `json:"positionId"`
+	// DeputyFor is the vacant position they stand in for, as its deputy; null when they stand for themselves.
+	DeputyFor *uuid.UUID `json:"deputyFor"`
+}
+
+type resolvedResponsibilityResponse struct {
+	responsibilityBody
+	// People are who the responsibility comes down to on the day; none when nobody holds it, even by deputy.
+	People []resolvedResponse `json:"people"`
+}
+
+type stepPeopleResponse struct {
+	Key              string                           `json:"key"`
+	Name             string                           `json:"name"`
+	Kind             org.NodeKind                     `json:"kind"`
+	Responsibilities []resolvedResponsibilityResponse `json:"responsibilities"`
+}
+
+// peopleQuery explains the parameters every people operation of a process reads.
+const peopleQuery = "asOf is a day written 2006-01-02, today when left out. version names a published version by number, or the draft as draft; left out it is the newest published version, or the draft before the first. A position comes down to its holders, or when vacant to the holders of its first deputy with any, who stand in; a role to whoever holds it directly or holds a position carrying it; a unit to its head."
+
+func toStepPeople(s org.StepPeople) stepPeopleResponse {
+	out := stepPeopleResponse{Key: s.Key, Name: s.Name, Kind: s.Kind, Responsibilities: make([]resolvedResponsibilityResponse, len(s.Responsibilities))}
+	for i, r := range s.Responsibilities {
+		people := make([]resolvedResponse, len(r.People))
+		for j, p := range r.People {
+			people[j] = resolvedResponse(p)
+		}
+		out.Responsibilities[i] = resolvedResponsibilityResponse{responsibilityBody: responsibilityBody(r.Responsibility), People: people}
+	}
+	return out
+}
+
+// processPeople reads who a process comes down to, for the version and day the request names.
+func (s *Server) processPeople(w http.ResponseWriter, r *http.Request) (org.ProcessPeople, org.Day, bool) {
+	id, ok := s.pathID(w, r, "processID")
+	if !ok {
+		return org.ProcessPeople{}, org.Day{}, false
+	}
+	day, ok := s.asOf(w, r)
+	if !ok {
+		return org.ProcessPeople{}, org.Day{}, false
+	}
+	var version *int
+	raw := r.URL.Query().Get("version")
+	if raw != "" && raw != "draft" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 {
+			respondError(w, r, s.Log, ErrValidation(map[string]string{"version": "Name a version by its number, or the draft as draft."}))
+			return org.ProcessPeople{}, org.Day{}, false
+		}
+		version = &n
+	}
+	people, err := s.Org.ProcessPeople(r.Context(), id, version, raw == "draft", day)
+	if err != nil {
+		respondError(w, r, s.Log, processError(err))
+		return org.ProcessPeople{}, org.Day{}, false
+	}
+	return people, day, true
+}
+
+func (s *Server) handleProcessPeople(w http.ResponseWriter, r *http.Request) {
+	people, day, ok := s.processPeople(w, r)
+	if !ok {
+		return
+	}
+	steps := make([]stepPeopleResponse, len(people.Steps))
+	for i, step := range people.Steps {
+		steps[i] = toStepPeople(step)
+	}
+	respondJSON(w, http.StatusOK, env{"asOf": day, "version": people.Version, "steps": steps})
+}
+
+func (s *Server) handleStepPeople(w http.ResponseWriter, r *http.Request) {
+	people, day, ok := s.processPeople(w, r)
+	if !ok {
+		return
+	}
+	key := chi.URLParam(r, "stepKey")
+	for _, step := range people.Steps {
+		if step.Key == key {
+			respondJSON(w, http.StatusOK, env{"asOf": day, "version": people.Version, "step": toStepPeople(step)})
+			return
+		}
+	}
+	respondError(w, r, s.Log, ErrNotFound())
+}
