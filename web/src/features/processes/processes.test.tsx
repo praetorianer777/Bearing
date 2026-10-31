@@ -371,6 +371,26 @@ describe("responsibilities on steps", () => {
   });
 });
 
+describe("a process in swimlanes", () => {
+  it("lays the draft out in lanes by who is responsible, read-only, and switches back to the canvas", async () => {
+    serve();
+    const user = userEvent.setup();
+    const { router } = renderApp("/processes/inv?view=lanes");
+    expect(await screen.findByRole("region", { name: "Lane: Head of Finance" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Swimlanes" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("toolbar", { name: "Add" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tidy view" })).not.toBeInTheDocument();
+    fireEvent.click(await nodeCard("Step: Book it"));
+    expect(within(screen.getByRole("region", { name: "Node" })).getByRole("list", { name: "Responsibilities" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("region", { name: "Lane: Head of Finance" }));
+    expect(await screen.findByText(/^Pick a node or an arrow/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Canvas" }));
+    expect(router.state.location.search).toEqual({});
+    expect(screen.queryByRole("region", { name: "Lane: Head of Finance" })).not.toBeInTheDocument();
+    expect(screen.getByRole("toolbar", { name: "Add" })).toBeInTheDocument();
+  });
+});
+
 describe("who a step comes down to", () => {
   it("names the people behind each responsibility on the day, deputies standing in, and nobody where nobody is", async () => {
     serve("member");

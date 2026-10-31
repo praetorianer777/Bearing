@@ -130,7 +130,7 @@ const processRoute = createRoute({
     const version = Number(search.version);
     return {
       ...(Number.isInteger(version) && version >= 1 ? { version } : {}),
-      ...(search.view === "matrix" ? { view: "matrix" as const } : {}),
+      ...(search.view === "matrix" || search.view === "lanes" ? { view: search.view } : {}),
       ...(isDay(search.asOf) ? { asOf: search.asOf } : {}),
     };
   },

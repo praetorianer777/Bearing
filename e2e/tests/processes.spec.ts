@@ -126,6 +126,20 @@ test("the demo's supplier invoice says who does what in a RACI matrix", async ({
   await expect(node(page, "Step: Approve the invoice")).toContainText("A · Head of Finance and People");
 });
 
+test("the demo's supplier invoice reads in swimlanes, one per responsible party", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/processes");
+  await page.getByRole("link", { name: "Supplier invoice" }).click();
+  await page.getByRole("button", { name: "Swimlanes" }).click();
+  await expect(page.getByRole("region", { name: "Lane: Invoice approver" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Lane: Accountant" })).toBeVisible();
+  await expect(page.getByRole("toolbar", { name: "Add" })).toHaveCount(0);
+  const approve = await node(page, "Step: Approve the invoice").boundingBox();
+  const lane = await page.getByRole("region", { name: "Lane: Invoice approver" }).boundingBox();
+  expect(approve && lane && approve.x >= lane.x && approve.x + approve.width <= lane.x + lane.width).toBe(true);
+  expect((await new AxeBuilder({ page }).include("main").analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+});
+
 // In the demo the Head of Quality is vacant; the Test lab lead stands in as the first deputy.
 test("a step's responsibilities come down to people, a deputy standing in for a vacant position", async ({ page }) => {
   await signIn(page);
