@@ -1068,6 +1068,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/processes/{processID}/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who each node of a process comes down to on a day: the people behind every responsibility, deputies standing in for vacant positions.
+         * @description asOf is a day written 2006-01-02, today when left out. version names a published version by number, or the draft as draft; left out it is the newest published version, or the draft before the first. A position comes down to its holders, or when vacant to the holders of its first deputy with any, who stand in; a role to whoever holds it directly or holds a position carrying it; a unit to its head.
+         */
+        get: operations["processPeople"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/processes/{processID}/publish": {
         parameters: {
             query?: never;
@@ -1082,6 +1102,26 @@ export interface paths {
          * @description Refused as not_publishable while the draft has problems other than warnings, and as nothing_changed when it is as the newest version has it.
          */
         post: operations["publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/processes/{processID}/steps/{stepKey}/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who one step of a process comes down to on a day; a step without responsibilities is not found.
+         * @description asOf is a day written 2006-01-02, today when left out. version names a published version by number, or the draft as draft; left out it is the newest published version, or the draft before the first. A position comes down to its holders, or when vacant to the holders of its first deputy with any, who stand in; a role to whoever holds it directly or holds a position carrying it; a unit to its head.
+         */
+        get: operations["stepPeople"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1935,6 +1975,27 @@ export interface components {
             /** Format: uuid */
             reportsToId?: string;
         };
+        ResolvedResponse: {
+            /** Format: uuid */
+            deputyFor: string | null;
+            name: string;
+            /** Format: uuid */
+            personId: string;
+            /** Format: uuid */
+            positionId: string | null;
+            share: number;
+        };
+        ResolvedResponsibilityResponse: {
+            /** @enum {string} */
+            kind: "responsible" | "accountable" | "consulted" | "informed";
+            people: components["schemas"]["ResolvedResponse"][];
+            /** Format: uuid */
+            positionId?: string;
+            /** Format: uuid */
+            roleId?: string;
+            /** Format: uuid */
+            unitId?: string;
+        };
         ResponsibilityBody: {
             /** @enum {string} */
             kind: "responsible" | "accountable" | "consulted" | "informed";
@@ -1967,6 +2028,13 @@ export interface components {
         };
         StatusResponse: {
             status: string;
+        };
+        StepPeopleResponse: {
+            key: string;
+            /** @enum {string} */
+            kind: "start" | "step" | "decision" | "subprocess" | "end";
+            name: string;
+            responsibilities: components["schemas"]["ResolvedResponsibilityResponse"][];
         };
         ThemeAssetResponse: {
             contentType: string;
@@ -4800,6 +4868,48 @@ export interface operations {
             };
         };
     };
+    processPeople: {
+        parameters: {
+            query?: {
+                asOf?: string;
+                version?: string;
+            };
+            header?: never;
+            path: {
+                processID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        steps: components["schemas"]["StepPeopleResponse"][];
+                        version: number | null;
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     publish: {
         parameters: {
             query?: never;
@@ -4823,6 +4933,49 @@ export interface operations {
                 content: {
                     "application/json": {
                         version: components["schemas"]["VersionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    stepPeople: {
+        parameters: {
+            query?: {
+                asOf?: string;
+                version?: string;
+            };
+            header?: never;
+            path: {
+                processID: string;
+                stepKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        step: components["schemas"]["StepPeopleResponse"];
+                        version: number | null;
                     };
                 };
             };

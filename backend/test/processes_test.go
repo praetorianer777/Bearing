@@ -385,3 +385,139 @@ func TestAStepSaysWhoIsResponsibleAccountableConsultedAndInformed(t *testing.T) 
 		t.Error("a published version's responsibility was removed")
 	}
 }
+
+type resolvedJSON struct {
+	PersonID   string
+	Name       string
+	PositionID *string
+	DeputyFor  *string
+}
+
+type stepPeopleJSON struct {
+	Key              string
+	Responsibilities []struct {
+		Kind                       string
+		RoleID, PositionID, UnitID string
+		People                     []resolvedJSON
+	}
+}
+
+// who are the names a step's responsibility of a kind comes down to, deputies marked.
+func who(step stepPeopleJSON, kind string) []string {
+	out := []string{}
+	for _, r := range step.Responsibilities {
+		if r.Kind != kind {
+			continue
+		}
+		for _, p := range r.People {
+			name := p.Name
+			if p.DeputyFor != nil {
+				name += " (deputy)"
+			}
+			out = append(out, name)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// The case the issue names: a responsibility comes down to the people holding its party on a day, and a vacant
+// position to its deputies, in order, saying so.
+func TestResponsibilitiesComeDownToPeopleOnADayWithDeputiesForVacancies(t *testing.T) {
+	editor, unit := orgFixture(t)
+	ids := positions(t, editor, unit, "Head of Quality", "Quality clerk", "Quality engineer")
+	head, clerk, engineer := ids[0], ids[1], ids[2]
+	if status := editor.do(http.MethodPatch, "/positions/"+head, map[string]any{"headOfUnit": true}, nil); status != http.StatusOK {
+		t.Fatalf("making the head answered %d", status)
+	}
+	if status := editor.do(http.MethodPut, "/positions/"+head+"/deputies", map[string]any{"deputyIds": []string{clerk, engineer}}, nil); status != http.StatusOK {
+		t.Fatalf("naming deputies answered %d", status)
+	}
+	auditor := orgRole(t, editor, "Auditor")
+	if status := editor.do(http.MethodPost, "/positions/"+engineer+"/roles", map[string]any{"roleId": auditor.ID, "from": day(-30)}, nil); status != http.StatusCreated {
+		t.Fatalf("carrying the role answered %d", status)
+	}
+	ana := person(t, editor, map[string]any{"name": "Ana Head"}).ID
+	dora := person(t, editor, map[string]any{"name": "Dora Engineer"}).ID
+	rita := person(t, editor, map[string]any{"name": "Rita Auditor"}).ID
+	give(t, editor, map[string]any{"personId": ana, "positionId": head, "from": day(-20), "to": day(-5)})
+	give(t, editor, map[string]any{"personId": dora, "positionId": engineer, "from": day(-20)})
+	give(t, editor, map[string]any{"personId": rita, "roleId": auditor.ID, "from": day(-20)})
+
+	made := process(t, editor, "Audit", nil)
+	nodes := []nodeJSON{
+		{Key: "s", Kind: "start"},
+		{Key: "audit", Kind: "step", Name: "Audit", Responsibilities: []responsibilityJSON{
+			{Kind: "accountable", UnitID: unit}, {Kind: "responsible", RoleID: auditor.ID},
+			{Kind: "consulted", PositionID: clerk}, {Kind: "informed", PositionID: engineer},
+		}},
+		{Key: "e", Kind: "end"},
+	}
+	arrows := []arrowJSON{{Key: "a1", From: "s", To: "audit"}, {Key: "a2", From: "audit", To: "e"}}
+	var saved processBody
+	saveDraft(editor, made.ID, made.Draft.Revision, nodes, arrows, &saved)
+	if status := editor.do(http.MethodPost, "/processes/"+made.ID+"/publish", map[string]any{}, nil); status != http.StatusCreated {
+		t.Fatalf("publishing answered %d", status)
+	}
+
+	step := func(query string) stepPeopleJSON {
+		t.Helper()
+		var got struct {
+			Version *int
+			Step    stepPeopleJSON
+		}
+		if status := editor.do(http.MethodGet, "/processes/"+made.ID+"/steps/audit/people"+query, nil, &got); status != http.StatusOK {
+			t.Fatalf("reading the step's people%s answered %d", query, status)
+		}
+		return got.Step
+	}
+	now := step("")
+	for kind, want := range map[string][]string{
+		"accountable": {"Dora Engineer (deputy)"},
+		"responsible": {"Dora Engineer", "Rita Auditor"},
+		"consulted":   {},
+		"informed":    {"Dora Engineer"},
+	} {
+		if got := who(now, kind); !slices.Equal(got, want) {
+			t.Errorf("today %s comes down to %v, want %v", kind, got, want)
+		}
+	}
+	for _, r := range now.Responsibilities {
+		if r.Kind == "accountable" && (*r.People[0].DeputyFor != head || *r.People[0].PositionID != engineer) {
+			t.Errorf("the deputy does not say whom they stand in for: %+v", r.People[0])
+		}
+	}
+	if got := who(step("?asOf="+day(-10)), "accountable"); !slices.Equal(got, []string{"Ana Head"}) {
+		t.Errorf("ten days ago the accountable was %v", got)
+	}
+
+	nodes[1].Responsibilities = nodes[1].Responsibilities[:1]
+	saveDraft(editor, made.ID, saved.Process.Draft.Revision+1, nodes, arrows, nil)
+	if got := who(step(""), "responsible"); len(got) != 2 {
+		t.Errorf("the published version's responsible changed with the draft: %v", got)
+	}
+	if got := who(step("?version=draft"), "responsible"); len(got) != 0 {
+		t.Errorf("the draft, without a responsible, comes down to %v", got)
+	}
+	var whole struct {
+		Version *int
+		Steps   []stepPeopleJSON
+	}
+	if status := editor.do(http.MethodGet, "/processes/"+made.ID+"/people?version=1", nil, &whole); status != http.StatusOK ||
+		whole.Version == nil || *whole.Version != 1 || len(whole.Steps) != 1 || whole.Steps[0].Key != "audit" {
+		t.Errorf("the whole version's people answered %d %+v", status, whole)
+	}
+	var r refusal
+	for query, want := range map[string]int{
+		"/steps/s/people":               http.StatusNotFound,
+		"/steps/audit/people?version=9": http.StatusNotFound,
+		"/people?version=zero":          http.StatusUnprocessableEntity,
+	} {
+		if status := editor.do(http.MethodGet, "/processes/"+made.ID+query, nil, &r); status != want {
+			t.Errorf("%s answered %d, want %d", query, status, want)
+		}
+	}
+	if status := editor.do(http.MethodGet, "/processes/"+uuid.NewString()+"/people", nil, nil); status != http.StatusNotFound {
+		t.Errorf("an unknown process answered %d", status)
+	}
+}

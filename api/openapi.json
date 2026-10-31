@@ -4047,6 +4047,87 @@
         "x-bearing-role": "editor"
       }
     },
+    "/processes/{processID}/people": {
+      "get": {
+        "operationId": "processPeople",
+        "summary": "Who each node of a process comes down to on a day: the people behind every responsibility, deputies standing in for vacant positions.",
+        "description": "asOf is a day written 2006-01-02, today when left out. version names a published version by number, or the draft as draft; left out it is the newest published version, or the draft before the first. A position comes down to its holders, or when vacant to the holders of its first deputy with any, who stand in; a role to whoever holds it directly or holds a position carrying it; a unit to its head.",
+        "tags": [
+          "processes"
+        ],
+        "parameters": [
+          {
+            "name": "processID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "steps": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StepPeopleResponse"
+                      }
+                    },
+                    "version": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "steps",
+                    "version"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/processes/{processID}/publish": {
       "post": {
         "operationId": "publish",
@@ -4107,6 +4188,92 @@
           }
         },
         "x-bearing-role": "editor"
+      }
+    },
+    "/processes/{processID}/steps/{stepKey}/people": {
+      "get": {
+        "operationId": "stepPeople",
+        "summary": "Who one step of a process comes down to on a day; a step without responsibilities is not found.",
+        "description": "asOf is a day written 2006-01-02, today when left out. version names a published version by number, or the draft as draft; left out it is the newest published version, or the draft before the first. A position comes down to its holders, or when vacant to the holders of its first deputy with any, who stand in; a role to whoever holds it directly or holds a position carrying it; a unit to its head.",
+        "tags": [
+          "processes"
+        ],
+        "parameters": [
+          {
+            "name": "processID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "stepKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "step": {
+                      "$ref": "#/components/schemas/StepPeopleResponse"
+                    },
+                    "version": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "step",
+                    "version"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/processes/{processID}/versions/{number}": {
@@ -7047,6 +7214,78 @@
           }
         }
       },
+      "ResolvedResponse": {
+        "type": "object",
+        "properties": {
+          "deputyFor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "positionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "share": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "personId",
+          "name",
+          "share",
+          "positionId",
+          "deputyFor"
+        ]
+      },
+      "ResolvedResponsibilityResponse": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "responsible",
+              "accountable",
+              "consulted",
+              "informed"
+            ]
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResolvedResponse"
+            }
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "kind",
+          "people"
+        ]
+      },
       "ResponsibilityBody": {
         "type": "object",
         "properties": {
@@ -7165,6 +7404,39 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "StepPeopleResponse": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "start",
+              "step",
+              "decision",
+              "subprocess",
+              "end"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "responsibilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResolvedResponsibilityResponse"
+            }
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "kind",
+          "responsibilities"
         ]
       },
       "ThemeAssetResponse": {

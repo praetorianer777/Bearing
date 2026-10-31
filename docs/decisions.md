@@ -221,3 +221,14 @@ without anyone responsible is a warning, not a refusal: a process is often
 published before every party is agreed, and refusing it would push
 editors to name somebody for the sake of the rule. The editor and the
 RACI matrix mark such steps so they are not forgotten.
+
+## A responsibility comes down to people on a day, deputies once
+
+Who does a step is worked out when asked, for a day, never stored: a
+position comes down to whoever holds it then; a role to whoever holds it
+directly or holds a position carrying it; a unit to its head. A vacant
+position comes down to the holders of its first deputy position that has
+any, who are marked as standing in, so nobody mistakes a deputy for the
+holder. Deputies stand in once: a deputy's own deputies do not, since a
+chain of stand-ins nobody chose is no answer to who does it. A party
+nobody holds, even by deputy, says so rather than going quiet.

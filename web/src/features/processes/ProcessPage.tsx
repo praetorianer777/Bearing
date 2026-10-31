@@ -7,16 +7,18 @@ import {
   type FlowNode,
   type Problem,
   type Process,
+  type StepPeople,
   useDeleteProcess,
   useProcess,
   useProcesses,
+  useProcessPeople,
   useProcessVersion,
   usePublish,
   useSaveDraft,
   useUpdateProcess,
 } from "@/api/processes";
 import { Button, Field, FormError, fieldError } from "@/components/ui";
-import { PositionName, today } from "@/features/org/common";
+import { AsOfPicker, PositionName, today } from "@/features/org/common";
 import { t, useLanguage } from "@/i18n";
 import { arrange } from "./arrange";
 import { type Edit, edit, type Flow, start } from "./editor";
@@ -24,7 +26,7 @@ import { FlowCanvas, Palette, type Selection } from "./FlowCanvas";
 import { type Party, useParties } from "./raci";
 import { NodeResponsibilities, RaciMatrix } from "./Responsibilities";
 
-export type ProcessSearch = { version?: number; view?: "matrix" };
+export type ProcessSearch = { version?: number; view?: "matrix"; asOf?: string };
 
 const inputClass = "w-full rounded-md border border-border-strong bg-surface px-2 py-1.5 text-sm text-ink";
 
@@ -85,6 +87,7 @@ function Inspector({
   others,
   parties,
   nameOf,
+  people,
   onEdit,
   onRemove,
 }: {
@@ -94,6 +97,7 @@ function Inspector({
   others: Process[];
   parties: Party[];
   nameOf: (key: string) => string;
+  people: StepPeople[];
   onEdit: (e: Edit) => void;
   onRemove: () => void;
 }) {
@@ -185,7 +189,9 @@ function Inspector({
           </select>
         </div>
       )}
-      {n.kind !== "start" && n.kind !== "end" && <NodeResponsibilities node={n} editable={editable} parties={parties} nameOf={nameOf} onEdit={onEdit} />}
+      {n.kind !== "start" && n.kind !== "end" && (
+        <NodeResponsibilities node={n} editable={editable} parties={parties} nameOf={nameOf} people={people.find((p) => p.key === n.key)} onEdit={onEdit} />
+      )}
       {editable && (
         <Button variant="secondary" onClick={onRemove} className="self-start">
           {t.process.removeNode}
@@ -282,6 +288,9 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
   // Each arrangement fits the view anew, so the whole flow is in sight where the layout put it.
   const [arranged, setArranged] = useState(0);
   const parties = useParties();
+  const asOf = search.asOf ?? today();
+  // The saved draft's people while the draft is shown; unsaved changes come down to people once saved.
+  const people = useProcessPeople(process.id, viewing ?? "draft", asOf);
   const save = useSaveDraft(process.id);
   const publish = usePublish(process.id);
 
@@ -384,6 +393,7 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
             ))}
           </select>
         </div>
+        <AsOfPicker value={asOf} onChange={(day) => onSearch({ ...search, asOf: day })} />
         <fieldset className="flex h-9 overflow-hidden rounded-md border border-border-strong text-sm">
           <legend className="sr-only">{t.process.viewAs}</legend>
           {(["canvas", "matrix"] as const).map((v) => (
@@ -459,6 +469,7 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
               others={(processes.data ?? []).filter((p) => p.id !== process.id)}
               parties={parties.list}
               nameOf={parties.nameOf}
+              people={people.data ?? []}
               onEdit={dispatch}
               onRemove={removePicked}
             />

@@ -390,6 +390,8 @@ export const de: Messages = {
     step: "Schritt",
     short: "unvollständig",
     noSteps: "Noch keine Schritte.",
+    nobody: "An diesem Tag niemand, auch keine Vertretung",
+    standsInFor: "vertritt",
   },
   notFound: {
     title: "Hier ist nichts",

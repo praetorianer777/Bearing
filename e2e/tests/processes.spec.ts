@@ -117,3 +117,16 @@ test("the demo's supplier invoice says who does what in a RACI matrix", async ({
   await approve.getByRole("button", { name: "Approve the invoice" }).click();
   await expect(node(page, "Step: Approve the invoice")).toContainText("A · Head of Finance and People");
 });
+
+// In the demo the Head of Quality is vacant; the Test lab lead stands in as the first deputy.
+test("a step's responsibilities come down to people, a deputy standing in for a vacant position", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/processes");
+  await page.getByRole("link", { name: "Customer complaint" }).click();
+  await node(page, "Step: Find the root cause").click();
+  const named = page.getByRole("region", { name: "Node" }).getByRole("list", { name: "Responsibilities" });
+  await expect(named.getByRole("link", { name: "Carol Checker" })).toBeVisible();
+  await expect(named).toContainText("standing in for Head of Quality");
+  await named.getByRole("link", { name: "Carol Checker" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Carol Checker" })).toBeVisible();
+});
