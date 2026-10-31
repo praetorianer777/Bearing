@@ -86,6 +86,24 @@ if (typeof globalThis.DOMMatrixReadOnly === "undefined") {
   }
   Object.defineProperty(globalThis, "DOMMatrixReadOnly", { value: StubDOMMatrixReadOnly, writable: true });
 }
+// jsdom gives every element a size of nothing, and React Flow keeps a node of no size hidden; as its testing guide
+// does, an element is as large as its style says, or a pixel.
+if (typeof window !== "undefined") {
+  Object.defineProperties(window.HTMLElement.prototype, {
+    offsetHeight: {
+      configurable: true,
+      get(this: HTMLElement) {
+        return Number.parseFloat(this.style.height) || 1;
+      },
+    },
+    offsetWidth: {
+      configurable: true,
+      get(this: HTMLElement) {
+        return Number.parseFloat(this.style.width) || 1;
+      },
+    },
+  });
+}
 if (typeof window !== "undefined" && !(window.SVGElement.prototype as { getBBox?: unknown }).getBBox) {
   (window.SVGElement.prototype as unknown as { getBBox: () => DOMRect }).getBBox = () => new DOMRect();
 }
