@@ -254,6 +254,9 @@ func loadProcesses(ctx context.Context, s *org.Service) error {
 	return s.MarkDemoProcessesLoaded(ctx)
 }
 
+// widths are those the web client draws each kind of node at, so a row's nodes share a centre line.
+var widths = map[org.NodeKind]float64{org.Start: 160, org.End: 160, org.Step: 180, org.Subprocess: 180, org.Decision: 180}
+
 // graph lays a flow out top to bottom: each node a row below the nearest node leading to it, the nodes of a row side
 // by side in the order they are named.
 func (f flow) graph(ids map[string]uuid.UUID) org.Graph {
@@ -287,8 +290,8 @@ func (f flow) graph(ids map[string]uuid.UUID) org.Graph {
 	var g org.Graph
 	for _, n := range f.nodes {
 		r := row[n.key]
-		node := org.Node{Key: n.key, Kind: n.kind, Name: n.name,
-			X: float64(placed[r]*2-across[r]+1) * 130, Y: float64(r) * 110}
+		centre := float64(placed[r]*2-across[r]+1) * 130
+		node := org.Node{Key: n.key, Kind: n.kind, Name: n.name, X: centre - widths[n.kind]/2, Y: float64(r) * 110}
 		placed[r]++
 		if n.sub != "" {
 			id := ids[n.sub]

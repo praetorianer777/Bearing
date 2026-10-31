@@ -192,7 +192,7 @@ func TestTheDemoProcessesHangTogether(t *testing.T) {
 	for _, n := range g.Nodes {
 		rows[n.Y] = append(rows[n.Y], n.X)
 	}
-	if len(rows[0]) != 1 || rows[0][0] != 0 {
+	if len(rows[0]) != 1 || rows[0][0] != -widths[org.Start]/2 {
 		t.Errorf("the start is not alone at the top middle: %v", rows[0])
 	}
 	for y, xs := range rows {
