@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { type Link as Reached, usePersonPage } from "@/api/people";
 import { t, useLanguage } from "@/i18n";
-import { AsOfPicker, Changes, PersonName, PositionName, Section, today, UnitName } from "../org/common";
+import { Duties } from "@/features/processes/Duties";
+import { AsOfPicker, Changes, PersonName, PositionName, RoleName, Section, today, UnitName } from "../org/common";
 import { type Held, personView, type Seat } from "./view";
 
 export type PersonSearch = { asOf?: string };
@@ -105,7 +106,9 @@ export function PersonPage({ personId, search, onSearch }: { personId: string; s
             <ul className="space-y-1">
               {view.roles.map((r) => (
                 <li key={`${r.roleId}-${r.through ?? ""}`}>
-                  <span className="font-medium text-ink">{r.name}</span>
+                  <span className="font-medium">
+                    <RoleName id={r.roleId} name={r.name} />
+                  </span>
                   <span className="text-ink-subtle"> · {r.through ? t.person.through(r.through) : t.person.directRole}</span>
                 </li>
               ))}
@@ -134,6 +137,7 @@ export function PersonPage({ personId, search, onSearch }: { personId: string; s
       <Section title={t.person.history} empty={t.person.noHistory}>
         {view.history.length > 0 && <HeldList items={view.history} dated />}
       </Section>
+      <Duties subject={{ personId: person.id }} asOf={asOf} />
       <Changes subject={{ kind: "people", id: person.id }} />
     </div>
   );

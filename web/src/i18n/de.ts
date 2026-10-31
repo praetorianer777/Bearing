@@ -393,6 +393,31 @@ export const de: Messages = {
     nobody: "An diesem Tag niemand, auch keine Vertretung",
     standsInFor: "vertritt",
   },
+  duties: {
+    title: "Verantwortlich für",
+    none: "An diesem Tag für keinen Schritt eines veröffentlichten Prozesses benannt.",
+    vacantPosition: "eine offene Stelle",
+  },
+  role: {
+    kind: "Rolle",
+    carriedBy: "Getragen von",
+    carriedByNone: "An diesem Tag trägt keine Stelle sie.",
+    heldBy: "Inne von",
+    heldByNobody: "An diesem Tag hat sie niemand.",
+    unreachable: "Diese Rolle konnte nicht gelesen werden. Vielleicht wurde sie entfernt.",
+  },
+  whoDoes: {
+    title: "Wer macht was",
+    intro:
+      "Finden Sie einen Schritt eines veröffentlichten Prozesses über seinen Namen oder den seines Prozesses und sehen Sie, wer durchführt, rechenschaftspflichtig ist, konsultiert und informiert wird.",
+    search: "Schritt oder Prozess",
+    placeholder: "z. B. Rechnung, Ursache",
+    hint: "Geben Sie zwei Buchstaben oder mehr ein.",
+    none: "Kein Schritt eines veröffentlichten Prozesses passt.",
+    results: "Gefundene Schritte",
+    nobodyNamed: "Für diesen Schritt ist niemand benannt.",
+    deputy: "vertretend",
+  },
   notFound: {
     title: "Hier ist nichts",
     body: "Diese Adresse führt in Bearing nirgendwohin.",

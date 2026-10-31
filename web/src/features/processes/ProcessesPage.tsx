@@ -85,6 +85,9 @@ export function ProcessesPage() {
       <div>
         <h1 className="text-2xl font-semibold">{t.processes.title}</h1>
         <p className="mt-1 text-base text-ink-muted">{t.processes.intro}</p>
+        <Link to="/who-does" className="mt-2 inline-block text-sm text-accent hover:underline">
+          {t.whoDoes.title}
+        </Link>
       </div>
       {processes.isError && <p className="text-sm text-danger">{t.processes.unreachable}</p>}
       {processes.data?.length === 0 && (

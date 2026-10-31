@@ -2,7 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { usePositionPage } from "@/api/org";
 import type { Link as Reached } from "@/api/people";
 import { t, useLanguage } from "@/i18n";
-import { AsOfPicker, Changes, PersonName, PositionName, Section, today, UnitName } from "./common";
+import { Duties } from "@/features/processes/Duties";
+import { AsOfPicker, Changes, PersonName, PositionName, RoleName, Section, today, UnitName } from "./common";
 import type { DaySearch } from "./UnitPage";
 
 function Reachable({ items }: { items: Reached[] }) {
@@ -85,7 +86,7 @@ export function PositionPage({ positionId, search, onSearch }: { positionId: str
             <ul className="space-y-1">
               {position.roles.map((id) => (
                 <li key={id} className="font-medium text-ink">
-                  {roleNames.get(id)}
+                  <RoleName id={id} name={roleNames.get(id) ?? ""} />
                 </li>
               ))}
             </ul>
@@ -151,6 +152,7 @@ export function PositionPage({ positionId, search, onSearch }: { positionId: str
           </ul>
         )}
       </Section>
+      <Duties subject={{ positionId: position.id }} asOf={asOf} />
       <Changes subject={{ kind: "positions", id: position.id }} />
     </div>
   );

@@ -4,7 +4,9 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -445,4 +447,84 @@ func (s *Server) handleStepPeople(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	respondError(w, r, s.Log, ErrNotFound())
+}
+
+type dutyResponse struct {
+	ProcessID   uuid.UUID    `json:"processId"`
+	ProcessKey  string       `json:"processKey"`
+	ProcessName string       `json:"processName"`
+	Version     int          `json:"version"`
+	StepKey     string       `json:"stepKey"`
+	StepName    string       `json:"stepName"`
+	StepKind    org.NodeKind `json:"stepKind"`
+	resolvedResponsibilityResponse
+}
+
+type publishedStepResponse struct {
+	ProcessID   uuid.UUID `json:"processId"`
+	ProcessKey  string    `json:"processKey"`
+	ProcessName string    `json:"processName"`
+	Version     int       `json:"version"`
+	stepPeopleResponse
+}
+
+func (s *Server) handleDuties(w http.ResponseWriter, r *http.Request) {
+	day, ok := s.asOf(w, r)
+	if !ok {
+		return
+	}
+	var subject org.Subject
+	named := 0
+	for name, into := range map[string]**uuid.UUID{"personId": &subject.PersonID, "positionId": &subject.PositionID, "roleId": &subject.RoleID, "unitId": &subject.UnitID} {
+		raw := r.URL.Query().Get(name)
+		if raw == "" {
+			continue
+		}
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			respondError(w, r, s.Log, ErrValidation(map[string]string{name: "Name it by its id."}))
+			return
+		}
+		*into = &id
+		named++
+	}
+	if named != 1 {
+		respondError(w, r, s.Log, ErrValidation(map[string]string{"personId": "Name one person, position, role or unit."}))
+		return
+	}
+	duties, err := s.Org.Duties(r.Context(), subject, day)
+	if err != nil {
+		respondError(w, r, s.Log, err)
+		return
+	}
+	out := make([]dutyResponse, len(duties))
+	for i, d := range duties {
+		step := toStepPeople(org.StepPeople{Responsibilities: []org.ResolvedResponsibility{d.ResolvedResponsibility}})
+		out[i] = dutyResponse{ProcessID: d.ProcessID, ProcessKey: d.ProcessKey, ProcessName: d.ProcessName, Version: d.Version,
+			StepKey: d.StepKey, StepName: d.StepName, StepKind: d.StepKind, resolvedResponsibilityResponse: step.Responsibilities[0]}
+	}
+	respondJSON(w, http.StatusOK, env{"asOf": day, "responsibilities": out})
+}
+
+func (s *Server) handleWhoDoes(w http.ResponseWriter, r *http.Request) {
+	day, ok := s.asOf(w, r)
+	if !ok {
+		return
+	}
+	term := strings.TrimSpace(r.URL.Query().Get("q"))
+	if utf8.RuneCountInString(term) < 2 {
+		respondError(w, r, s.Log, ErrValidation(map[string]string{"q": "Give two letters or more."}))
+		return
+	}
+	steps, err := s.Org.WhoDoes(r.Context(), term, day)
+	if err != nil {
+		respondError(w, r, s.Log, err)
+		return
+	}
+	out := make([]publishedStepResponse, len(steps))
+	for i, st := range steps {
+		out[i] = publishedStepResponse{ProcessID: st.ProcessID, ProcessKey: st.ProcessKey, ProcessName: st.ProcessName, Version: st.Version,
+			stepPeopleResponse: toStepPeople(st.StepPeople)}
+	}
+	respondJSON(w, http.StatusOK, env{"asOf": day, "steps": out})
 }

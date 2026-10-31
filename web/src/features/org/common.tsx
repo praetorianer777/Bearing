@@ -39,6 +39,14 @@ export function PositionName({ id, title }: { id: string; title: string }) {
   );
 }
 
+export function RoleName({ id, name }: { id: string; name: string }) {
+  return (
+    <Link to="/roles/$roleId" params={{ roleId: id }} className={inlineLink}>
+      {name}
+    </Link>
+  );
+}
+
 export function UnitName({ id, name }: { id: string; name: string }) {
   return (
     <Link to="/units/$unitId" params={{ unitId: id }} className={inlineLink}>

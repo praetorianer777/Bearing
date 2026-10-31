@@ -1162,6 +1162,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/responsibilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a person, position, role or unit is responsible for on a day, by RACI kind, across the newest published version of every process.
+         * @description Name one of personId, positionId, roleId and unitId. A person's are those that come down to them by any position, role, headship or deputyship; a position's those naming it, a role it carries, a unit it heads or a vacant position it stands in for; a role's those naming it; a unit's those naming it or a position in it. asOf is a day written 2006-01-02, today when left out.
+         */
+        get: operations["duties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/roles": {
         parameters: {
             query?: never;
@@ -1214,6 +1234,26 @@ export interface paths {
          * @description Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.
          */
         get: operations["roleAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/steps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who does it: the steps of the newest published versions whose name, or whose process's name, holds q, with who each responsibility comes down to on a day.
+         * @description q needs two letters or more; asOf is a day written 2006-01-02, today when left out. Steps nobody is named for are answered too.
+         */
+        get: operations["whoDoes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1617,6 +1657,26 @@ export interface components {
             /** Format: date-time */
             savedAt: string;
         };
+        DutyResponse: {
+            /** @enum {string} */
+            kind: "responsible" | "accountable" | "consulted" | "informed";
+            people: components["schemas"]["ResolvedResponse"][];
+            /** Format: uuid */
+            positionId?: string;
+            /** Format: uuid */
+            processId: string;
+            processKey: string;
+            processName: string;
+            /** Format: uuid */
+            roleId?: string;
+            stepKey: string;
+            /** @enum {string} */
+            stepKind: "start" | "step" | "decision" | "subprocess" | "end";
+            stepName: string;
+            /** Format: uuid */
+            unitId?: string;
+            version: number;
+        };
         EndRequest: {
             /**
              * Format: date
@@ -1956,6 +2016,18 @@ export interface components {
         };
         PublishRequest: {
             note: string;
+        };
+        PublishedStepResponse: {
+            key: string;
+            /** @enum {string} */
+            kind: "start" | "step" | "decision" | "subprocess" | "end";
+            name: string;
+            /** Format: uuid */
+            processId: string;
+            processKey: string;
+            processName: string;
+            responsibilities: components["schemas"]["ResolvedResponsibilityResponse"][];
+            version: number;
         };
         ReadinessResponse: {
             replicas: components["schemas"]["ReplicaStatus"][];
@@ -5062,6 +5134,48 @@ export interface operations {
             };
         };
     };
+    duties: {
+        parameters: {
+            query?: {
+                personId?: string;
+                positionId?: string;
+                roleId?: string;
+                unitId?: string;
+                asOf?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        responsibilities: components["schemas"]["DutyResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     roles: {
         parameters: {
             query?: never;
@@ -5258,6 +5372,45 @@ export interface operations {
                         events: components["schemas"]["EventResponse"][];
                         /** Format: uuid */
                         next: string | null;
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    whoDoes: {
+        parameters: {
+            query?: {
+                q?: string;
+                asOf?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        steps: components["schemas"]["PublishedStepResponse"][];
                     };
                 };
             };

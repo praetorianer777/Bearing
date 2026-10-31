@@ -130,3 +130,31 @@ test("a step's responsibilities come down to people, a deputy standing in for a 
   await named.getByRole("link", { name: "Carol Checker" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Carol Checker" })).toBeVisible();
 });
+
+test("who does what: a step found by a term, a person's duties and a role's page", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/processes");
+  await page.getByRole("link", { name: "Who does what" }).click();
+  await page.getByLabel("Step or process").fill("root cause");
+  const found = page.getByRole("list", { name: "Steps found" });
+  await expect(found.getByRole("heading", { name: "Find the root cause" })).toBeVisible();
+  await expect(found).toContainText("Carol Checker (standing in)");
+  expect((await new AxeBuilder({ page }).include("main").analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+
+  await found.getByRole("link", { name: "Carol Checker" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Carol Checker" })).toBeVisible();
+  const duties = page.getByRole("region", { name: "Responsible for" });
+  await expect(duties.getByRole("link", { name: "Test the batch" })).toBeVisible();
+  await expect(duties).toContainText("standing in for Head of Quality");
+
+  await page.goto("/processes");
+  await page.getByRole("link", { name: "Supplier invoice" }).click();
+  await node(page, "Step: Approve the invoice").click();
+  await page.getByRole("region", { name: "Node" }).getByRole("list", { name: "Responsibilities" }).getByText("Invoice approver").waitFor();
+  await page.goto("/people?q=Maren");
+  await page.getByRole("link", { name: "Maren Holt" }).click();
+  await page.getByRole("region", { name: "Roles" }).getByRole("link", { name: "Invoice approver" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Invoice approver" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Responsible for" }).getByRole("link", { name: "Approve the invoice" })).toBeVisible();
+  expect((await new AxeBuilder({ page }).include("main").analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+});
