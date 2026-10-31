@@ -197,7 +197,7 @@ func (b *Builder) fields(owner, t reflect.Type, into *Schema) {
 			schema = &copied
 		}
 		into.Properties[name] = schema
-		if !omitempty && !overridden {
+		if !omitempty {
 			into.Required = append(into.Required, name)
 		}
 	}

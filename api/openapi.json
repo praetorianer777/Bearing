@@ -5532,6 +5532,7 @@
           "positionId",
           "roleId",
           "share",
+          "from",
           "to"
         ]
       },
@@ -5724,6 +5725,7 @@
         "required": [
           "reportsToId",
           "kind",
+          "from",
           "to"
         ]
       },
@@ -6102,6 +6104,7 @@
         },
         "required": [
           "parentId",
+          "from",
           "to"
         ]
       },
@@ -6206,6 +6209,7 @@
           "description",
           "headOfUnit",
           "seats",
+          "existsFrom",
           "archivedOn",
           "reportsToId",
           "dottedTo",

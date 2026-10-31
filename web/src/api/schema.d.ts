@@ -1505,7 +1505,7 @@ export interface components {
              * Format: date
              * @description A calendar day, written 2006-01-02.
              */
-            from?: string;
+            from: string;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -1569,7 +1569,7 @@ export interface components {
              * Format: date
              * @description A calendar day, written 2006-01-02.
              */
-            from?: string;
+            from: string;
             /** @enum {string} */
             kind: "solid" | "dotted";
             /** Format: uuid */
@@ -1690,7 +1690,7 @@ export interface components {
              * Format: date
              * @description A calendar day, written 2006-01-02.
              */
-            from?: string;
+            from: string;
             /** Format: uuid */
             parentId: string | null;
             /**
@@ -1718,7 +1718,7 @@ export interface components {
              * Format: date
              * @description A calendar day, written 2006-01-02.
              */
-            existsFrom?: string;
+            existsFrom: string;
             headOfUnit: boolean;
             holders: components["schemas"]["HoldingResponse"][];
             /** Format: uuid */
