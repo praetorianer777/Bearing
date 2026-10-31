@@ -237,12 +237,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Whether the demo organisation was loaded, and whether the installation is empty enough for it. */
+        /** How far the demo is in: whether its organisation and its processes were loaded, and whether the installation is empty enough for each. */
         get: operations["demo"];
         put?: never;
         /**
-         * Load the demo organisation, Kestrel Works: about sixty people in four levels, with dotted lines, vacancies, deputies and roles.
-         * @description It goes only into an installation without units, all of it or nothing, and only once. The suite realm's alice, bob, carol and dave are in it by address, so their first sign-in links them.
+         * Load the demo: Kestrel Works, about sixty people in four levels with dotted lines, vacancies, deputies and roles, and its processes.
+         * @description The organisation goes only into an installation without units; the processes only into one without processes whose organisation is the demo's. Each goes in once, all of it or nothing, and asked again with nothing left to load the demo is refused. The suite realm's alice, bob, carol and dave are in it by address, so their first sign-in links them.
          */
         post: operations["loadDemo"];
         delete?: never;
@@ -991,6 +991,120 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/processes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every process by area, then by name, with its newest published version. */
+        get: operations["processes"];
+        put?: never;
+        /** Add a process. Its draft begins as a start joined to an end. */
+        post: operations["createProcess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/processes/{processID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One process with its draft, what keeps the draft from being published, and every version published, newest first. */
+        get: operations["process"];
+        put?: never;
+        post?: never;
+        /** Remove a process never published that no other process has as a subprocess; a published one stays for the history. */
+        delete: operations["deleteProcess"];
+        options?: never;
+        head?: never;
+        /** Change a process's key, name, area, description or owner; what is left out stays, and an empty ownerId takes the owner away. */
+        patch: operations["updateProcess"];
+        trace?: never;
+    };
+    "/processes/{processID}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The changes to a process and to every relation naming it, newest first: who made each, when, and the row before and after.
+         * @description Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.
+         */
+        get: operations["processAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/processes/{processID}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace a process's draft graph.
+         * @description The draft may be anything the store can hold: nodes keyed once each, arrows between them, at most one between two nodes in one direction. What keeps it from being published comes back as its problems. A save names the revision it was made from and is refused as draft_stale when somebody saved since.
+         */
+        put: operations["saveDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/processes/{processID}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish the draft as the process's next version, which never changes again.
+         * @description Refused as not_publishable while the draft has problems, and as nothing_changed when it is as the newest version has it.
+         */
+        post: operations["publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/processes/{processID}/versions/{number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One published version of a process with its graph. */
+        get: operations["processVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/readyz": {
         parameters: {
             query?: never;
@@ -1377,6 +1491,12 @@ export interface components {
             /** @enum {string} */
             role: "administrator" | "editor" | "member" | "reader";
         };
+        ArrowBody: {
+            from: string;
+            key: string;
+            label: string;
+            to: string;
+        };
         CarryRoleRequest: {
             /**
              * Format: date
@@ -1424,9 +1544,13 @@ export interface components {
             /** Format: uuid */
             themeId: string | null;
         };
-        DemoResponse: {
+        DemoPartResponse: {
             empty: boolean;
             loaded: boolean;
+        };
+        DemoResponse: {
+            organisation: components["schemas"]["DemoPartResponse"];
+            processes: components["schemas"]["DemoPartResponse"];
         };
         DeputiesRequest: {
             deputyIds: string[];
@@ -1439,6 +1563,19 @@ export interface components {
             from?: string;
             /** Format: uuid */
             reportsToId: string;
+        };
+        DraftRequest: {
+            arrows: components["schemas"]["ArrowBody"][];
+            nodes: components["schemas"]["NodeBody"][];
+            revision: number;
+        };
+        DraftResponse: {
+            arrows: components["schemas"]["ArrowBody"][];
+            nodes: components["schemas"]["NodeBody"][];
+            problems: components["schemas"]["ProblemResponse"][];
+            revision: number;
+            /** Format: date-time */
+            savedAt: string;
         };
         EndRequest: {
             /**
@@ -1626,6 +1763,17 @@ export interface components {
             /** Format: uuid */
             parentId?: string;
         };
+        NodeBody: {
+            description: string;
+            key: string;
+            /** @enum {string} */
+            kind: "start" | "step" | "decision" | "subprocess" | "end";
+            name: string;
+            /** Format: uuid */
+            subprocessId: string | null;
+            x: number;
+            y: number;
+        };
         OrgRoleHolderResponse: {
             /** Format: uuid */
             holdingId: string;
@@ -1732,8 +1880,40 @@ export interface components {
             /** Format: uuid */
             unitId: string;
         };
+        ProblemResponse: {
+            arrow?: string;
+            code: string;
+            message: string;
+            node?: string;
+        };
+        ProcessRequest: {
+            area?: string;
+            description?: string;
+            key?: string;
+            name?: string;
+            ownerId?: string;
+        };
+        ProcessResponse: {
+            area: string;
+            changed: boolean;
+            description: string;
+            draft?: components["schemas"]["DraftResponse"];
+            /** Format: uuid */
+            id: string;
+            key: string;
+            latest: number | null;
+            name: string;
+            /** Format: uuid */
+            ownerId: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            versions?: components["schemas"]["VersionResponse"][];
+        };
         ProfileRequest: {
             name: string;
+        };
+        PublishRequest: {
+            note: string;
         };
         ReadinessResponse: {
             replicas: components["schemas"]["ReplicaStatus"][];
@@ -1897,6 +2077,17 @@ export interface components {
             name: string;
             rank: number;
             units: number;
+        };
+        VersionResponse: {
+            arrows?: components["schemas"]["ArrowBody"][];
+            nodes?: components["schemas"]["NodeBody"][];
+            note: string;
+            number: number;
+            /** Format: date-time */
+            publishedAt: string;
+            /** Format: uuid */
+            publishedBy: string | null;
+            publisherName: string | null;
         };
     };
     responses: never;
@@ -4343,6 +4534,317 @@ export interface operations {
                 content: {
                     "application/json": {
                         position: components["schemas"]["PositionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    processes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        processes: components["schemas"]["ProcessResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createProcess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProcessRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        process: components["schemas"]["ProcessResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    process: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                processID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        process: components["schemas"]["ProcessResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    deleteProcess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                processID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    updateProcess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                processID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProcessRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        process: components["schemas"]["ProcessResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    processAudit: {
+        parameters: {
+            query?: {
+                before?: string;
+                limit?: string;
+            };
+            header?: never;
+            path: {
+                processID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: components["schemas"]["EventResponse"][];
+                        /** Format: uuid */
+                        next: string | null;
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    saveDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                processID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        process: components["schemas"]["ProcessResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    publish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                processID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        version: components["schemas"]["VersionResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    processVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                processID: string;
+                number: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        version: components["schemas"]["VersionResponse"];
                     };
                 };
             };

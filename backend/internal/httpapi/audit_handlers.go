@@ -18,7 +18,7 @@ type eventResponse struct {
 	ActorID   *uuid.UUID `json:"actorId"`
 	ActorName *string    `json:"actorName"`
 	// Table is what changed: unit, unit_placement, position, reporting_line, person, person_photo, holding, role,
-	// position_role, deputy or unit_type.
+	// position_role, deputy, unit_type, process or process_version.
 	Table     string `json:"table"`
 	Operation string `json:"operation"`
 	// Before and After are the row as it was and as it became; null before an insert and after a delete.

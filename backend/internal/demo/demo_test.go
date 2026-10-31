@@ -1,7 +1,12 @@
 package demo
 
 import (
+	"slices"
 	"testing"
+
+	"github.com/google/uuid"
+
+	"github.com/praetorianer777/bearing/backend/internal/org"
 )
 
 // The demo is data; these hold it to what the model would accept and to what the issue promises, before any
@@ -144,4 +149,55 @@ func maxOf(m map[string]int) int {
 		out = max(out, v)
 	}
 	return out
+}
+
+// Every published version of a demo process passes the rules, and the one left a draft shows what they catch.
+func TestTheDemoProcessesHangTogether(t *testing.T) {
+	ids := map[string]uuid.UUID{}
+	titles := map[string]bool{}
+	for _, p := range positions {
+		titles[p.title] = true
+	}
+	for _, p := range processes {
+		ids[p.key] = uuid.New()
+		if !titles[p.owner] {
+			t.Errorf("process %s is owned by an unknown position %s", p.key, p.owner)
+		}
+	}
+	unpublished := 0
+	for _, p := range processes {
+		for i, f := range p.versions {
+			g := f.graph(ids)
+			if problems := org.Check(ids[p.key], g); len(problems) > 0 {
+				t.Errorf("version %d of %s has %+v", i+1, p.key, problems)
+			}
+		}
+		if len(p.versions) == 0 {
+			unpublished++
+			if problems := org.Check(ids[p.key], p.draft.graph(ids)); len(problems) == 0 {
+				t.Errorf("the draft-only %s has nothing keeping it from being published", p.key)
+			}
+		}
+	}
+	if unpublished != 1 {
+		t.Errorf("%d processes are never published, want 1", unpublished)
+	}
+	g := processes[1].versions[1].graph(ids)
+	for _, n := range g.Nodes {
+		if n.Kind == org.Subprocess && (n.SubprocessID == nil || *n.SubprocessID != ids["production-run"]) {
+			t.Errorf("the subprocess node %s stands for %v", n.Key, n.SubprocessID)
+		}
+	}
+	rows := map[float64][]float64{}
+	for _, n := range g.Nodes {
+		rows[n.Y] = append(rows[n.Y], n.X)
+	}
+	if len(rows[0]) != 1 || rows[0][0] != 0 {
+		t.Errorf("the start is not alone at the top middle: %v", rows[0])
+	}
+	for y, xs := range rows {
+		if len(xs) != len(slices.Compact(slices.Sorted(slices.Values(xs)))) {
+			t.Errorf("nodes on the row at %v lie on each other: %v", y, xs)
+		}
+	}
 }

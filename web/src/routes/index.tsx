@@ -9,6 +9,7 @@ import { type DaySearch, UnitPage } from "@/features/org/UnitPage";
 import { type PeopleSearch, PeoplePage } from "@/features/people/PeoplePage";
 import { type PersonSearch, PersonPage } from "@/features/people/PersonPage";
 import { AccountsPage } from "@/features/settings/Accounts";
+import { ExampleDataPage } from "@/features/settings/ExampleData";
 import { ProfilePage } from "@/features/settings/Profile";
 import { ThemesPage } from "@/features/settings/Themes";
 import { UnitTypesPage } from "@/features/settings/UnitTypes";
@@ -169,6 +170,14 @@ const unitTypesRoute = createRoute({
   },
   component: UnitTypesPage,
 });
+const exampleDataRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/settings/example-data",
+  beforeLoad: ({ context }) => {
+    if (context.me.role !== "administrator") throw redirect({ to: "/" });
+  },
+  component: ExampleDataPage,
+});
 const profileRoute = createRoute({ getParentRoute: () => appRoute, path: "/settings/profile", component: ProfilePage });
 
 const routeTree = rootRoute.addChildren([
@@ -188,6 +197,7 @@ const routeTree = rootRoute.addChildren([
     accountsRoute,
     themesRoute,
     unitTypesRoute,
+    exampleDataRoute,
     profileRoute,
   ]),
 ]);

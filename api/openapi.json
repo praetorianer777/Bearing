@@ -31,6 +31,9 @@
       "name": "positions"
     },
     {
+      "name": "processes"
+    },
+    {
       "name": "roles"
     },
     {
@@ -685,7 +688,7 @@
     "/demo": {
       "get": {
         "operationId": "demo",
-        "summary": "Whether the demo organisation was loaded, and whether the installation is empty enough for it.",
+        "summary": "How far the demo is in: whether its organisation and its processes were loaded, and whether the installation is empty enough for each.",
         "tags": [
           "units"
         ],
@@ -715,8 +718,8 @@
       },
       "post": {
         "operationId": "loadDemo",
-        "summary": "Load the demo organisation, Kestrel Works: about sixty people in four levels, with dotted lines, vacancies, deputies and roles.",
-        "description": "It goes only into an installation without units, all of it or nothing, and only once. The suite realm's alice, bob, carol and dave are in it by address, so their first sign-in links them.",
+        "summary": "Load the demo: Kestrel Works, about sixty people in four levels with dotted lines, vacancies, deputies and roles, and its processes.",
+        "description": "The organisation goes only into an installation without units; the processes only into one without processes whose organisation is the demo's. Each goes in once, all of it or nothing, and asked again with nothing left to load the demo is refused. The suite realm's alice, bob, carol and dave are in it by address, so their first sign-in links them.",
         "tags": [
           "units"
         ],
@@ -3672,6 +3675,498 @@
         "x-bearing-role": "editor"
       }
     },
+    "/processes": {
+      "get": {
+        "operationId": "processes",
+        "summary": "Every process by area, then by name, with its newest published version.",
+        "tags": [
+          "processes"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "processes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ProcessResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "processes"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createProcess",
+        "summary": "Add a process. Its draft begins as a start joined to an end.",
+        "tags": [
+          "processes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "process": {
+                      "$ref": "#/components/schemas/ProcessResponse"
+                    }
+                  },
+                  "required": [
+                    "process"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/processes/{processID}": {
+      "delete": {
+        "operationId": "deleteProcess",
+        "summary": "Remove a process never published that no other process has as a subprocess; a published one stays for the history.",
+        "tags": [
+          "processes"
+        ],
+        "parameters": [
+          {
+            "name": "processID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      },
+      "get": {
+        "operationId": "process",
+        "summary": "One process with its draft, what keeps the draft from being published, and every version published, newest first.",
+        "tags": [
+          "processes"
+        ],
+        "parameters": [
+          {
+            "name": "processID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "process": {
+                      "$ref": "#/components/schemas/ProcessResponse"
+                    }
+                  },
+                  "required": [
+                    "process"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateProcess",
+        "summary": "Change a process's key, name, area, description or owner; what is left out stays, and an empty ownerId takes the owner away.",
+        "tags": [
+          "processes"
+        ],
+        "parameters": [
+          {
+            "name": "processID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "process": {
+                      "$ref": "#/components/schemas/ProcessResponse"
+                    }
+                  },
+                  "required": [
+                    "process"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/processes/{processID}/audit": {
+      "get": {
+        "operationId": "processAudit",
+        "summary": "The changes to a process and to every relation naming it, newest first: who made each, when, and the row before and after.",
+        "description": "Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.",
+        "tags": [
+          "audit"
+        ],
+        "parameters": [
+          {
+            "name": "processID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EventResponse"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "next"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/processes/{processID}/draft": {
+      "put": {
+        "operationId": "saveDraft",
+        "summary": "Replace a process's draft graph.",
+        "description": "The draft may be anything the store can hold: nodes keyed once each, arrows between them, at most one between two nodes in one direction. What keeps it from being published comes back as its problems. A save names the revision it was made from and is refused as draft_stale when somebody saved since.",
+        "tags": [
+          "processes"
+        ],
+        "parameters": [
+          {
+            "name": "processID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "process": {
+                      "$ref": "#/components/schemas/ProcessResponse"
+                    }
+                  },
+                  "required": [
+                    "process"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/processes/{processID}/publish": {
+      "post": {
+        "operationId": "publish",
+        "summary": "Publish the draft as the process's next version, which never changes again.",
+        "description": "Refused as not_publishable while the draft has problems, and as nothing_changed when it is as the newest version has it.",
+        "tags": [
+          "processes"
+        ],
+        "parameters": [
+          {
+            "name": "processID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "$ref": "#/components/schemas/VersionResponse"
+                    }
+                  },
+                  "required": [
+                    "version"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/processes/{processID}/versions/{number}": {
+      "get": {
+        "operationId": "processVersion",
+        "summary": "One published version of a process with its graph.",
+        "tags": [
+          "processes"
+        ],
+        "parameters": [
+          {
+            "name": "processID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "$ref": "#/components/schemas/VersionResponse"
+                    }
+                  },
+                  "required": [
+                    "version"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/readyz": {
       "get": {
         "operationId": "readiness",
@@ -5157,6 +5652,29 @@
           "role"
         ]
       },
+      "ArrowBody": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "from",
+          "to",
+          "label"
+        ]
+      },
       "CarryRoleRequest": {
         "type": "object",
         "properties": {
@@ -5274,7 +5792,7 @@
           "themeId"
         ]
       },
-      "DemoResponse": {
+      "DemoPartResponse": {
         "type": "object",
         "properties": {
           "empty": {
@@ -5287,6 +5805,21 @@
         "required": [
           "loaded",
           "empty"
+        ]
+      },
+      "DemoResponse": {
+        "type": "object",
+        "properties": {
+          "organisation": {
+            "$ref": "#/components/schemas/DemoPartResponse"
+          },
+          "processes": {
+            "$ref": "#/components/schemas/DemoPartResponse"
+          }
+        },
+        "required": [
+          "organisation",
+          "processes"
         ]
       },
       "DeputiesRequest": {
@@ -5319,6 +5852,68 @@
         },
         "required": [
           "reportsToId"
+        ]
+      },
+      "DraftRequest": {
+        "type": "object",
+        "properties": {
+          "arrows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArrowBody"
+            }
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodeBody"
+            }
+          },
+          "revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "nodes",
+          "arrows"
+        ]
+      },
+      "DraftResponse": {
+        "type": "object",
+        "properties": {
+          "arrows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArrowBody"
+            }
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodeBody"
+            }
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProblemResponse"
+            }
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "savedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "nodes",
+          "arrows",
+          "revision",
+          "savedAt",
+          "problems"
         ]
       },
       "EndRequest": {
@@ -5866,6 +6461,52 @@
           }
         }
       },
+      "NodeBody": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "start",
+              "step",
+              "decision",
+              "subprocess",
+              "end"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "subprocessId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "name",
+          "description",
+          "x",
+          "y",
+          "subprocessId"
+        ]
+      },
       "OrgRoleHolderResponse": {
         "type": "object",
         "properties": {
@@ -6218,6 +6859,111 @@
           "deputies"
         ]
       },
+      "ProblemResponse": {
+        "type": "object",
+        "properties": {
+          "arrow": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "node": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "ProcessRequest": {
+        "type": "object",
+        "properties": {
+          "area": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          }
+        }
+      },
+      "ProcessResponse": {
+        "type": "object",
+        "properties": {
+          "area": {
+            "type": "string"
+          },
+          "changed": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/DraftResponse"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string"
+          },
+          "latest": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "publishedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersionResponse"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "area",
+          "description",
+          "ownerId",
+          "latest",
+          "publishedAt",
+          "changed"
+        ]
+      },
       "ProfileRequest": {
         "type": "object",
         "properties": {
@@ -6227,6 +6973,17 @@
         },
         "required": [
           "name"
+        ]
+      },
+      "PublishRequest": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
         ]
       },
       "ReadinessResponse": {
@@ -6755,6 +7512,53 @@
           "colour",
           "rank",
           "units"
+        ]
+      },
+      "VersionResponse": {
+        "type": "object",
+        "properties": {
+          "arrows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArrowBody"
+            }
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodeBody"
+            }
+          },
+          "note": {
+            "type": "string"
+          },
+          "number": {
+            "type": "integer"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "publishedBy": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "publisherName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "number",
+          "publishedAt",
+          "publishedBy",
+          "publisherName",
+          "note"
         ]
       }
     },

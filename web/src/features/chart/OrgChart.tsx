@@ -19,6 +19,7 @@ import { Link } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useOrganisation } from "@/api/org";
 import { Button } from "@/components/ui";
+import { LoadExampleData } from "@/features/settings/ExampleData";
 import { t, useLanguage } from "@/i18n";
 import { exportChart } from "./exportImage";
 import { CARD_WIDTH, type Card, type Focus, chartGraph, type LineKind } from "./graph";
@@ -258,7 +259,12 @@ function Chart({ search, onSearch }: { search: ChartSearch; onSearch: (next: Cha
       </ul>
       <div className="relative min-h-0 flex-1">
         {organisation.isError && <p className="p-6 text-sm text-danger">{t.chart.unreachable}</p>}
-        {data && data.units.length === 0 && <p className="p-6 text-sm text-ink-muted">{t.chart.empty}</p>}
+        {data && data.units.length === 0 && (
+          <div className="relative z-10 flex flex-col items-start gap-3 p-6">
+            <p className="text-sm text-ink-muted">{t.chart.empty}</p>
+            <LoadExampleData />
+          </div>
+        )}
         <ChartActions.Provider value={actions}>
           <ReactFlow
             aria-label={t.chart.title}

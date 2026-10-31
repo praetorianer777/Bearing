@@ -106,12 +106,24 @@ export const en = {
     icons: { unit: "Unit", organisation: "Organisation", division: "Division", department: "Department", team: "Team", project: "Project" },
   },
   demo: {
-    title: "Demo organisation",
+    title: "Example data",
     intro:
-      "Kestrel Works, a made-up maker of industrial sensors: about sixty people in four levels, with dotted lines, two vacancies, deputies and a few roles. The suite's alice, bob, carol and dave are in it and are linked when they sign in.",
-    load: "Load the demo organisation",
-    loaded: "The demo organisation is loaded.",
-    notEmpty: "This installation has an organisation of its own, so the demo cannot go in.",
+      "Kestrel Works, a made-up maker of industrial sensors, to look around in and to try things on. Each part goes in once, and only where the installation has nothing of its kind of its own.",
+    organisation: "Organisation",
+    organisationIntro:
+      "About sixty people in four levels, with dotted lines, two vacancies, deputies and a few roles. The suite's alice, bob, carol and dave are in it and are linked when they sign in.",
+    processes: "Processes",
+    processesIntro:
+      "Six processes, from an order to its delivery to a new colleague's onboarding, with decisions, a subprocess, versions and a draft not yet publishable. They go in with the example organisation or after it.",
+    state: {
+      loaded: "Loaded",
+      ready: "Ready to load",
+      taken: "This installation has its own",
+      needsOrganisation: "Needs the example organisation",
+    },
+    load: "Load example data",
+    done: "All the example data is loaded.",
+    nothing: "None of the example data can go in here.",
   },
   themes: {
     title: "Themes",
@@ -199,7 +211,7 @@ export const en = {
     folded: (n: number) => (n === 1 ? "1 position folded away" : `${n} positions folded away`),
     collapse: (unit: string) => `Fold ${unit}`,
     expand: (unit: string) => `Unfold ${unit}`,
-    empty: "No organisation yet. Add units and positions, or load the demo organisation under Settings, Unit types.",
+    empty: "No organisation yet. Add units and positions, or load the example data.",
     unreachable: "The organisation could not be read. Try again in a moment.",
   },
   people: {

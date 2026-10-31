@@ -1,5 +1,5 @@
 // Command seed sets the installation up with its name and first administrator from BEARING_NAME and
-// BEARING_BOOTSTRAP_ADMIN_*, when it is not set up yet, and with BEARING_DEMO loads the demo organisation as that
+// BEARING_BOOTSTRAP_ADMIN_*, when it is not set up yet, and with BEARING_DEMO loads the demo, its organisation and its processes, as that
 // administrator. Run again, it changes nothing.
 package main
 
@@ -71,7 +71,7 @@ func run() error {
 	return nil
 }
 
-// loadDemo loads the demo organisation as the first administrator, leaving an installation that has it, or one of
+// loadDemo loads what of the demo may go in as the first administrator, leaving an installation that has it, or one of
 // its own, as it is.
 func loadDemo(ctx context.Context, cluster *db.Cluster, email string, log *slog.Logger) error {
 	var admin uuid.UUID
@@ -79,7 +79,7 @@ func loadDemo(ctx context.Context, cluster *db.Cluster, email string, log *slog.
 		return q.QueryRow(ctx, `SELECT id FROM account WHERE email = $1 AND role = 'administrator' AND disabled_at IS NULL`, email).Scan(&admin)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		log.Info("the first administrator is gone; no demo organisation loaded", "administrator", email)
+		log.Info("the first administrator is gone; no demo loaded", "administrator", email)
 		return nil
 	}
 	if err != nil {
@@ -88,13 +88,13 @@ func loadDemo(ctx context.Context, cluster *db.Cluster, email string, log *slog.
 	_, err = demo.Load(db.WithUser(ctx, admin), &org.Service{DB: cluster})
 	switch {
 	case errors.Is(err, demo.ErrLoaded):
-		log.Info("the demo organisation is loaded already")
+		log.Info("the demo is loaded already")
 	case errors.Is(err, demo.ErrNotEmpty):
-		log.Info("the installation has an organisation of its own; no demo organisation loaded")
+		log.Info("the installation has an organisation or processes of its own; no demo loaded")
 	case err != nil:
-		return fmt.Errorf("load the demo organisation: %w", err)
+		return fmt.Errorf("load the demo: %w", err)
 	default:
-		log.Info("demo organisation loaded")
+		log.Info("demo loaded")
 	}
 	return nil
 }

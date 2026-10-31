@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -14,12 +15,13 @@ import (
 )
 
 var (
-	ErrLoaded   = errors.New("the demo organisation is loaded already")
-	ErrNotEmpty = errors.New("the installation has an organisation of its own; the demo goes only into an empty one")
+	ErrLoaded   = errors.New("the demo is loaded already")
+	ErrNotEmpty = errors.New("the installation has an organisation or processes of its own; the demo goes only where there are none")
 )
 
-// Load adds the demo organisation as an administrator, all of it in one transaction or nothing. Loaded once, it is
-// not loaded again, even after its units are changed or removed.
+// Load adds what of the demo may go in, as an administrator, all of it in one transaction or nothing: the
+// organisation into an installation without units, and its processes into one without processes whose organisation
+// is the demo's. Each part goes in once, and not again even after it is changed or removed.
 func Load(ctx context.Context, s *org.Service) (db.LSN, error) {
 	return s.Together(ctx, func(ctx context.Context, s *org.Service) error {
 		return load(ctx, s)
@@ -27,15 +29,30 @@ func Load(ctx context.Context, s *org.Service) (db.LSN, error) {
 }
 
 func load(ctx context.Context, s *org.Service) error {
-	loaded, empty, err := s.DemoState(ctx)
-	switch {
-	case err != nil:
+	state, err := s.DemoState(ctx)
+	if err != nil {
 		return err
-	case loaded:
+	}
+	organisation := !state.Organisation.Loaded && state.Organisation.Empty
+	flows := !state.Processes.Loaded && state.Processes.Empty && (state.Organisation.Loaded || organisation)
+	switch {
+	case !organisation && !flows && state.Organisation.Loaded && state.Processes.Loaded:
 		return ErrLoaded
-	case !empty:
+	case !organisation && !flows:
 		return ErrNotEmpty
 	}
+	if organisation {
+		if err := loadOrganisation(ctx, s); err != nil {
+			return err
+		}
+	}
+	if flows {
+		return loadProcesses(ctx, s)
+	}
+	return nil
+}
+
+func loadOrganisation(ctx context.Context, s *org.Service) error {
 	start := mustDay(since)
 	kindIDs, err := unitTypes(ctx, s)
 	if err != nil {
@@ -185,6 +202,104 @@ func unitTypes(ctx context.Context, s *org.Service) (map[string]uuid.UUID, error
 		out[k.name] = made.ID
 	}
 	return out, nil
+}
+
+// loadProcesses adds the demo's processes, publishing their versions in turn, each owned by the position of its
+// owner's title today.
+func loadProcesses(ctx context.Context, s *org.Service) error {
+	positions, err := s.Positions(ctx, org.DayOf(time.Now()), nil, false)
+	if err != nil {
+		return err
+	}
+	owners := map[string]uuid.UUID{}
+	for _, p := range positions {
+		owners[p.Title] = p.ID
+	}
+	ids := map[string]uuid.UUID{}
+	for _, p := range processes {
+		in := org.ProcessInput{Key: ptr(p.key), Name: ptr(p.name), Area: ptr(p.area), Description: ptr(p.description)}
+		if id, ok := owners[p.owner]; ok {
+			in.OwnerID = &id
+		}
+		made, _, err := s.CreateProcess(ctx, in)
+		if err != nil {
+			return fmt.Errorf("process %s: %w", p.key, err)
+		}
+		ids[p.key] = made.ID
+	}
+	for _, p := range processes {
+		id := ids[p.key]
+		save := func(f flow) error {
+			current, err := s.Process(ctx, id)
+			if err != nil {
+				return err
+			}
+			_, _, err = s.SaveDraft(ctx, id, current.Draft.Revision, f.graph(ids))
+			return err
+		}
+		for i, f := range p.versions {
+			if err := save(f); err != nil {
+				return fmt.Errorf("version %d of %s: %w", i+1, p.key, err)
+			}
+			if _, _, err := s.Publish(ctx, id, f.note); err != nil {
+				return fmt.Errorf("publishing version %d of %s: %w", i+1, p.key, err)
+			}
+		}
+		if p.draft != nil {
+			if err := save(*p.draft); err != nil {
+				return fmt.Errorf("draft of %s: %w", p.key, err)
+			}
+		}
+	}
+	return s.MarkDemoProcessesLoaded(ctx)
+}
+
+// graph lays a flow out top to bottom: each node a row below the nearest node leading to it, the nodes of a row side
+// by side in the order they are named.
+func (f flow) graph(ids map[string]uuid.UUID) org.Graph {
+	next := map[string][]string{}
+	for _, a := range f.arrows {
+		next[a.from] = append(next[a.from], a.to)
+	}
+	row := map[string]int{}
+	var queue []string
+	for _, n := range f.nodes {
+		if n.kind == org.Start {
+			row[n.key] = 0
+			queue = append(queue, n.key)
+		}
+	}
+	for len(queue) > 0 {
+		k := queue[0]
+		queue = queue[1:]
+		for _, to := range next[k] {
+			if _, seen := row[to]; !seen {
+				row[to] = row[k] + 1
+				queue = append(queue, to)
+			}
+		}
+	}
+	across := map[int]int{}
+	for _, n := range f.nodes {
+		across[row[n.key]]++
+	}
+	placed := map[int]int{}
+	var g org.Graph
+	for _, n := range f.nodes {
+		r := row[n.key]
+		node := org.Node{Key: n.key, Kind: n.kind, Name: n.name,
+			X: float64(placed[r]*2-across[r]+1) * 130, Y: float64(r) * 110}
+		placed[r]++
+		if n.sub != "" {
+			id := ids[n.sub]
+			node.SubprocessID = &id
+		}
+		g.Nodes = append(g.Nodes, node)
+	}
+	for _, a := range f.arrows {
+		g.Arrows = append(g.Arrows, org.Arrow{Key: a.from + "-" + a.to, From: a.from, To: a.to, Label: a.label})
+	}
+	return g
 }
 
 func mustDay(s string) org.Day {
