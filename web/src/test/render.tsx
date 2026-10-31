@@ -19,7 +19,8 @@ export function renderApp(path = "/") {
 }
 
 /** An answer: a JSON body with a status, or a function of the request's body. */
-type Answer = { status?: number; body?: unknown } | ((body: unknown) => { status?: number; body?: unknown });
+/** What the fake API answers a call with: fixed, or worked out from the body and the address asked. */
+type Answer = { status?: number; body?: unknown } | ((body: unknown, url: string) => { status?: number; body?: unknown });
 
 export const ADMIN = {
   id: "0190a000-0000-7000-8000-000000000001",
@@ -58,7 +59,7 @@ export function fakeAPI(answers: Record<string, Answer>) {
     const answer = answers[`${request.method} ${path}`];
     const { status = 200, body } =
       typeof answer === "function"
-        ? answer(text ? JSON.parse(text) : undefined)
+        ? answer(text ? JSON.parse(text) : undefined, request.url)
         : (answer ?? { status: 404, body: { error: { code: "not_found", message: "Nothing here." } } });
     if (body === undefined) return new Response(null, { status });
     return Response.json(body, { status });
