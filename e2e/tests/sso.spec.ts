@@ -12,6 +12,6 @@ test("somebody let in ahead signs in through the identity provider and lands whe
 
   await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
   await page.getByRole("button", { name: "Account and settings" }).click();
-  await expect(page.getByText("bob@suite.test")).toBeVisible();
+  await expect(page.getByText("bob@suite.test", { exact: true })).toBeVisible();
   await expect(page.getByText("Member", { exact: true })).toBeVisible();
 });
