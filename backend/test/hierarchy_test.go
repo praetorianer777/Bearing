@@ -197,14 +197,14 @@ func TestTheHierarchyOfFiveThousandAnswersWithin50ms(t *testing.T) {
 	s := &org.Service{DB: cluster}
 	today := org.DayOf(time.Now())
 
-	// The replica has the organisation once the top's reports reach all the way down.
+	// The replica has the organisation once everybody holds their position there: the holdings went in last.
 	for deadline := time.Now().Add(10 * time.Second); ; time.Sleep(100 * time.Millisecond) {
-		all, err := s.ReportsOfPosition(as, positionIDs[0], today, org.Walk{All: true})
-		if err == nil && len(all) == people-1 {
+		all, err := s.Members(as, unitIDs[0], today, true)
+		if err == nil && len(all) == people {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("the replica has %d of the reports: %v", len(all), err)
+			t.Fatalf("the replica has %d of the holders: %v", len(all), err)
 		}
 	}
 	for name, c := range map[string]struct {
