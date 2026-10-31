@@ -8,14 +8,15 @@ import { PositionPage } from "@/features/org/PositionPage";
 import { type DaySearch, UnitPage } from "@/features/org/UnitPage";
 import { type PeopleSearch, PeoplePage } from "@/features/people/PeoplePage";
 import { type PersonSearch, PersonPage } from "@/features/people/PersonPage";
+import { type ProcessSearch, ProcessPage } from "@/features/processes/ProcessPage";
+import { ProcessesPage } from "@/features/processes/ProcessesPage";
 import { AccountsPage } from "@/features/settings/Accounts";
 import { ExampleDataPage } from "@/features/settings/ExampleData";
 import { ProfilePage } from "@/features/settings/Profile";
 import { ThemesPage } from "@/features/settings/Themes";
 import { UnitTypesPage } from "@/features/settings/UnitTypes";
 import { AppShell } from "@/features/shell/AppShell";
-import { ComingSoon, NotFound } from "@/features/shell/Placeholder";
-import { t } from "@/i18n";
+import { NotFound } from "@/features/shell/Placeholder";
 
 type RouterContext = { queryClient: QueryClient };
 
@@ -119,10 +120,20 @@ const personRoute = createRoute({
     return <PersonPage personId={personId} search={search} onSearch={(next) => navigate({ search: next })} />;
   },
 });
-const processesRoute = createRoute({
+const processesRoute = createRoute({ getParentRoute: () => appRoute, path: "/processes", component: ProcessesPage });
+const processRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: "/processes",
-  component: () => <ComingSoon title={() => t.nav.processes} />,
+  path: "/processes/$processId",
+  validateSearch: (search: Record<string, unknown>): ProcessSearch => {
+    const version = Number(search.version);
+    return Number.isInteger(version) && version >= 1 ? { version } : {};
+  },
+  component: function Process() {
+    const { processId } = processRoute.useParams();
+    const search = processRoute.useSearch();
+    const navigate = processRoute.useNavigate();
+    return <ProcessPage processId={processId} search={search} onSearch={(next) => navigate({ search: next })} />;
+  },
 });
 const unitRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -194,6 +205,7 @@ const routeTree = rootRoute.addChildren([
     unitRoute,
     positionRoute,
     processesRoute,
+    processRoute,
     accountsRoute,
     themesRoute,
     unitTypesRoute,

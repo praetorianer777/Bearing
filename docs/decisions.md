@@ -196,3 +196,16 @@ to an end, decisions with two or more labelled ways, subprocesses
 naming another process) comes back with it as problems, so the editor
 can show them while drawing. The log keeps processes and each
 publishing, not every save of a draft.
+
+## The process editor keeps its own history and saves when asked
+
+The canvas edits a copy of the draft in the browser: every change is an
+edit to that copy, so undo and redo walk back and forth through it, a run
+of typing or one drag counting as one step. Saving sends the whole graph
+with the revision it was read at, and the problems that come back are
+those of what was saved, so the editor says when they are older than the
+canvas. Saving is a step the editor takes, not something done on each
+keystroke: a draft half drawn is no one else's business until it is
+saved, and publishing takes the saved draft only. Where a node was left
+is part of the draft, so everyone sees the flow as it was arranged;
+Arrange lays it out anew on request.
