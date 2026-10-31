@@ -5982,6 +5982,12 @@
           "label": {
             "type": "string"
           },
+          "route": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
           "to": {
             "type": "string"
           }
@@ -5990,7 +5996,8 @@
           "key",
           "from",
           "to",
-          "label"
+          "label",
+          "route"
         ]
       },
       "CarryRoleRequest": {

@@ -17,7 +17,7 @@ export type Edit =
   | { type: "label"; key: string; label: string }
   | { type: "responsibilities"; key: string; list: Responsibility[] }
   | { type: "remove"; nodes: string[]; arrows: string[] }
-  | { type: "arrange"; places: Record<string, Point> }
+  | { type: "arrange"; places: Record<string, Point>; routes: Record<string, number[]> }
   | { type: "settle" }
   | { type: "undo" }
   | { type: "redo" };
@@ -74,10 +74,14 @@ function apply(flow: Flow, edit: Edit): Flow {
         ],
       };
     case "move":
-      return { ...flow, nodes: flow.nodes.map((n) => (n.key === edit.key ? { ...n, x: edit.to.x, y: edit.to.y } : n)) };
+      // A moved node's arrows no longer follow their routes; the others keep theirs.
+      return {
+        nodes: flow.nodes.map((n) => (n.key === edit.key ? { ...n, x: edit.to.x, y: edit.to.y } : n)),
+        arrows: flow.arrows.map((a) => ((a.from === edit.key || a.to === edit.key) && a.route.length > 0 ? { ...a, route: [] } : a)),
+      };
     case "connect":
       if (!mayConnect(flow, edit.from, edit.to)) return flow;
-      return { ...flow, arrows: [...flow.arrows, { key: edit.key, from: edit.from, to: edit.to, label: "" }] };
+      return { ...flow, arrows: [...flow.arrows, { key: edit.key, from: edit.from, to: edit.to, label: "", route: [] }] };
     case "node":
       return { ...flow, nodes: flow.nodes.map((n) => (n.key === edit.key ? { ...n, ...edit.change } : n)) };
     case "label":
@@ -94,7 +98,10 @@ function apply(flow: Flow, edit: Edit): Flow {
       };
     }
     case "arrange":
-      return { ...flow, nodes: flow.nodes.map((n) => (edit.places[n.key] ? { ...n, ...edit.places[n.key] } : n)) };
+      return {
+        nodes: flow.nodes.map((n) => (edit.places[n.key] ? { ...n, ...edit.places[n.key] } : n)),
+        arrows: flow.arrows.map((a) => ({ ...a, route: edit.routes[a.key] ?? [] })),
+      };
     default:
       return flow;
   }

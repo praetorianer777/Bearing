@@ -25,10 +25,10 @@ describe("responsibilities in a matrix", () => {
     const flow = {
       nodes: [node("late", "step", { y: 300 }), node("e", "end"), node("b", "step"), node("s", "start"), node("a", "step"), node("lost", "step", { y: 100 })],
       arrows: [
-        { key: "1", from: "s", to: "a", label: "" },
-        { key: "2", from: "a", to: "b", label: "" },
-        { key: "3", from: "b", to: "a", label: "" },
-        { key: "4", from: "b", to: "e", label: "" },
+        { key: "1", from: "s", to: "a", label: "", route: [] },
+        { key: "2", from: "a", to: "b", label: "", route: [] },
+        { key: "3", from: "b", to: "a", label: "", route: [] },
+        { key: "4", from: "b", to: "e", label: "", route: [] },
       ],
     };
     expect(inFlowOrder(flow)).toEqual(["s", "a", "b", "e", "lost", "late"]);
@@ -46,12 +46,12 @@ describe("responsibilities in a matrix", () => {
         node("e", "end"),
       ],
       arrows: [
-        { key: "1", from: "s", to: "check", label: "" },
-        { key: "2", from: "check", to: "big", label: "" },
-        { key: "3", from: "big", to: "ask", label: "" },
-        { key: "4", from: "ask", to: "pay", label: "" },
-        { key: "5", from: "pay", to: "empty", label: "" },
-        { key: "6", from: "empty", to: "e", label: "" },
+        { key: "1", from: "s", to: "check", label: "", route: [] },
+        { key: "2", from: "check", to: "big", label: "", route: [] },
+        { key: "3", from: "big", to: "ask", label: "", route: [] },
+        { key: "4", from: "ask", to: "pay", label: "", route: [] },
+        { key: "5", from: "pay", to: "empty", label: "", route: [] },
+        { key: "6", from: "empty", to: "e", label: "", route: [] },
       ],
     };
     const m = matrix(flow);

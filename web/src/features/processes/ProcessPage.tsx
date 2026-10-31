@@ -21,7 +21,7 @@ import { Button, Field, FormError, fieldError } from "@/components/ui";
 import { AsOfPicker, PositionName, today } from "@/features/org/common";
 import { t, useLanguage } from "@/i18n";
 import { arrange } from "./arrange";
-import { type Edit, edit, type Flow, start } from "./editor";
+import { type Edit, edit, type Flow, type Point, start } from "./editor";
 import { FlowCanvas, Palette, type Selection } from "./FlowCanvas";
 import { type Party, useParties } from "./raci";
 import { NodeResponsibilities, RaciMatrix } from "./Responsibilities";
@@ -295,7 +295,24 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
   const publish = usePublish(process.id);
 
   const editable = mayEdit && viewing === undefined;
-  const flow: Flow = viewing === undefined ? history.present : { nodes: version.data?.nodes ?? [], arrows: version.data?.arrows ?? [] };
+  const shown: Flow = viewing === undefined ? history.present : { nodes: version.data?.nodes ?? [], arrows: version.data?.arrows ?? [] };
+  // A view nobody may change can still be laid out for reading; the layout goes with the version it was made for.
+  const [tidy, setTidy] = useState<{ for: string; places: Record<string, Point>; routes: Record<string, number[]> } | undefined>();
+  const tidyFor = `${viewing ?? "draft"}`;
+  const tidied = tidy && tidy.for === tidyFor ? tidy : undefined;
+  const flow: Flow = tidied
+    ? {
+        nodes: shown.nodes.map((n) => ({ ...n, ...(tidied.places[n.key] ?? {}) })),
+        arrows: shown.arrows.map((a) => ({ ...a, route: tidied.routes[a.key] ?? [] })),
+      }
+    : shown;
+  const onTidy = () => {
+    if (tidied) {
+      setTidy(undefined);
+      return;
+    }
+    arrange(shown).then((laid) => setTidy({ for: tidyFor, ...laid }));
+  };
   const dirty = history.present !== saved;
   const flagged = useMemo(
     () => new Set(viewing === undefined ? problems.flatMap((p) => [p.node, p.arrow].filter((k): k is string => !!k)) : []),
@@ -341,8 +358,8 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
       },
     });
   const onArrange = () =>
-    arrange(history.present).then((places) => {
-      dispatch({ type: "arrange", places });
+    arrange(history.present).then(({ places, routes }) => {
+      dispatch({ type: "arrange", places, routes });
       setArranged((n) => n + 1);
     });
   const removePicked = () => {
@@ -408,6 +425,11 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
             </button>
           ))}
         </fieldset>
+        {!editable && search.view !== "matrix" && (
+          <Button variant="secondary" onClick={onTidy} aria-pressed={!!tidied} disabled={shown.nodes.length === 0}>
+            {tidied ? t.process.asDrawn : t.process.tidy}
+          </Button>
+        )}
         {editable && (
           <>
             <Button variant="secondary" onClick={() => dispatch({ type: "undo" })} disabled={history.past.length === 0}>
@@ -452,7 +474,7 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
               onEdit={dispatch}
               flagged={flagged}
               subprocesses={names}
-              fitKey={`${process.id}|${viewing ?? "draft"}|${flow.nodes.length > 0}|${arranged}`}
+              fitKey={`${process.id}|${viewing ?? "draft"}|${flow.nodes.length > 0}|${arranged}|${tidied ? "tidy" : "drawn"}`}
               parties={parties.names}
             />
           )}
