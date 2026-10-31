@@ -73,3 +73,25 @@ func TestANullableEnumTakesNullAndItsValues(t *testing.T) {
 		t.Error("a value outside the enum should fail")
 	}
 }
+
+type day struct{ s string }
+
+type span struct {
+	From  day  `json:"from"`
+	To    *day `json:"to"`
+	Until *day `json:"until,omitempty"`
+}
+
+// A field of a type described by hand is as required as any other: always there unless it may be left out.
+func TestAnOverriddenFieldIsRequiredUnlessItMayBeLeftOut(t *testing.T) {
+	b := NewBuilder()
+	b.Overrides[reflect.TypeOf(day{})] = &Schema{Type: "string", Format: "date"}
+	s := b.SchemaOf(span{})
+	d := &Document{Components: Components{Schemas: b.Components()}}
+	if err := d.ValidateJSON(s, []byte(`{"to":null}`)); err == nil {
+		t.Error("a span without its from passed")
+	}
+	if err := d.ValidateJSON(s, []byte(`{"from":"2026-01-01","to":null}`)); err != nil {
+		t.Errorf("a span with from and a null to failed: %v", err)
+	}
+}
