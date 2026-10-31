@@ -4,6 +4,8 @@ import { installationQuery, meQuery } from "@/api/auth";
 import { AcceptInvitationPage, ForgotPasswordPage, ResetPasswordPage, SetUpPage, SignInPage } from "@/features/auth/pages";
 import { type ChartSearch, OrgChartPage } from "@/features/chart/OrgChart";
 import { Home } from "@/features/home/Home";
+import { type PeopleSearch, PeoplePage } from "@/features/people/PeoplePage";
+import { type PersonSearch, PersonPage } from "@/features/people/PersonPage";
 import { AccountsPage } from "@/features/settings/Accounts";
 import { ProfilePage } from "@/features/settings/Profile";
 import { ThemesPage } from "@/features/settings/Themes";
@@ -13,6 +15,9 @@ import { ComingSoon, NotFound } from "@/features/shell/Placeholder";
 import { t } from "@/i18n";
 
 type RouterContext = { queryClient: QueryClient };
+
+/** Whether an address's value is a day written 2006-01-02. */
+const isDay = (value: unknown): value is string => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({ component: Outlet, notFoundComponent: NotFound });
 
@@ -78,7 +83,7 @@ const organisationRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/organisation",
   validateSearch: (search: Record<string, unknown>): ChartSearch => ({
-    ...(typeof search.asOf === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search.asOf) ? { asOf: search.asOf } : {}),
+    ...(isDay(search.asOf) ? { asOf: search.asOf } : {}),
     ...(typeof search.focus === "string" ? { focus: search.focus } : {}),
   }),
   component: function Organisation() {
@@ -87,7 +92,30 @@ const organisationRoute = createRoute({
     return <OrgChartPage search={search} onSearch={(next) => navigate({ search: next })} />;
   },
 });
-const peopleRoute = createRoute({ getParentRoute: () => appRoute, path: "/people", component: () => <ComingSoon title={() => t.nav.people} /> });
+const peopleRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/people",
+  validateSearch: (search: Record<string, unknown>): PeopleSearch => ({
+    ...(typeof search.q === "string" && search.q ? { q: search.q } : {}),
+    ...(search.left === true || search.left === "true" ? { left: true } : {}),
+  }),
+  component: function People() {
+    const search = peopleRoute.useSearch();
+    const navigate = peopleRoute.useNavigate();
+    return <PeoplePage search={search} onSearch={(next) => navigate({ search: next, replace: true })} />;
+  },
+});
+const personRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/people/$personId",
+  validateSearch: (search: Record<string, unknown>): PersonSearch => (isDay(search.asOf) ? { asOf: search.asOf } : {}),
+  component: function Person() {
+    const { personId } = personRoute.useParams();
+    const search = personRoute.useSearch();
+    const navigate = personRoute.useNavigate();
+    return <PersonPage personId={personId} search={search} onSearch={(next) => navigate({ search: next })} />;
+  },
+});
 const processesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/processes",
@@ -125,7 +153,7 @@ const routeTree = rootRoute.addChildren([
   forgotRoute,
   resetRoute,
   invitationRoute,
-  appRoute.addChildren([homeRoute, organisationRoute, peopleRoute, processesRoute, accountsRoute, themesRoute, unitTypesRoute, profileRoute]),
+  appRoute.addChildren([homeRoute, organisationRoute, peopleRoute, personRoute, processesRoute, accountsRoute, themesRoute, unitTypesRoute, profileRoute]),
 ]);
 
 export function buildRouter(queryClient: QueryClient, history?: RouterHistory) {
