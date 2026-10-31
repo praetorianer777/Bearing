@@ -257,3 +257,16 @@ Pointing at or picking a node brings its arrows forward and fades the
 rest, and a version nobody may change can be laid out for reading
 without changing it. The demo routes its own arrows so that none crosses
 a node, as its unit test holds it to.
+
+## Swimlanes are derived, not drawn
+
+A process seen in lanes is laid out from its graph and responsibilities
+each time it is shown, never stored and never edited there. A step goes
+in the lane of its first responsible party, or of its first accountable
+one where nobody is responsible, or in a lane for nobody, last, so the
+gap shows. A start, an end or a decision without a party follows the
+node before it in the flow. The layout is Bearing's own rather than
+ELK's, because ELK cannot hold nodes to lanes: rows run down the flow,
+loops not pushing anything further down, and every arrow travels only
+in the gaps between rows and the gutters between columns, where no node
+stands, so none crosses a node.

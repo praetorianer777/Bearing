@@ -22,11 +22,12 @@ import { AsOfPicker, PositionName, today } from "@/features/org/common";
 import { t, useLanguage } from "@/i18n";
 import { arrange } from "./arrange";
 import { type Edit, edit, type Flow, type Point, start } from "./editor";
-import { FlowCanvas, Palette, type Selection } from "./FlowCanvas";
+import { FlowCanvas, type LaneShown, Palette, type Selection } from "./FlowCanvas";
+import { NOBODY, swimlanes } from "./lanes";
 import { type Party, useParties } from "./raci";
 import { NodeResponsibilities, RaciMatrix } from "./Responsibilities";
 
-export type ProcessSearch = { version?: number; view?: "matrix"; asOf?: string };
+export type ProcessSearch = { version?: number; view?: "lanes" | "matrix"; asOf?: string };
 
 const inputClass = "w-full rounded-md border border-border-strong bg-surface px-2 py-1.5 text-sm text-ink";
 
@@ -295,7 +296,10 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
   const publish = usePublish(process.id);
 
   const editable = mayEdit && viewing === undefined;
-  const shown: Flow = viewing === undefined ? history.present : { nodes: version.data?.nodes ?? [], arrows: version.data?.arrows ?? [] };
+  const shown: Flow = useMemo(
+    () => (viewing === undefined ? history.present : { nodes: version.data?.nodes ?? [], arrows: version.data?.arrows ?? [] }),
+    [viewing, history.present, version.data],
+  );
   // A view nobody may change can still be laid out for reading; the layout goes with the version it was made for.
   const [tidy, setTidy] = useState<{ for: string; places: Record<string, Point>; routes: Record<string, number[]> } | undefined>();
   const tidyFor = `${viewing ?? "draft"}`;
@@ -313,6 +317,13 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
     }
     arrange(shown).then((laid) => setTidy({ for: tidyFor, ...laid }));
   };
+  // Lanes are read off the flow as it stands, so they follow every edit made beside them.
+  const inLanes = useMemo(() => (search.view === "lanes" ? swimlanes(shown) : undefined), [search.view, shown]);
+  const lanes: LaneShown[] = (inLanes?.lanes ?? []).map((l) =>
+    l.key === NOBODY
+      ? { ...l, name: t.process.nobodyLane }
+      : { ...l, name: parties.nameOf(l.key), group: t.process.laneGroups[l.key.split(":")[0] as Party["kind"]] },
+  );
   const dirty = history.present !== saved;
   const flagged = useMemo(
     () => new Set(viewing === undefined ? problems.flatMap((p) => [p.node, p.arrow].filter((k): k is string => !!k)) : []),
@@ -413,19 +424,19 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
         <AsOfPicker value={asOf} onChange={(day) => onSearch({ ...search, asOf: day })} />
         <fieldset className="flex h-9 overflow-hidden rounded-md border border-border-strong text-sm">
           <legend className="sr-only">{t.process.viewAs}</legend>
-          {(["canvas", "matrix"] as const).map((v) => (
+          {(["canvas", "lanes", "matrix"] as const).map((v) => (
             <button
               key={v}
               type="button"
               aria-pressed={(search.view ?? "canvas") === v}
-              onClick={() => onSearch({ ...search, view: v === "matrix" ? "matrix" : undefined })}
+              onClick={() => onSearch({ ...search, view: v === "canvas" ? undefined : v })}
               className={`px-3 ${(search.view ?? "canvas") === v ? "bg-primary text-on-primary" : "bg-surface text-ink hover:bg-surface-sunken"}`}
             >
               {t.process.views[v]}
             </button>
           ))}
         </fieldset>
-        {!editable && search.view !== "matrix" && (
+        {!editable && search.view === undefined && (
           <Button variant="secondary" onClick={onTidy} aria-pressed={!!tidied} disabled={shown.nodes.length === 0}>
             {tidied ? t.process.asDrawn : t.process.tidy}
           </Button>
@@ -438,9 +449,11 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
             <Button variant="secondary" onClick={() => dispatch({ type: "redo" })} disabled={history.future.length === 0}>
               {t.process.redo}
             </Button>
-            <Button variant="secondary" onClick={onArrange} disabled={history.present.nodes.length === 0}>
-              {t.process.arrange}
-            </Button>
+            {search.view === undefined && (
+              <Button variant="secondary" onClick={onArrange} disabled={history.present.nodes.length === 0}>
+                {t.process.arrange}
+              </Button>
+            )}
             <Button onClick={onSave} disabled={!dirty || save.isPending}>
               {dirty ? t.process.save : t.process.saved}
             </Button>
@@ -453,7 +466,7 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
         )}
       </header>
       {editingDetails && <Details process={process} onDone={() => setEditingDetails(false)} />}
-      {editable && <Palette flow={history.present} onEdit={dispatch} />}
+      {editable && search.view === undefined && <Palette flow={history.present} onEdit={dispatch} />}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <div className="relative min-h-[60vh] flex-1 md:min-h-0">
           {search.view === "matrix" ? (
@@ -467,15 +480,16 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
             />
           ) : (
             <FlowCanvas
-              flow={flow}
-              editable={editable}
+              flow={inLanes?.flow ?? flow}
+              editable={editable && !inLanes}
               selection={selection}
               onSelect={setSelection}
               onEdit={dispatch}
               flagged={flagged}
               subprocesses={names}
-              fitKey={`${process.id}|${viewing ?? "draft"}|${flow.nodes.length > 0}|${arranged}|${tidied ? "tidy" : "drawn"}`}
+              fitKey={`${process.id}|${viewing ?? "draft"}|${flow.nodes.length > 0}|${arranged}|${tidied ? "tidy" : "drawn"}|${search.view ?? "canvas"}`}
               parties={parties.names}
+              lanes={lanes}
             />
           )}
         </div>

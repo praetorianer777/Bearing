@@ -373,7 +373,10 @@ export const de: Messages = {
     neverPublished: "Noch nicht veröffentlicht.",
     warnings: "Einen Blick wert; veröffentlichen geht trotzdem",
     viewAs: "Ansicht",
-    views: { canvas: "Zeichnung", matrix: "RACI-Matrix" },
+    views: { canvas: "Zeichnung", lanes: "Swimlanes", matrix: "RACI-Matrix" },
+    lane: (name: string) => `Bahn: ${name}`,
+    laneGroups: { role: "Rolle", position: "Stelle", unit: "Einheit" },
+    nobodyLane: "Niemand verantwortlich",
   },
   raci: {
     title: "Verantwortlichkeiten",

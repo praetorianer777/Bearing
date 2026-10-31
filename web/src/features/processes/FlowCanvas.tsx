@@ -34,6 +34,11 @@ type Tone = "plain" | "picked" | "lit" | "dim" | "flagged";
 type ArrowData = { route: number[]; label: string; tone: Tone };
 type FlowEdgeView = Edge<ArrowData, "flow">;
 type FlowNodeView = Node<NodeData>;
+type LaneData = { name: string; group?: string; even: boolean };
+type LaneView = Node<LaneData, "lane">;
+
+/** A lane drawn behind the nodes: whose it is, where it runs and its title. */
+export type LaneShown = { key: string; name: string; group?: string; x: number; width: number; height: number };
 
 const tone = (flagged: boolean, selected: boolean) =>
   selected ? "border-accent ring-2 ring-accent/40" : flagged ? "border-warning border-dashed" : "border-border-strong";
@@ -135,7 +140,23 @@ function DecisionNode({ data, selected }: NodeProps<FlowNodeView>) {
   );
 }
 
-const nodeTypes = { start: TerminalNode, end: TerminalNode, step: StepNode, subprocess: StepNode, decision: DecisionNode };
+function LaneNode({ data, width, height }: NodeProps<LaneView>) {
+  return (
+    <section
+      aria-label={t.process.lane(data.name)}
+      className={`border-r border-border ${data.even ? "bg-surface-sunken/60" : "bg-canvas/60"}`}
+      style={{ width, height }}
+    >
+      <p className="truncate px-6 pt-3 text-sm font-semibold text-ink">
+        {data.group && <span className="block text-xs font-normal text-ink-subtle">{data.group}</span>}
+        {data.name}
+      </p>
+    </section>
+  );
+}
+
+const nodeTypes = { start: TerminalNode, end: TerminalNode, step: StepNode, subprocess: StepNode, decision: DecisionNode, lane: LaneNode };
+const LANE = "lane|";
 
 const toneColour: Record<Tone, string> = {
   plain: "var(--color-ink-muted)",
@@ -211,6 +232,7 @@ export function FlowCanvas({
   subprocesses,
   fitKey,
   parties,
+  lanes = [],
 }: {
   flow: Flow;
   editable: boolean;
@@ -223,6 +245,8 @@ export function FlowCanvas({
   fitKey: string;
   /** Names of the roles, positions and units responsibilities name, by party key. */
   parties: Map<string, string>;
+  /** Lanes to draw behind the nodes, read-only. */
+  lanes?: LaneShown[];
 }) {
   const view = useReactFlow();
   // React Flow measures each node once drawn and hides it until then; the sizes are kept apart from the flow.
@@ -247,28 +271,46 @@ export function FlowCanvas({
   const focused = litNodes.size > 0;
   const chosen = useMemo(() => sides(flow), [flow]);
 
-  const nodes: FlowNodeView[] = useMemo(
-    () =>
-      flow.nodes.map((n) => ({
-        id: n.key,
-        type: n.kind,
-        position: { x: n.x, y: n.y },
-        selected: selection?.kind === "node" && selection.key === n.key,
-        measured: measured[n.key],
-        style: focused && !litNodes.has(n.key) ? { opacity: 0.35 } : undefined,
-        data: {
-          node: n,
-          flagged: flagged.has(n.key),
-          subprocess: n.subprocessId ? { id: n.subprocessId, name: subprocesses.get(n.subprocessId) ?? "" } : undefined,
-          accountable:
-            n.responsibilities
-              .filter((r) => r.kind === "accountable")
-              .map((r) => parties.get(partyOf(r)))
-              .filter(Boolean)
-              .join(", ") || undefined,
-        },
-      })),
-    [flow.nodes, selection, measured, flagged, subprocesses, parties, focused, litNodes],
+  const nodes: (FlowNodeView | LaneView)[] = useMemo(
+    () => [
+      ...lanes.map(
+        (l, i): LaneView => ({
+          id: `${LANE}${l.key}`,
+          type: "lane",
+          position: { x: l.x, y: 0 },
+          width: l.width,
+          height: l.height,
+          measured: { width: l.width, height: l.height },
+          selectable: false,
+          draggable: false,
+          focusable: false,
+          zIndex: -1,
+          data: { name: l.name, group: l.group, even: i % 2 === 0 },
+        }),
+      ),
+      ...flow.nodes.map(
+        (n): FlowNodeView => ({
+          id: n.key,
+          type: n.kind,
+          position: { x: n.x, y: n.y },
+          selected: selection?.kind === "node" && selection.key === n.key,
+          measured: measured[n.key],
+          style: focused && !litNodes.has(n.key) ? { opacity: 0.35 } : undefined,
+          data: {
+            node: n,
+            flagged: flagged.has(n.key),
+            subprocess: n.subprocessId ? { id: n.subprocessId, name: subprocesses.get(n.subprocessId) ?? "" } : undefined,
+            accountable:
+              n.responsibilities
+                .filter((r) => r.kind === "accountable")
+                .map((r) => parties.get(partyOf(r)))
+                .filter(Boolean)
+                .join(", ") || undefined,
+          },
+        }),
+      ),
+    ],
+    [lanes, flow.nodes, selection, measured, flagged, subprocesses, parties, focused, litNodes],
   );
 
   const nameOf = new Map(flow.nodes.map((n) => [n.key, n.name || t.process.unnamed]));
@@ -304,9 +346,10 @@ export function FlowCanvas({
     requestAnimationFrame(() => view.fitView({ padding: 0.2, maxZoom: 1.2 }));
   }, [fitKey, flow.nodes.length, view]);
 
-  const onNodesChange = (changes: NodeChange<FlowNodeView>[]) => {
+  const onNodesChange = (changes: NodeChange<FlowNodeView | LaneView>[]) => {
     const sizes: Record<string, { width: number; height: number }> = {};
     for (const c of changes) {
+      if ("id" in c && c.id.startsWith(LANE)) continue;
       if (c.type === "dimensions" && c.dimensions) sizes[c.id] = c.dimensions;
       if (c.type === "position" && editable) {
         if (c.position) onEdit({ type: "move", key: c.id, to: { x: Math.round(c.position.x), y: Math.round(c.position.y) } });
@@ -326,11 +369,11 @@ export function FlowCanvas({
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
-      onNodeMouseEnter={(_, n) => setHovered(n.id)}
+      onNodeMouseEnter={(_, n) => !n.id.startsWith(LANE) && setHovered(n.id)}
       onNodeMouseLeave={() => setHovered(undefined)}
       onConnect={editable ? connect : undefined}
       isValidConnection={(c) => mayConnect(flow, c.source, c.target)}
-      onNodeClick={(_, n) => onSelect({ kind: "node", key: n.id })}
+      onNodeClick={(_, n) => onSelect(n.id.startsWith(LANE) ? null : { kind: "node", key: n.id })}
       onEdgeClick={(_, e) => onSelect({ kind: "arrow", key: e.id })}
       onPaneClick={() => onSelect(null)}
       onDelete={({ nodes: gone, edges: cut }) => {

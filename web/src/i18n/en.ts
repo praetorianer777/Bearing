@@ -372,7 +372,10 @@ export const en = {
     neverPublished: "Not published yet.",
     warnings: "Worth a look; publishing goes ahead anyway",
     viewAs: "View as",
-    views: { canvas: "Canvas", matrix: "RACI matrix" },
+    views: { canvas: "Canvas", lanes: "Swimlanes", matrix: "RACI matrix" },
+    lane: (name: string) => `Lane: ${name}`,
+    laneGroups: { role: "Role", position: "Position", unit: "Unit" },
+    nobodyLane: "Nobody responsible",
   },
   raci: {
     title: "Responsibilities",
