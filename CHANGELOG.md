@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Cards for chips (`org-embed@1`):** partners show a person, position,
+  unit or role as a chip with a line beneath its name and a link back to
+  Bearing, by id or a person by the realm's subject, and find them by
+  the words typed so far. `GET /api/v1/cards/{kind}/{id}`,
+  `GET /api/v1/cards/person/by-subject`, `GET /api/v1/cards/suggest`
+  (#41).
+
 - **Webhook topics for resource planning:** `holding.planned`,
   `holding.started` and `holding.ended`, the last two also sent by the
   worker on their day when nobody writes then; `person.left`; and

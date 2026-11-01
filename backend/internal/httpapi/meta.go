@@ -32,6 +32,8 @@ var integrationCapabilities = []capability{
 	{name: "capacity@1", promise: "Full-time equivalents a unit, a position, a role or a person has over a range, against targets, and the gaps where people are missing.",
 		operations: []string{"GET /units/{unitID}/capacity", "GET /positions/{positionID}/capacity", "GET /roles/{roleID}/capacity",
 			"GET /people/{personID}/capacity", "GET /people/by-subject/capacity", "GET /targets", "GET /gaps"}},
+	{name: "org-embed@1", promise: "Person, position, unit and role cards for chips, by id or a person by the realm's subject, and found by the words typed so far.",
+		operations: []string{"GET /cards/{kind}/{cardID}", "GET /cards/person/by-subject", "GET /cards/suggest"}},
 	{name: "org-directory@1", promise: "A person by the realm's issuer and subject with their positions, units and roles; search; a unit's tree; the management chain up and the reports down.",
 		operations: []string{"GET /people/by-subject", "GET /people/{personID}/entry", "GET /people/by-subject/chain", "GET /people/by-subject/reports",
 			"GET /people/{personID}/chain", "GET /people/{personID}/reports", "GET /units/{unitID}/tree", "GET /search"}},

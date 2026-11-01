@@ -281,6 +281,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cards/person/by-subject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A person's card, the person named as the realm knows them.
+         * @description asOf is a day written 2006-01-02, today when left out. A card is what a partner shows as a chip: the name, one line beneath it and a link to the page in Bearing. issuer and subject name the person as the realm knows them.
+         */
+        get: operations["realmPersonCard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cards/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The cards of people, positions, units and roles whose names hold the words typed so far, best first.
+         * @description asOf is a day written 2006-01-02, today when left out. A card is what a partner shows as a chip: the name, one line beneath it and a link to the page in Bearing. q is two letters or more; kinds narrows to some of person, position, unit and role, separated by commas; limit is at most 20, 8 when left out.
+         */
+        get: operations["suggestCards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cards/{kind}/{cardID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The card of a person, position, unit or role, for a chip in another tool.
+         * @description asOf is a day written 2006-01-02, today when left out. A card is what a partner shows as a chip: the name, one line beneath it and a link to the page in Bearing. kind is person, position, unit or role.
+         */
+        get: operations["card"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/connected-apps": {
         parameters: {
             query?: never;
@@ -2493,6 +2553,22 @@ export interface components {
              */
             to: string;
         };
+        CardResponse: {
+            detail: string;
+            /** Format: uuid */
+            id: string;
+            issuer: string | null;
+            kind: string;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            leftOn: string | null;
+            name: string;
+            photoUrl: string | null;
+            subject: string | null;
+            url: string;
+        };
         CarryRoleRequest: {
             /**
              * Format: date
@@ -4173,6 +4249,129 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    realmPersonCard: {
+        parameters: {
+            query?: {
+                issuer?: string;
+                subject?: string;
+                asOf?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        card: components["schemas"]["CardResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    suggestCards: {
+        parameters: {
+            query?: {
+                q?: string;
+                kinds?: string;
+                limit?: string;
+                asOf?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        cards: components["schemas"]["CardResponse"][];
+                        query: string;
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    card: {
+        parameters: {
+            query?: {
+                asOf?: string;
+            };
+            header?: never;
+            path: {
+                kind: string;
+                cardID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        card: components["schemas"]["CardResponse"];
+                    };
+                };
             };
             /** @description An error, in the one shape every endpoint uses. */
             default: {

@@ -3,8 +3,8 @@
 Proposed. None of these names is in Dynamo's `docs/compatibility.md` yet;
 each is added there by pull request before Bearing reports it. Bearing serves
 `theme-export@1`, `oauth.partner-tokens@1`, `oauth.token-exchange@1`,
-`mcp@1`, `capacity@1`, `org-directory@1`, `responsibility@1` and `webhooks@1`
-already, in the shape the siblings serve them where
+`mcp@1`, `capacity@1`, `org-directory@1`, `responsibility@1`, `org-embed@1`
+and `webhooks@1` already, in the shape the siblings serve them where
 they share one, and lists them at `/meta`.
 
 ## MCP
@@ -128,6 +128,24 @@ GET /api/v1/people/by-subject/managers?issuer=&subject=&levels=&asOf=
   is what an approval routed to "the manager two levels up" asks.
 - An unknown subject answers 404; a call without both issuer and subject
   answers 422.
+
+## Cards
+
+`org-embed@1` is what a partner shows as a chip for a person, a position, a
+unit or a role, and the picker that finds one:
+
+```
+GET /api/v1/cards/{kind}/{id}?asOf=
+GET /api/v1/cards/person/by-subject?issuer=&subject=&asOf=
+GET /api/v1/cards/suggest?q=&kinds=person,role&limit=&asOf=
+```
+
+A card is `kind`, `id`, `name`, one line of `detail` beneath it, the `url`
+of its page in Bearing, and for a person `photoUrl` (which needs the caller
+signed in), `issuer`, `subject` and `leftOn`. The detail is a person's main
+position and its unit, a position's unit, the unit a unit is part of, or the
+start of a role's description. Suggestions are best first, by the words
+typed so far, two letters or more, at most 20; `kinds` narrows them.
 
 ## Webhooks
 
@@ -256,7 +274,7 @@ features, not data.
   "build": { "version": "0.1.0" },
   "apiVersion": "1",
   "capabilities": ["capacity@1", "mcp@1", "oauth.partner-tokens@1", "oauth.token-exchange@1", "org-directory@1",
-    "responsibility@1", "theme-export@1", "webhooks@1"]
+    "org-embed@1", "responsibility@1", "theme-export@1", "webhooks@1"]
 }
 ```
 
