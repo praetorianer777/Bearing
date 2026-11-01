@@ -17,6 +17,7 @@ import { ExampleDataPage } from "@/features/settings/ExampleData";
 import { ConsentPage } from "@/features/connect/ConsentPage";
 import { ConnectedAppsPage } from "@/features/settings/ConnectedApps";
 import { ProfilePage } from "@/features/settings/Profile";
+import { TokensPage } from "@/features/settings/Tokens";
 import { ThemesPage } from "@/features/settings/Themes";
 import { UnitTypesPage } from "@/features/settings/UnitTypes";
 import { AppShell } from "@/features/shell/AppShell";
@@ -224,6 +225,7 @@ const exampleDataRoute = createRoute({
   component: ExampleDataPage,
 });
 const profileRoute = createRoute({ getParentRoute: () => appRoute, path: "/settings/profile", component: ProfilePage });
+const tokensRoute = createRoute({ getParentRoute: () => appRoute, path: "/settings/tokens", component: TokensPage });
 const connectedAppsRoute = createRoute({ getParentRoute: () => appRoute, path: "/settings/connected-apps", component: ConnectedAppsPage });
 // The authorization endpoint sends the browser here with the app's request, which only the API reads.
 const connectRoute = createRoute({ getParentRoute: () => appRoute, path: "/connect", component: ConsentPage });
@@ -251,6 +253,7 @@ const routeTree = rootRoute.addChildren([
     exampleDataRoute,
     profileRoute,
     connectedAppsRoute,
+    tokensRoute,
     connectRoute,
   ]),
 ]);

@@ -108,6 +108,9 @@ func TestAPartnerTradesARealmTokenForAGrantOfThePersonsOwn(t *testing.T) {
 	if status, out := exchange(t, app, "not.a.token", nil); status != http.StatusBadRequest || out.Error != "invalid_grant" {
 		t.Errorf("a forged token: %d %+v", status, out)
 	}
+	// Trading her token asks to join for her, as signing in would; the request goes again, so the tests of joining
+	// begin from nothing.
+	t.Cleanup(func() { forget(t, "carol@suite.test") })
 	if status, out := exchange(t, app, realmToken(t, "carol", "carol password", "bearing-partner", "bearing-partner-dev-secret"), nil); status != http.StatusBadRequest || out.Error != "invalid_grant" {
 		t.Errorf("somebody without an account: %d %+v", status, out)
 	}

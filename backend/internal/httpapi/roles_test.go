@@ -153,6 +153,9 @@ var mayCall = map[string]auth.Role{
 	"removeApp":            auth.RoleAdministrator,
 	"registerPartner":      auth.RoleAdministrator,
 	"mcp":                  "",
+	"personalTokens":       "",
+	"makePersonalToken":    "",
+	"revokePersonalToken":  "",
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {

@@ -333,3 +333,14 @@ API. `search` filters the lists the API answers by name, as the web
 client's search does, so it finds what the person may see. Answers are
 cut at 64 KiB so a large organisation cannot flood an assistant's
 context.
+
+## Personal tokens are the person's own rows, made only while signed in
+
+A personal access token is an `api_token` row of its person's without an
+app, so one lookup authenticates every bearer token and one list shows
+what a person has handed out. The person makes it as themselves, under row
+level security that lets nobody make a token for somebody else. Every
+token ends, a year at the latest, and a person holds twenty at most.
+Making a token and connecting an app need a session, not a token: a token
+that leaks then cannot be turned into a lasting one, and revoking it ends
+what it could do. Read only is the default, as most scripts only read.

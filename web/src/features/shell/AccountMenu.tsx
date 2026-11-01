@@ -83,6 +83,9 @@ export function AccountMenu() {
               <Link to="/settings/connected-apps" onClick={() => setOpen(false)} className="mt-1 block text-sm text-accent hover:underline">
                 {t.account.connectedApps}
               </Link>
+              <Link to="/settings/tokens" onClick={() => setOpen(false)} className="mt-1 block text-sm text-accent hover:underline">
+                {t.account.tokens}
+              </Link>
             </div>
           )}
           <fieldset>

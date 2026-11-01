@@ -122,3 +122,12 @@ func TestTheOAuthEndpointsAnswerInOAuthsShape(t *testing.T) {
 		t.Errorf("removing an app never registered: %d", rec.Code)
 	}
 }
+
+func TestATokenMakesNoTokenAndConnectsNoApp(t *testing.T) {
+	s := oauthServer()
+	for _, path := range []string{"/tokens", "/oauth/consent"} {
+		if rec := bearerCall(s, http.MethodPost, path, "writing"); rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), "signed in") {
+			t.Errorf("%s with a token: %d %s", path, rec.Code, rec.Body)
+		}
+	}
+}

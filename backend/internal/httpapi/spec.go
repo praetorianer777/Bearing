@@ -66,7 +66,7 @@ func Spec() *openapi.Document {
 		Components: openapi.Components{
 			SecuritySchemes: map[string]openapi.SecurityScheme{
 				"session": {Type: "apiKey", In: "cookie", Name: config.DefaultSessionCookie, Description: "The cookie a sign-in sets."},
-				"bearer":  {Type: "http", Scheme: "bearer", Description: "An access token a connected app holds."},
+				"bearer":  {Type: "http", Scheme: "bearer", Description: "A personal access token (bearing_pat_), or an access token a connected app holds (bearing_oat_)."},
 			},
 		},
 		Security: []map[string][]string{{"session": {}}, {"bearer": {}}},
