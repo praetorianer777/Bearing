@@ -19,6 +19,9 @@
       "name": "audit"
     },
     {
+      "name": "capacity"
+    },
+    {
       "name": "health"
     },
     {
@@ -3045,6 +3048,70 @@
         "x-bearing-role": "editor"
       }
     },
+    "/people/{personID}/capacity": {
+      "get": {
+        "operationId": "personCapacity",
+        "summary": "A person's capacity over a range, period by period: the full-time equivalents of everything they hold, until they leave.",
+        "description": "from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "personID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapacityResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/people/{personID}/chain": {
       "get": {
         "operationId": "personChain",
@@ -3803,6 +3870,70 @@
           }
         },
         "x-bearing-role": "editor"
+      }
+    },
+    "/positions/{positionID}/capacity": {
+      "get": {
+        "operationId": "positionCapacity",
+        "summary": "A position's capacity over a range, period by period: the full-time equivalents its holdings add up to, and its seats filled and vacant.",
+        "description": "from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days. A seat held at half a week is half filled.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "positionID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapacityResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/positions/{positionID}/chain": {
@@ -5513,6 +5644,70 @@
         "x-bearing-role": "editor"
       }
     },
+    "/roles/{roleID}/capacity": {
+      "get": {
+        "operationId": "roleCapacity",
+        "summary": "A role's capacity over a range, period by period: the full-time equivalents of its holdings, directly and through the positions carrying it.",
+        "description": "from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "roleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapacityResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/search": {
       "get": {
         "operationId": "search",
@@ -6646,6 +6841,77 @@
         "x-bearing-role": "editor"
       }
     },
+    "/units/{unitID}/capacity": {
+      "get": {
+        "operationId": "unitCapacity",
+        "summary": "A unit's capacity over a range, period by period: the full-time equivalents its positions' holdings add up to, and its seats filled and vacant.",
+        "description": "from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days. subUnits=true counts in the units inside it, as the tree stands on each day.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "unitID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subUnits",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapacityResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/units/{unitID}/members": {
       "get": {
         "operationId": "members",
@@ -6980,6 +7246,76 @@
           "to",
           "label",
           "route"
+        ]
+      },
+      "CapacityPeriodResponse": {
+        "type": "object",
+        "properties": {
+          "filled": {
+            "type": "number"
+          },
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "fte": {
+            "type": "number"
+          },
+          "people": {
+            "type": "integer"
+          },
+          "seats": {
+            "type": "number"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "vacant": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "fte",
+          "people"
+        ]
+      },
+      "CapacityResponse": {
+        "type": "object",
+        "properties": {
+          "by": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "periods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CapacityPeriodResponse"
+            }
+          },
+          "subUnits": {
+            "type": "boolean"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "by",
+          "subUnits",
+          "periods"
         ]
       },
       "CarryRoleRequest": {

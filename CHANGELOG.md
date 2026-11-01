@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Capacity:** full-time equivalents of a person, a position, a unit
+  with or without its sub-units, and a role, per day, week or month over
+  up to two years, with a position's and a unit's seats filled and
+  vacant; planned holdings and leavers count on their days.
+  `GET /api/v1/{units,positions,roles,people}/{id}/capacity` (#87).
 - **Search:** one box along the top finds people, positions, units, roles,
   processes and their steps as they are typed, ignoring case and accents
   and forgiving a slip; Enter opens every result on the search page, as of

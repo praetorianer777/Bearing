@@ -883,6 +883,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{personID}/capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A person's capacity over a range, period by period: the full-time equivalents of everything they hold, until they leave.
+         * @description from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days.
+         */
+        get: operations["personCapacity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{personID}/chain": {
         parameters: {
             query?: never;
@@ -1044,6 +1064,26 @@ export interface paths {
          * @description Pages run newest first: before names the last entry of the page read, limit how many to answer, 50 when left out and 200 at most.
          */
         get: operations["positionAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/positions/{positionID}/capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A position's capacity over a range, period by period: the full-time equivalents its holdings add up to, and its seats filled and vacant.
+         * @description from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days. A seat held at half a week is half filled.
+         */
+        get: operations["positionCapacity"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1468,6 +1508,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/roles/{roleID}/capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A role's capacity over a range, period by period: the full-time equivalents of its holdings, directly and through the positions carrying it.
+         * @description from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days.
+         */
+        get: operations["roleCapacity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -1783,6 +1843,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/units/{unitID}/capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A unit's capacity over a range, period by period: the full-time equivalents its positions' holdings add up to, and its seats filled and vacant.
+         * @description from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days. subUnits=true counts in the units inside it, as the tree stands on each day.
+         */
+        get: operations["unitCapacity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/units/{unitID}/members": {
         parameters: {
             query?: never;
@@ -1880,6 +1960,38 @@ export interface components {
             key: string;
             label: string;
             route: number[];
+            to: string;
+        };
+        CapacityPeriodResponse: {
+            filled?: number;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from: string;
+            fte: number;
+            people: number;
+            seats?: number;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            to: string;
+            vacant?: number;
+        };
+        CapacityResponse: {
+            by: string;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from: string;
+            periods: components["schemas"]["CapacityPeriodResponse"][];
+            subUnits: boolean;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
             to: string;
         };
         CarryRoleRequest: {
@@ -4896,6 +5008,41 @@ export interface operations {
             };
         };
     };
+    personCapacity: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                by?: string;
+            };
+            header?: never;
+            path: {
+                personID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapacityResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     personChain: {
         parameters: {
             query?: {
@@ -5354,6 +5501,41 @@ export interface operations {
                         /** Format: uuid */
                         next: string | null;
                     };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    positionCapacity: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                by?: string;
+            };
+            header?: never;
+            path: {
+                positionID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapacityResponse"];
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */
@@ -6393,6 +6575,41 @@ export interface operations {
             };
         };
     };
+    roleCapacity: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                by?: string;
+            };
+            header?: never;
+            path: {
+                roleID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapacityResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     search: {
         parameters: {
             query?: {
@@ -7134,6 +7351,42 @@ export interface operations {
                         /** Format: uuid */
                         next: string | null;
                     };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    unitCapacity: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                by?: string;
+                subUnits?: string;
+            };
+            header?: never;
+            path: {
+                unitID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapacityResponse"];
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */
