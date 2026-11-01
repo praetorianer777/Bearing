@@ -823,6 +823,230 @@
         }
       }
     },
+    "/cards/person/by-subject": {
+      "get": {
+        "operationId": "realmPersonCard",
+        "summary": "A person's card, the person named as the realm knows them.",
+        "description": "asOf is a day written 2006-01-02, today when left out. A card is what a partner shows as a chip: the name, one line beneath it and a link to the page in Bearing. issuer and subject name the person as the realm knows them.",
+        "tags": [
+          "directory"
+        ],
+        "parameters": [
+          {
+            "name": "issuer",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "card": {
+                      "$ref": "#/components/schemas/CardResponse"
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "card"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cards/suggest": {
+      "get": {
+        "operationId": "suggestCards",
+        "summary": "The cards of people, positions, units and roles whose names hold the words typed so far, best first.",
+        "description": "asOf is a day written 2006-01-02, today when left out. A card is what a partner shows as a chip: the name, one line beneath it and a link to the page in Bearing. q is two letters or more; kinds narrows to some of person, position, unit and role, separated by commas; limit is at most 20, 8 when left out.",
+        "tags": [
+          "directory"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kinds",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "cards": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CardResponse"
+                      }
+                    },
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "cards",
+                    "query"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cards/{kind}/{cardID}": {
+      "get": {
+        "operationId": "card",
+        "summary": "The card of a person, position, unit or role, for a chip in another tool.",
+        "description": "asOf is a day written 2006-01-02, today when left out. A card is what a partner shows as a chip: the name, one line beneath it and a link to the page in Bearing. kind is person, position, unit or role.",
+        "tags": [
+          "directory"
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cardID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "card": {
+                      "$ref": "#/components/schemas/CardResponse"
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "card"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/connected-apps": {
       "get": {
         "operationId": "connectedApps",
@@ -9269,6 +9493,64 @@
           "by",
           "subUnits",
           "periods"
+        ]
+      },
+      "CardResponse": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issuer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "leftOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "name": {
+            "type": "string"
+          },
+          "photoUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name",
+          "detail",
+          "url",
+          "photoUrl",
+          "issuer",
+          "subject",
+          "leftOn"
         ]
       },
       "CarryRoleRequest": {
