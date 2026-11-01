@@ -33,6 +33,14 @@ export const useDisconnect = () => {
 
 export const useApps = (enabled: boolean) => useQuery({ queryKey: appsKey, enabled, queryFn: async () => unwrap(await api.GET("/oauth/clients")).clients });
 
+export const useRegisterPartner = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { name: string; keycloakClientId: string; write: boolean }) => unwrap(await api.POST("/oauth/clients", { body })),
+    onSuccess: () => client.invalidateQueries({ queryKey: appsKey }),
+  });
+};
+
 export const useRemoveApp = () => {
   const client = useQueryClient();
   return useMutation({

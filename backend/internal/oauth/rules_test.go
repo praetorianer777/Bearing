@@ -1,12 +1,16 @@
 package oauth
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/praetorianer777/bearing/backend/internal/auth"
 )
 
 func TestPKCEHoldsTheVerifierToItsChallenge(t *testing.T) {
@@ -140,5 +144,78 @@ func TestAnAuthorizationAnswersAtTheAppWithItsState(t *testing.T) {
 	}
 	if !strings.Contains(pendingRefusal("Rotor"), "Rotor") || ended().Code != "invalid_grant" || (&RefusedError{Sentence: "x"}).Error() != "x" {
 		t.Error("the sentences")
+	}
+}
+
+func TestAPartnerNeedsANameAndItsRealmClient(t *testing.T) {
+	s := &Service{}
+	for _, in := range []PartnerInput{
+		{Name: " ", KeycloakClientID: "rotor"},
+		{Name: strings.Repeat("n", MaxNameLength+1), KeycloakClientID: "rotor"},
+		{Name: "Rotor", KeycloakClientID: ""},
+		{Name: "Rotor", KeycloakClientID: "two words"},
+	} {
+		var field *FieldError
+		if _, _, _, err := s.RegisterPartner(t.Context(), in); !errors.As(err, &field) || field.Message == "" || field.Error() != field.Message {
+			t.Errorf("%+v: %v", in, err)
+		}
+	}
+}
+
+func TestAnExchangeIsRefusedBeforeAnythingIsReadWhenItCannotBeServed(t *testing.T) {
+	s := &Service{}
+	realm := "rotor"
+	partner := &clientRow{Name: "Rotor", Kind: KindPartner, KeycloakClientID: &realm, Scopes: Scopes}
+	registered := &clientRow{Name: "Assistant", Kind: KindRegistered, Scopes: Scopes}
+	form := func(extra ...string) url.Values {
+		v := url.Values{"subject_token": {"eyJ.realm.token"}, "subject_token_type": {TokenTypeAccess}}
+		for i := 0; i+1 < len(extra); i += 2 {
+			v.Set(extra[i], extra[i+1])
+		}
+		return v
+	}
+	for _, c := range []struct {
+		client *clientRow
+		form   url.Values
+		code   string
+	}{
+		{partner, url.Values{}, "invalid_request"},
+		{partner, form("subject_token_type", "urn:ietf:params:oauth:token-type:id_token"), "invalid_request"},
+		{partner, form("requested_token_type", "urn:ietf:params:oauth:token-type:refresh_token"), "invalid_request"},
+		{registered, form(), "unauthorized_client"},
+		{partner, form(), "unauthorized_client"},
+	} {
+		_, err := s.exchange(t.Context(), c.client, c.form)
+		var e *Error
+		if !errors.As(err, &e) || e.Code != c.code {
+			t.Errorf("%s %v: %v", c.client.Kind, c.form, err)
+		}
+	}
+	s.Realm = func(context.Context, string, string) (auth.Identity, error) {
+		return auth.Identity{}, errors.New("expired")
+	}
+	if _, err := s.exchange(t.Context(), partner, form("scope", "write")); err == nil {
+		t.Error("write without read was asked and taken")
+	}
+	var e *Error
+	if _, err := s.exchange(t.Context(), partner, form()); !errors.As(err, &e) || e.Code != "invalid_grant" || !strings.Contains(e.Description, "expired") {
+		t.Errorf("a refused realm token: %v", err)
+	}
+}
+
+func TestTheTokenEndpointAsksForWhatItNeeds(t *testing.T) {
+	s := &Service{}
+	for _, form := range []url.Values{
+		{"grant_type": {"a", "b"}},
+		{},
+		{"grant_type": {"password"}},
+	} {
+		var e *Error
+		if _, err := s.Token(t.Context(), Credentials{}, form); !errors.As(err, &e) || e.Status != http.StatusBadRequest {
+			t.Errorf("%v: %v", form, err)
+		}
+	}
+	if err := required(url.Values{"code": {"x"}}, "code", "redirect_uri"); err == nil || !strings.Contains(err.Error(), "redirect_uri") {
+		t.Errorf("a missing parameter: %v", err)
 	}
 }

@@ -2,8 +2,8 @@
 
 Proposed. None of these names is in Dynamo's `docs/compatibility.md` yet;
 each is added there by pull request before Bearing reports it. Bearing serves
-`theme-export@1` and `oauth.partner-tokens@1` already, in the shape the
-siblings serve them, and lists them at `/meta`.
+`theme-export@1`, `oauth.partner-tokens@1` and `oauth.token-exchange@1`
+already, in the shape the siblings serve them, and lists them at `/meta`.
 
 ## Connecting an app
 
@@ -22,6 +22,37 @@ second time ends the grant. People disconnect their apps under Connected
 apps; administrators remove an app for everybody there too. Tokens carry
 their kind in their prefix: `bearing_oat_` access, `bearing_ort_`
 refresh, `bearing_ocs_` client secret.
+
+## Trading a realm token
+
+A partner app of the suite that signs people in through the realm is
+registered by an administrator under Connected apps, with the realm client
+it signs them in through; its secret is shown once. It trades a person's
+realm access token at the token endpoint (RFC 8693):
+
+```
+POST /api/v1/oauth/token
+Authorization: Basic <client id>:<secret>
+
+grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+&subject_token=<the realm access token>
+&subject_token_type=urn:ietf:params:oauth:token-type:access_token
+&scope=read write
+```
+
+The realm token must be signed by the realm, live, issued to the partner's
+client (`azp`) and name `bearing` among its audiences (`aud`), which an
+audience mapper on the partner's client adds. The person needs a Bearing
+account, found or made as their sign-in would; somebody who has none asks
+to join and is refused until an administrator lets them in. The answer is
+a grant of theirs, with a refresh token, that acts on the whole API within
+their role and the scopes.
+
+Any app may also trade an access token of its own grant for a narrower
+one, for one run: `subject_token` is then the `bearing_oat_` token,
+`scope` may narrow to `read`, and `bearing_expires_in` may shorten it
+below the grant's remaining hour. A narrower token has no refresh token,
+ends with its grant, and is revoked like any other.
 
 `GET /api/v1/meta` lists, under `capabilities`, the integration features this
 build offers, as stable names with a version, in the scheme the suite uses. A

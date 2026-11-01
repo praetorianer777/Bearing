@@ -109,6 +109,17 @@ export const en = {
     people: (n: number) => (n === 1 ? "1 person connected" : `${n} people connected`),
     remove: "Remove",
     removeApp: (app: string) => `Remove ${app}`,
+    partnerTitle: "Register a partner app",
+    partnerIntro:
+      "A partner app of the suite signs people in through the realm and trades their token here for one of Bearing's, without a consent page. Name the realm client it signs them in through.",
+    partnerName: "Name",
+    realmClient: "Realm client",
+    partnerWrite: "It may change what its people may, not only read",
+    register: "Register",
+    partnerOf: (realmClient: string) => `partner, through the realm client ${realmClient}`,
+    secretOnce: (app: string) => `${app} is registered. Hand it its client id and secret now; the secret is not shown again.`,
+    clientId: "Client id",
+    secret: "Secret",
   },
   account: {
     menu: "Account and settings",

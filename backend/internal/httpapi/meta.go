@@ -27,6 +27,8 @@ type capability struct {
 var integrationCapabilities = []capability{
 	{name: oauth.CapabilityPartnerTokens, promise: "An app registers itself, and a person connects it on a consent page by authorization code with PKCE; its grant acts at the MCP endpoint.",
 		operations: []string{"POST /oauth/register", "GET /oauth/authorize", "POST /oauth/token", "POST /oauth/revoke"}},
+	{name: oauth.CapabilityTokenExchange, promise: "A partner trades a person's realm access token, issued to its client with Bearing among the audiences, for a Bearing grant of theirs (RFC 8693).",
+		operations: []string{"POST /oauth/token"}},
 	{name: "theme-export@1", promise: "A theme exported and imported as one armature-theme/1 file.",
 		operations: []string{"GET /themes/{themeID}/export", "POST /themes/import"}},
 }

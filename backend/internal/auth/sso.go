@@ -17,6 +17,19 @@ import (
 // groups the provider names replace the ones it named last time. It returns the sign-in's write position, for the
 // session's first reads to respect.
 func (s *Service) SignInWithIdentity(ctx context.Context, id Identity) (Account, string, db.LSN, error) {
+	a, lsn, err := s.AccountForIdentity(ctx, id)
+	if err != nil {
+		return Account{}, "", lsn, err
+	}
+	s.signedIn(ctx, a.ID)
+	token, err := s.Sessions.Start(ctx, a.ID)
+	return a, token, lsn, err
+}
+
+// AccountForIdentity is the account somebody single sign-on vouches for has, found or made as a sign-in finds or
+// makes it, without a session: a partner trading their token acts as them. Somebody who has none asks to join, and
+// ErrAwaitingAdmission says so; a switched off account is ErrDisabled.
+func (s *Service) AccountForIdentity(ctx context.Context, id Identity) (Account, db.LSN, error) {
 	var (
 		accountID uuid.UUID
 		awaiting  bool
@@ -63,21 +76,19 @@ func (s *Service) SignInWithIdentity(ctx context.Context, id Identity) (Account,
 		return err
 	})
 	if err != nil {
-		return Account{}, "", 0, err
+		return Account{}, 0, err
 	}
 	if awaiting {
-		return Account{}, "", lsn, ErrAwaitingAdmission
+		return Account{}, lsn, ErrAwaitingAdmission
 	}
 	a, err := s.Account(db.PinPrimary(db.WithUser(ctx, accountID)), accountID)
 	if err != nil {
-		return Account{}, "", 0, err
+		return Account{}, 0, err
 	}
 	if a.Disabled {
-		return Account{}, "", 0, ErrDisabled
+		return Account{}, 0, ErrDisabled
 	}
-	s.signedIn(ctx, a.ID)
-	token, err := s.Sessions.Start(ctx, a.ID)
-	return a, token, lsn, err
+	return a, lsn, nil
 }
 
 // JoinRequests lists who asked to join, as an administrator.

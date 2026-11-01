@@ -98,7 +98,7 @@ func (s *Service) Authorize(ctx context.Context, rawQuery string) (*Authorizatio
 	if a.redirectURI == "" && len(client.RedirectURIs) == 1 {
 		a.redirectURI = client.RedirectURIs[0]
 	}
-	if len(q["redirect_uri"]) > 1 || !RedirectMatches(client.RedirectURIs, a.redirectURI) {
+	if client.Kind != KindRegistered || len(q["redirect_uri"]) > 1 || !RedirectMatches(client.RedirectURIs, a.redirectURI) {
 		return nil, ErrUnknownApp
 	}
 	for _, name := range authorizeParams {

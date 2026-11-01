@@ -1,9 +1,77 @@
+import { type FormEvent, useState } from "react";
 import { useMe } from "@/api/auth";
-import { useApps, useDisconnect, useGrants, useRemoveApp } from "@/api/oauth";
-import { Button, FormError } from "@/components/ui";
+import { useApps, useDisconnect, useGrants, useRegisterPartner, useRemoveApp } from "@/api/oauth";
+import { Button, Field, FormError, fieldError } from "@/components/ui";
 import { t, useLanguage } from "@/i18n";
 
 const day = (iso: string) => new Date(iso).toLocaleDateString();
+
+/** An administrator registers a partner app for token exchange; its secret is shown once, to hand to the app. */
+function RegisterPartner() {
+  const register = useRegisterPartner();
+  const [name, setName] = useState("");
+  const [realmClient, setRealmClient] = useState("");
+  const [write, setWrite] = useState(false);
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    register.mutate(
+      { name, keycloakClientId: realmClient, write },
+      {
+        onSuccess: () => {
+          setName("");
+          setRealmClient("");
+          setWrite(false);
+        },
+      },
+    );
+  };
+  const made = register.data;
+  return (
+    <section aria-labelledby="partner" className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5">
+      <div>
+        <h2 id="partner" className="text-base font-semibold">
+          {t.connectedApps.partnerTitle}
+        </h2>
+        <p className="mt-1 text-sm text-ink-muted">{t.connectedApps.partnerIntro}</p>
+      </div>
+      <form onSubmit={submit} className="flex flex-col gap-3" noValidate>
+        <Field
+          label={t.connectedApps.partnerName}
+          name="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          error={fieldError(register.error, "name")}
+        />
+        <Field
+          label={t.connectedApps.realmClient}
+          name="keycloakClientId"
+          value={realmClient}
+          onChange={(e) => setRealmClient(e.target.value)}
+          error={fieldError(register.error, "keycloakClientId")}
+        />
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" checked={write} onChange={(e) => setWrite(e.target.checked)} />
+          {t.connectedApps.partnerWrite}
+        </label>
+        <Button type="submit" disabled={register.isPending} className="self-start">
+          {t.connectedApps.register}
+        </Button>
+        <FormError error={register.error} />
+      </form>
+      {made && (
+        <div role="status" className="rounded-md border border-border bg-surface-sunken p-3 text-sm">
+          <p>{t.connectedApps.secretOnce(made.client.name)}</p>
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+            <dt className="text-ink-muted">{t.connectedApps.clientId}</dt>
+            <dd className="break-all font-mono">{made.client.id}</dd>
+            <dt className="text-ink-muted">{t.connectedApps.secret}</dt>
+            <dd className="break-all font-mono">{made.secret}</dd>
+          </dl>
+        </div>
+      )}
+    </section>
+  );
+}
 
 /** The apps the person connected, each disconnected on its own; for administrators also every app that registered. */
 export function ConnectedAppsPage() {
@@ -67,7 +135,7 @@ export function ConnectedAppsPage() {
                       </span>
                     </p>
                     <p className="truncate text-sm text-ink-muted">
-                      {a.redirectUris.join(", ")} · {t.connectedApps.people(a.people)}
+                      {a.kind === "partner" ? t.connectedApps.partnerOf(a.keycloakClientId) : a.redirectUris.join(", ")} · {t.connectedApps.people(a.people)}
                     </p>
                   </div>
                   <Button variant="danger" onClick={() => remove.mutate(a.id)} disabled={remove.isPending} aria-label={t.connectedApps.removeApp(a.name)}>
@@ -80,6 +148,7 @@ export function ConnectedAppsPage() {
           <FormError error={remove.error} />
         </section>
       )}
+      {administers && <RegisterPartner />}
     </div>
   );
 }

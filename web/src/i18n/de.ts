@@ -109,6 +109,17 @@ export const de: Messages = {
     people: (n: number) => (n === 1 ? "1 Person verbunden" : `${n} Personen verbunden`),
     remove: "Entfernen",
     removeApp: (app: string) => `${app} entfernen`,
+    partnerTitle: "Partner-App anmelden",
+    partnerIntro:
+      "Eine Partner-App der Suite meldet Personen über den Realm an und tauscht deren Token hier gegen eines von Bearing, ohne Zustimmungsseite. Nennen Sie den Realm-Client, über den sie anmeldet.",
+    partnerName: "Name",
+    realmClient: "Realm-Client",
+    partnerWrite: "Sie darf ändern, was ihre Personen dürfen, nicht nur lesen",
+    register: "Anmelden",
+    partnerOf: (realmClient: string) => `Partner, über den Realm-Client ${realmClient}`,
+    secretOnce: (app: string) => `${app} ist angemeldet. Geben Sie der App jetzt Client-ID und Secret; das Secret wird nicht noch einmal gezeigt.`,
+    clientId: "Client-ID",
+    secret: "Secret",
   },
   account: {
     menu: "Konto und Einstellungen",

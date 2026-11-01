@@ -56,14 +56,19 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 		AppURL:         cfg.Auth.AppURL,
 		Themes:         &theme.Service{DB: cluster},
 		Org:            people,
-		OAuth:          &oauth.Service{DB: cluster, Issuer: cfg.Auth.AppURL, Log: log},
 	}
+	authorization := &oauth.Service{DB: cluster, Issuer: cfg.Auth.AppURL, Log: log,
+		AccountFor: func(ctx context.Context, id auth.Identity) (auth.Account, error) {
+			a, _, err := accounts.AccountForIdentity(ctx, id)
+			return a, err
+		}}
+	srv.OAuth = authorization
 	if cfg.OIDC.Enabled() {
 		backchannel, err := sso.ParseBackchannel(cfg.OIDC.Backchannel)
 		if err != nil {
 			return nil, fmt.Errorf("BEARING_OIDC_BACKCHANNEL: %w", err)
 		}
-		srv.SSO = sso.New(sso.Config{
+		provider := sso.New(sso.Config{
 			Issuer:       cfg.OIDC.Issuer,
 			ClientID:     cfg.OIDC.ClientID,
 			ClientSecret: cfg.OIDC.ClientSecret,
@@ -71,6 +76,11 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 			GroupsClaim:  cfg.OIDC.GroupsClaim,
 			Backchannel:  backchannel,
 		}, valkey)
+		srv.SSO = provider
+		authorization.Realm = func(ctx context.Context, raw, azp string) (auth.Identity, error) {
+			id, err := provider.VerifyAccessToken(ctx, raw, azp)
+			return auth.Identity{Issuer: id.Issuer, Subject: id.Subject, Email: id.Email, Name: id.Name, Groups: id.Groups}, err
+		}
 	}
 	return srv, nil
 }

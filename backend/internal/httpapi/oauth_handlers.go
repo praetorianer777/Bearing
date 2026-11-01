@@ -31,12 +31,19 @@ type OAuth interface {
 	Grants(ctx context.Context) ([]oauth.Grant, error)
 	Disconnect(ctx context.Context, id uuid.UUID) (db.LSN, error)
 	Clients(ctx context.Context) ([]oauth.Client, error)
+	RegisterPartner(ctx context.Context, in oauth.PartnerInput) (oauth.Client, string, db.LSN, error)
 	RemoveClient(ctx context.Context, id uuid.UUID) (db.LSN, error)
 }
 
 // tokenForm is the token endpoint's form, in OAuth's names (RFC 6749 sections 4.1.3 and 6).
 type tokenForm struct {
-	GrantType    string `json:"grant_type"`
+	GrantType string `json:"grant_type"`
+	// SubjectToken is what a token exchange trades: a realm access token, or an access token of the app's own grant.
+	SubjectToken       string `json:"subject_token,omitempty"`
+	SubjectTokenType   string `json:"subject_token_type,omitempty"`
+	RequestedTokenType string `json:"requested_token_type,omitempty"`
+	// ExpiresIn shortens a narrower token, in seconds.
+	ExpiresIn    string `json:"bearing_expires_in,omitempty"`
 	Code         string `json:"code,omitempty"`
 	RedirectURI  string `json:"redirect_uri,omitempty"`
 	CodeVerifier string `json:"code_verifier,omitempty"`
@@ -84,15 +91,19 @@ type grantResponse struct {
 }
 
 type clientResponse struct {
-	ID           uuid.UUID `json:"id"`
-	Name         string    `json:"name"`
-	Status       string    `json:"status"`
-	Scopes       []string  `json:"scopes"`
-	ClientURI    string    `json:"clientUri"`
-	RedirectURIs []string  `json:"redirectUris"`
-	Confidential bool      `json:"confidential"`
-	People       int       `json:"people"`
-	CreatedAt    time.Time `json:"createdAt"`
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	// Kind is registered for an app that registered itself, partner for one registered for token exchange.
+	Kind string `json:"kind"`
+	// KeycloakClientID is the realm client whose tokens a partner trades; empty for an app that registered itself.
+	KeycloakClientID string    `json:"keycloakClientId"`
+	Status           string    `json:"status"`
+	Scopes           []string  `json:"scopes"`
+	ClientURI        string    `json:"clientUri"`
+	RedirectURIs     []string  `json:"redirectUris"`
+	Confidential     bool      `json:"confidential"`
+	People           int       `json:"people"`
+	CreatedAt        time.Time `json:"createdAt"`
 }
 
 // respondOAuth answers in OAuth's own shape, which partners' libraries read, rather than the API's envelope.
@@ -281,10 +292,41 @@ func (s *Server) handleClients(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]clientResponse, len(clients))
 	for i, c := range clients {
-		out[i] = clientResponse{ID: c.ID, Name: c.Name, Status: c.Status, Scopes: c.Scopes, ClientURI: c.ClientURI,
-			RedirectURIs: c.RedirectURIs, Confidential: c.Confidential, People: c.People, CreatedAt: c.CreatedAt}
+		out[i] = toClient(c)
 	}
 	respondJSON(w, http.StatusOK, env{"clients": out})
+}
+
+func toClient(c oauth.Client) clientResponse {
+	return clientResponse{ID: c.ID, Name: c.Name, Kind: c.Kind, KeycloakClientID: c.KeycloakClientID, Status: c.Status, Scopes: c.Scopes,
+		ClientURI: c.ClientURI, RedirectURIs: c.RedirectURIs, Confidential: c.Confidential, People: c.People, CreatedAt: c.CreatedAt}
+}
+
+type partnerRequest struct {
+	Name string `json:"name"`
+	// Write lets the app change what its people may, besides reading.
+	Write bool `json:"write"`
+	// KeycloakClientID is the realm client the partner signs its people in through.
+	KeycloakClientID string `json:"keycloakClientId"`
+}
+
+func (s *Server) handleRegisterPartner(w http.ResponseWriter, r *http.Request) {
+	var in partnerRequest
+	if err := decode(r, &in); err != nil {
+		respondError(w, r, s.Log, err)
+		return
+	}
+	c, secret, lsn, err := s.OAuth.RegisterPartner(r.Context(), oauth.PartnerInput{Name: in.Name, Write: in.Write, KeycloakClientID: in.KeycloakClientID})
+	noteWrite(r.Context(), lsn)
+	var field *oauth.FieldError
+	if errors.As(err, &field) {
+		err = ErrValidation(map[string]string{field.Field: field.Message})
+	}
+	if err != nil {
+		respondError(w, r, s.Log, err)
+		return
+	}
+	respondJSON(w, http.StatusCreated, env{"client": toClient(c), "secret": secret})
 }
 
 func (s *Server) handleRemoveClient(w http.ResponseWriter, r *http.Request) {

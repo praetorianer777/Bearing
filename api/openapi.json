@@ -1979,6 +1979,58 @@
           }
         },
         "x-bearing-role": "administrator"
+      },
+      "post": {
+        "operationId": "registerPartner",
+        "summary": "Register a partner app for token exchange, with the realm client its people sign in through. Its secret is shown this once.",
+        "tags": [
+          "oauth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "client": {
+                      "$ref": "#/components/schemas/ClientResponse"
+                    },
+                    "secret": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "client",
+                    "secret"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
       }
     },
     "/oauth/clients/{clientID}": {
@@ -2233,7 +2285,7 @@
     "/oauth/token": {
       "post": {
         "operationId": "token",
-        "summary": "The token endpoint: an authorization code or a refresh token traded for an access token of an hour and a new refresh token.",
+        "summary": "The token endpoint: an authorization code or a refresh token traded for an access token of an hour and a new refresh token; or a token exchanged (RFC 8693), a partner's realm token for a grant, or an app's own access token for a narrower one.",
         "tags": [
           "oauth"
         ],
@@ -6650,6 +6702,12 @@
             "type": "string",
             "format": "uuid"
           },
+          "keycloakClientId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
@@ -6675,6 +6733,8 @@
         "required": [
           "id",
           "name",
+          "kind",
+          "keycloakClientId",
           "status",
           "scopes",
           "clientUri",
@@ -7895,6 +7955,25 @@
           "description"
         ]
       },
+      "PartnerRequest": {
+        "type": "object",
+        "properties": {
+          "keycloakClientId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "write": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "write",
+          "keycloakClientId"
+        ]
+      },
       "PasswordRequest": {
         "type": "object",
         "properties": {
@@ -9059,6 +9138,9 @@
       "TokenForm": {
         "type": "object",
         "properties": {
+          "bearing_expires_in": {
+            "type": "string"
+          },
           "client_id": {
             "type": "string"
           },
@@ -9080,10 +9162,19 @@
           "refresh_token": {
             "type": "string"
           },
+          "requested_token_type": {
+            "type": "string"
+          },
           "resource": {
             "type": "string"
           },
           "scope": {
+            "type": "string"
+          },
+          "subject_token": {
+            "type": "string"
+          },
+          "subject_token_type": {
             "type": "string"
           }
         },
@@ -9100,6 +9191,9 @@
           "expires_in": {
             "type": "integer"
           },
+          "issued_token_type": {
+            "type": "string"
+          },
           "refresh_token": {
             "type": "string"
           },
@@ -9114,7 +9208,6 @@
           "access_token",
           "token_type",
           "expires_in",
-          "refresh_token",
           "scope"
         ]
       },

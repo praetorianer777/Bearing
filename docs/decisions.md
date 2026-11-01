@@ -300,3 +300,21 @@ page act for nobody and run as `bearing_admin`; a person reads and revokes
 their own grants under row level security, never their hashes. Who
 allowed or connected what is logged rather than written to the
 organisation's audit trail, which records changes to the model.
+
+## Partners trade realm tokens for grants that reach the whole API
+
+A partner app such as Rotor already signed the person in through the
+realm, so asking them again on a consent page would be a second sign-in
+for nothing. An administrator registers the partner with its realm
+client, and the partner trades the person's realm access token for a
+grant (RFC 8693), as with Stator. The token must name Bearing among its
+audiences and have been issued to that client, so a token meant for
+another service cannot be replayed here. The grant reaches the whole
+API, not only MCP, because partners read the organisation through the
+API's own operations; the person's role and the grant's scopes still
+hold. The person's account is found or made as single sign-on would, so
+token exchange is no back door past admission. A narrower token traded
+from an app's own grant lets the app hand a run less than it holds. The
+stack's realm carries `bearing-partner`, a client of Bearing's own that
+stands in for a partner in the tests; real partners need an audience
+mapper for `bearing` in Dynamo's realm when Bearing joins the suite.

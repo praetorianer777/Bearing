@@ -94,6 +94,8 @@ describe("connected apps", () => {
   const app = (status: string) => ({
     id: "c1",
     name: "Assistant",
+    kind: "registered",
+    keycloakClientId: "",
     status,
     scopes: ["read", "write"],
     clientUri: "",
@@ -131,6 +133,32 @@ describe("connected apps", () => {
     expect(await screen.findByText("You have not connected any app.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Remove Stranger" }));
     await waitFor(() => expect(within(screen.getByRole("list", { name: "Every app" })).queryByText("Stranger")).not.toBeInTheDocument());
+  });
+
+  it("registers a partner app and shows its secret once", async () => {
+    const registered: unknown[] = [];
+    let apps: object[] = [];
+    fakeAPI({
+      ...signedInAs(),
+      "GET /connected-apps": () => ({ body: { grants: [] } }),
+      "GET /oauth/clients": () => ({ body: { clients: apps } }),
+      "POST /oauth/clients": (body) => {
+        registered.push(body);
+        const made = { ...app("allowed"), id: "p1", name: "Rotor", kind: "partner", keycloakClientId: "rotor", redirectUris: [], people: 0 };
+        apps = [made];
+        return { status: 201, body: { client: made, secret: "bearing_ocs_shown_once" } };
+      },
+    });
+    const user = userEvent.setup();
+    renderApp("/settings/connected-apps");
+    const form = await screen.findByRole("region", { name: "Register a partner app" });
+    await user.type(within(form).getByLabelText("Name"), "Rotor");
+    await user.type(within(form).getByLabelText("Realm client"), "rotor");
+    await user.click(within(form).getByRole("checkbox", { name: /It may change/ }));
+    await user.click(within(form).getByRole("button", { name: "Register" }));
+    expect(await within(form).findByRole("status")).toHaveTextContent("bearing_ocs_shown_once");
+    expect(registered).toEqual([{ name: "Rotor", keycloakClientId: "rotor", write: true }]);
+    expect(await screen.findByText(/partner, through the realm client rotor/)).toBeInTheDocument();
   });
 
   it("shows somebody who is no administrator their own apps only", async () => {
