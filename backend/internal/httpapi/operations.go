@@ -45,6 +45,9 @@ type operation struct {
 	// mcp is the MCP endpoint, the one a grant made on the consent page acts at, and which answers a token that may
 	// only read itself.
 	mcp bool
+	// session operations need somebody signed in to a session, not a token: making tokens and connecting apps, so a
+	// token that leaks cannot make itself a lasting one.
+	session bool
 }
 
 // operations is the table. Order is by area, then by path; paths are relative to APIPrefix except the root ones.
@@ -386,6 +389,15 @@ var operations = []operation{
 	{method: http.MethodDelete, path: "/people/{personID}/photo", id: "deletePhoto", handle: (*Server).handleDeletePhoto, tag: "people",
 		summary: "Take a person's photo away.", role: editor, responses: map[int]any{http.StatusNoContent: nil}},
 
+	{method: http.MethodGet, path: "/tokens", id: "personalTokens", handle: (*Server).handlePersonalTokens, tag: "tokens",
+		summary:   "Your personal access tokens that have not run out, newest first; never their secrets.",
+		responses: map[int]any{http.StatusOK: env{"tokens": []personalTokenResponse{}}}},
+	{method: http.MethodPost, path: "/tokens", id: "makePersonalToken", handle: (*Server).handleMakePersonalToken, tag: "tokens",
+		summary:     "Make a personal access token (bearing_pat_) for a script or an assistant, reading or acting as far as you may, for 1 to 365 days. Its secret is shown this once.",
+		description: "Signed in only: a token cannot make another.", session: true, request: personalTokenRequest{},
+		responses: map[int]any{http.StatusCreated: env{"token": personalTokenResponse{}, "secret": ""}}},
+	{method: http.MethodDelete, path: "/tokens/{tokenID}", id: "revokePersonalToken", handle: (*Server).handleRevokePersonalToken, tag: "tokens",
+		summary: "Revoke one of your personal access tokens; it stops working at once.", responses: map[int]any{http.StatusNoContent: nil}},
 	{method: http.MethodPost, path: oauth.MCPPath, id: "mcp", handle: (*Server).handleMCP, tag: "mcp", mcp: true, request: mcpRequest{},
 		summary: "The MCP endpoint (Streamable HTTP, protocol 2025-11-25 and 2025-06-18): an assistant asks the organisation questions as the person signed in or whose token it holds.",
 		description: "JSON-RPC 2.0, one request at a time: initialize, ping, tools/list and tools/call. Every tool reads, as the person, within their role. " +
@@ -414,7 +426,7 @@ var operations = []operation{
 		responses: map[int]any{http.StatusOK: consentResponse{}}},
 	{method: http.MethodPost, path: "/oauth/consent", id: "decide", handle: (*Server).handleDecide, tag: "oauth",
 		summary: "Connect the app, or cancel; the answer says where the browser goes back to. An administrator connecting an app nobody allowed allows it for everybody.",
-		request: consentRequest{}, responses: map[int]any{http.StatusOK: redirectResponse{}}},
+		session: true, request: consentRequest{}, responses: map[int]any{http.StatusOK: redirectResponse{}}},
 	{method: http.MethodPost, path: oauth.TokenPath, id: "token", handle: (*Server).handleToken, tag: "oauth",
 		summary: "The token endpoint: an authorization code or a refresh token traded for an access token of an hour and a new refresh token; or a token exchanged (RFC 8693), a partner's realm token for a grant, or an app's own access token for a narrower one.",
 		public:  true, form: tokenForm{}, responses: map[int]any{http.StatusOK: oauth.TokenResponse{}, http.StatusBadRequest: oauth.Error{}}},

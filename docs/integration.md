@@ -45,6 +45,17 @@ apps; administrators remove an app for everybody there too. Tokens carry
 their kind in their prefix: `bearing_oat_` access, `bearing_ort_`
 refresh, `bearing_ocs_` client secret.
 
+## Personal access tokens
+
+A script or an assistant that cannot connect on a consent page uses a
+personal access token, which its person makes under Access tokens in the
+account menu: `bearing_pat_`, read only or acting as far as the person may,
+for 7 days up to a year, shown once. It is sent as
+`Authorization: Bearer <token>` to the API and to the MCP endpoint alike,
+and stops working the moment it is revoked or its day passes. A token can
+neither make another token nor connect an app; that needs the person
+signed in.
+
 ## Trading a realm token
 
 A partner app of the suite that signs people in through the realm is

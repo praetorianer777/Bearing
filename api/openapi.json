@@ -46,6 +46,9 @@
       "name": "themes"
     },
     {
+      "name": "tokens"
+    },
+    {
       "name": "units"
     }
   ],
@@ -5822,6 +5825,135 @@
         }
       }
     },
+    "/tokens": {
+      "get": {
+        "operationId": "personalTokens",
+        "summary": "Your personal access tokens that have not run out, newest first; never their secrets.",
+        "tags": [
+          "tokens"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tokens": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PersonalTokenResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "tokens"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "makePersonalToken",
+        "summary": "Make a personal access token (bearing_pat_) for a script or an assistant, reading or acting as far as you may, for 1 to 365 days. Its secret is shown this once.",
+        "description": "Signed in only: a token cannot make another.",
+        "tags": [
+          "tokens"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "secret": {
+                      "type": "string"
+                    },
+                    "token": {
+                      "$ref": "#/components/schemas/PersonalTokenResponse"
+                    }
+                  },
+                  "required": [
+                    "secret",
+                    "token"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tokens/{tokenID}": {
+      "delete": {
+        "operationId": "revokePersonalToken",
+        "summary": "Revoke one of your personal access tokens; it stops working at once.",
+        "tags": [
+          "tokens"
+        ],
+        "parameters": [
+          {
+            "name": "tokenID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/unit-types": {
       "get": {
         "operationId": "unitTypes",
@@ -8163,6 +8295,55 @@
           "hasPhoto"
         ]
       },
+      "PersonalTokenRequest": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "write": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "write",
+          "days"
+        ]
+      },
+      "PersonalTokenResponse": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "write": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "write",
+          "createdAt",
+          "expiresAt"
+        ]
+      },
       "PhotoRequest": {
         "type": "object",
         "properties": {
@@ -9490,7 +9671,7 @@
       "bearer": {
         "type": "http",
         "scheme": "bearer",
-        "description": "An access token a connected app holds."
+        "description": "A personal access token (bearing_pat_), or an access token a connected app holds (bearing_oat_)."
       },
       "session": {
         "type": "apiKey",

@@ -134,6 +134,10 @@ func (s *Server) guard(op operation, h http.Handler) http.Handler {
 			respondError(w, r, s.Log, ErrForbidden("This token was given to a connected app for the MCP endpoint, and acts there only."))
 			return
 		}
+		if p.Via != nil && op.session {
+			respondError(w, r, s.Log, ErrForbidden("Do this signed in to Bearing; a token may not."))
+			return
+		}
 		if p.Via != nil && p.Via.ReadOnly && !safeMethod(op.method) && !op.mcp {
 			respondError(w, r, s.Log, ErrForbidden("This token may only read."))
 			return
