@@ -38,9 +38,11 @@ type CapacityQuery struct {
 // CapacityPeriod is a subject's capacity over a period of the range: FTE is the full-time equivalents its holdings
 // add up to, a holding counting its share of the person's week; Seats, Filled and Vacant are for positions and
 // units, a position's filled seats being at most its seats; People is the most people holding on one day of it.
+// Target is the mean of the subject's target on the days of the period that have one, nil when none has.
 type CapacityPeriod struct {
 	From, To Day
 	FTE      float64
+	Target   *float64
 	Seats    *float64
 	Filled   *float64
 	Vacant   *float64
@@ -51,6 +53,7 @@ type capacityDay struct {
 	day                time.Time
 	fte, seats, filled float64
 	people             int
+	target             *float64
 }
 
 // capacityDays are the days capacity is counted on: the range's first and every day in it on which something it
@@ -137,18 +140,21 @@ func (s *Service) Capacity(ctx context.Context, q CapacityQuery) ([]CapacityPeri
 		return nil, ErrCapacityRange
 	}
 	var (
-		sql, exists string
-		id          uuid.UUID
-		missing     error
-		seated      bool
+		sql, exists, targeted string
+		id                    uuid.UUID
+		missing               error
+		seated                bool
 	)
 	switch {
 	case q.UnitID != nil:
 		sql, exists, id, missing, seated = unitCapacitySQL, `SELECT EXISTS (SELECT 1 FROM unit WHERE id = $1)`, *q.UnitID, ErrNotFound, true
+		targeted = "unit_id"
 	case q.PositionID != nil:
 		sql, exists, id, missing, seated = positionCapacitySQL, `SELECT EXISTS (SELECT 1 FROM position WHERE id = $1)`, *q.PositionID, ErrPositionNotFound, true
+		targeted = "position_id"
 	case q.RoleID != nil:
 		sql, exists, id, missing = roleCapacitySQL, `SELECT EXISTS (SELECT 1 FROM role WHERE id = $1)`, *q.RoleID, ErrRoleNotFound
+		targeted = "role_id"
 	case q.PersonID != nil:
 		sql, exists, id, missing = personCapacitySQL, `SELECT EXISTS (SELECT 1 FROM person WHERE id = $1)`, *q.PersonID, ErrPersonNotFound
 	default:
@@ -158,7 +164,10 @@ func (s *Service) Capacity(ctx context.Context, q CapacityQuery) ([]CapacityPeri
 	if q.UnitID != nil {
 		args = append(args, q.SubUnits)
 	}
-	var days []capacityDay
+	var (
+		days    []capacityDay
+		targets []Target
+	)
 	err := s.DB.Read(ctx, func(ctx context.Context, tx db.DBTX) error {
 		var found bool
 		if err := tx.QueryRow(ctx, exists, id).Scan(&found); err != nil {
@@ -176,12 +185,31 @@ func (s *Service) Capacity(ctx context.Context, q CapacityQuery) ([]CapacityPeri
 			err := row.Scan(&d.day, &d.fte, &d.seats, &d.filled, &d.people)
 			return d, err
 		})
+		if err != nil || targeted == "" {
+			return err
+		}
+		rows, err = tx.Query(ctx, `SELECT `+targetColumns+` FROM target WHERE `+targeted+` = $1
+			AND valid_from <= $3 AND (valid_to IS NULL OR valid_to > $2) ORDER BY valid_from`, id, q.From.Time(), q.To.Time())
+		if err != nil {
+			return err
+		}
+		targets, err = pgx.CollectRows(rows, scanTarget)
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
-	return periodsOf(everyDay(days, q.From, q.To), q.By, seated), nil
+	every := everyDay(days, q.From, q.To)
+	for i := range every {
+		on := DayOf(every[i].day)
+		for _, t := range targets {
+			if !on.Before(t.From) && (t.To == nil || on.Before(*t.To)) {
+				fte := t.FTE
+				every[i].target = &fte
+			}
+		}
+	}
+	return periodsOf(every, q.By, seated), nil
 }
 
 // everyDay spreads what was counted on the days something changed over every day of the range, each day taking the
@@ -195,7 +223,7 @@ func everyDay(changes []capacityDay, from, to Day) []capacityDay {
 			last = changes[next]
 			next++
 		}
-		last.day = day
+		last.day, last.target = day, nil
 		out = append(out, last)
 	}
 	return out
@@ -236,16 +264,24 @@ func periodsOf(days []capacityDay, by string, seated bool) []CapacityPeriod {
 		if len(counted) == 0 {
 			counted = span
 		}
-		var fte, seats, filled float64
-		people := 0
+		var fte, seats, filled, target float64
+		people, targeted := 0, 0
 		for _, d := range counted {
 			fte += d.fte
 			seats += d.seats
 			filled += d.filled
 			people = max(people, d.people)
+			if d.target != nil {
+				target += *d.target
+				targeted++
+			}
 		}
 		n := float64(len(counted))
 		p := CapacityPeriod{From: DayOf(span[0].day), To: DayOf(span[len(span)-1].day), FTE: round2(fte / n), People: people}
+		if targeted > 0 {
+			mean := round2(target / float64(targeted))
+			p.Target = &mean
+		}
 		if seated {
 			s, f := round2(seats/n), round2(filled/n)
 			v := round2(s - f)
