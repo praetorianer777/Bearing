@@ -9,7 +9,7 @@ export type Gap = components["schemas"]["GapResponse"];
 /** Whose capacity or targets: a unit (with everything inside it), a position or a role. */
 export type TargetSubject = { unitId: string } | { positionId: string } | { roleId: string };
 
-const subjectKey = (subject: TargetSubject) => Object.entries(subject).flat().join(":");
+const subjectKey = (subject: Record<string, string>) => Object.entries(subject).flat().join(":");
 
 /** A subject's targets, oldest first. */
 export const useTargets = (subject: TargetSubject) =>
@@ -63,3 +63,38 @@ export const useGaps = (range: { from: string; to: string; unitId?: string }) =>
         await api.GET("/gaps", { params: { query: { from: range.from, to: range.to, ...(range.unitId ? { unitId: range.unitId, subUnits: "true" } : {}) } } }),
       ).gaps,
   });
+
+export type CapacityBy = "week" | "month";
+
+/** Who a row of the planning grid counts: a unit with everything inside it, a position or a person. */
+export type PlanningSubject = { unitId: string } | { positionId: string } | { personId: string };
+
+/** A subject's capacity period by period over a range. */
+export const useCapacityRange = (subject: PlanningSubject, range: { from: string; to: string; by: CapacityBy }) =>
+  useQuery({
+    queryKey: ["capacity", subjectKey(subject), range.from, range.to, range.by],
+    queryFn: async () => {
+      const query = { from: range.from, to: range.to, by: range.by };
+      const answer =
+        "unitId" in subject
+          ? await api.GET("/units/{unitID}/capacity", { params: { path: { unitID: subject.unitId }, query: { ...query, subUnits: "true" } } })
+          : "positionId" in subject
+            ? await api.GET("/positions/{positionID}/capacity", { params: { path: { positionID: subject.positionId }, query } })
+            : await api.GET("/people/{personID}/capacity", { params: { path: { personID: subject.personId }, query } });
+      return unwrap(answer).periods;
+    },
+  });
+
+export type PlannedHolding = { positionId: string; personId?: string; name?: string; from: string; to?: string; share: number };
+
+/** Plans a holding into a position: of somebody in the organisation, or of somebody new added as external first. */
+export const usePlanHolding = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ positionId, personId, name, from, to, share }: PlannedHolding) => {
+      const holder = personId ?? unwrap(await api.POST("/people", { body: { name: name ?? "" } })).person.id;
+      return unwrap(await api.POST("/holdings", { body: { personId: holder, positionId, from, share, ...(to ? { to } : {}) } })).holding;
+    },
+    onSuccess: () => Promise.all(["capacity", "gaps", "holdings", "organisation", "people"].map((key) => client.invalidateQueries({ queryKey: [key] }))),
+  });
+};

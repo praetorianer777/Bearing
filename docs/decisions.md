@@ -403,3 +403,16 @@ it is a gap from its first day, and a planned holding closes it from
 its first day. Positions are read together in one statement; targets
 and roles reuse the capacity count, which keeps every gap equal to what
 the capacity answers say.
+
+## The planning grid reads one row at a time
+
+The planning page draws the unit tree as rows and the weeks or months of
+a range as columns, and each row asks the capacity of its own subject:
+a unit with everything inside it, a position, or a person holding it in
+the range. Only the rows shown are asked for, so opening a unit costs as
+many small reads as it has rows, and a large organisation never loads
+whole. A hire or a handover is planned where the gap shows, as a holding
+planned ahead of somebody in the organisation or of somebody new added
+as external; it needs nothing a holding does not already have, and the
+grid and the gaps close from its first day. The CSV is what is shown,
+one line per row and period, so a spreadsheet can sum and chart it.

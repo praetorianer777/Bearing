@@ -21,6 +21,12 @@ const gap = (kind: string, subjectKind: string, subjectId: string, name: string,
   size,
 });
 
+const empty = {
+  "GET /units": { body: { asOf: "2026-11-02", units: [] } },
+  "GET /positions": { body: { asOf: "2026-11-02", positions: [] } },
+  "GET /people": { body: { asOf: "2026-11-02", people: [] } },
+};
+
 const gaps = [
   gap("vacant", "position", "hoq", "Head of Quality", "2026-11-02", "2026-12-31", 1),
   gap("vacant", "position", "an", "Analyst", "2026-11-02", "2026-11-02", 1.5),
@@ -35,6 +41,7 @@ describe("the planning page", () => {
     const asked: string[] = [];
     fakeAPI({
       ...signedInAs(),
+      ...empty,
       "GET /gaps": (_, url) => {
         asked.push(url);
         return { body: { from: "2026-11-02", to: "2027-01-31", gaps } };
@@ -68,7 +75,7 @@ describe("the planning page", () => {
   });
 
   it("is in the sidebar, and says when there are no gaps or they cannot be read", async () => {
-    fakeAPI({ ...signedInAs(), "GET /gaps": (_, url) => (url.includes("2026-01") ? { status: 500, body: {} } : { body: { gaps: [] } }) });
+    fakeAPI({ ...signedInAs(), ...empty, "GET /gaps": (_, url) => (url.includes("2026-01") ? { status: 500, body: {} } : { body: { gaps: [] } }) });
     const { router } = renderApp("/planning");
     expect(within(await screen.findByRole("navigation", { name: "Main" })).getByRole("link", { name: "Planning" })).toHaveAttribute("aria-current", "page");
     expect(await screen.findByText("No gaps in these weeks.")).toBeVisible();
@@ -78,7 +85,7 @@ describe("the planning page", () => {
 
   it("speaks German", async () => {
     applyLanguage("de");
-    fakeAPI({ ...signedInAs(), "GET /gaps": { body: { gaps: gaps.slice(0, 3) } } });
+    fakeAPI({ ...signedInAs(), ...empty, "GET /gaps": { body: { gaps: gaps.slice(0, 3) } } });
     renderApp("/planning");
     const list = await screen.findByRole("list", { name: "Lücken" });
     expect(

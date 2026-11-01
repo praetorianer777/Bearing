@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { type Gap, useGaps } from "@/api/capacity";
 import { PositionName, RoleName, Section, UnitName } from "@/features/org/common";
 import { t, useLanguage } from "@/i18n";
@@ -64,5 +65,12 @@ export function Gaps({ gaps }: { gaps: Gap[] }) {
 export function UnitGaps({ unitId, asOf }: { unitId: string; asOf: string }) {
   useLanguage();
   const gaps = useGaps({ unitId, from: asOf, to: daysAfter(asOf, 90) });
-  return <Section title={t.gaps.title}>{gaps.isError ? <p className="text-danger">{t.gaps.unreachable}</p> : gaps.data && <Gaps gaps={gaps.data} />}</Section>;
+  return (
+    <Section title={t.gaps.title}>
+      {gaps.isError ? <p className="text-danger">{t.gaps.unreachable}</p> : gaps.data && <Gaps gaps={gaps.data} />}
+      <Link to="/planning" search={{ unit: unitId, from: asOf }} className="mt-3 inline-block text-accent hover:underline">
+        {t.planning.open}
+      </Link>
+    </Section>
+  );
 }
