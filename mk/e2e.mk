@@ -5,6 +5,7 @@ PLAYWRIGHT_VERSION := $(shell sed -n 's/.*"@playwright\/test": *"\([0-9][0-9.]*\
 PLAYWRIGHT_IMAGE ?= mcr.microsoft.com/playwright:v$(PLAYWRIGHT_VERSION)-noble
 E2E_NPM_CACHE := $(ROOT)/.cache/npm
 ONLY ?=
+POC_SCREENSHOTS ?=
 
 # On the host's network, so the browser reaches the stack exactly as a person at this machine does. --ipc=host
 # because Chromium runs out of the default 64 MB of shared memory.
@@ -17,6 +18,7 @@ DOCKER_PLAYWRIGHT = docker run --rm --init --ipc=host --network host --tmpfs /tm
 	-e HOME=/tmp \
 	-e CI \
 	-e ONLY='$(ONLY)' \
+	-e POC_SCREENSHOTS='$(POC_SCREENSHOTS)' \
 	-w /src/e2e $(PLAYWRIGHT_IMAGE)
 
 # npm ci only when the lock file changed since the last install, which keeps a rerun of one spec to seconds.
@@ -33,3 +35,7 @@ test-e2e: ## Run the browser suite against this checkout's running stack: ONLY=<
 		|| { echo "The stack for this checkout is not running. Start it with make up or make stack-up, then run this again."; exit 1; }
 	@mkdir -p $(E2E_NPM_CACHE) $(REPORTS)
 	$(DOCKER_PLAYWRIGHT) sh -c '$(E2E_INSTALL) && npx tsc --noEmit && npx playwright test'
+
+.PHONY: poc-screenshots
+poc-screenshots: ## Run the proof of concept's walkthrough and keep its pictures in docs/poc for docs/poc.md
+	@$(MAKE) --no-print-directory test-e2e ONLY=walkthrough POC_SCREENSHOTS=1

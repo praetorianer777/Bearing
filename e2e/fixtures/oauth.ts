@@ -7,7 +7,7 @@ const callback = "http://127.0.0.1:9/callback";
  * Registers an app, has the person signed in on page connect it on the consent page, and redeems the code as the app
  * would: the access token is what the app then acts with.
  */
-export async function connectApp(page: Page, name: string, scope = "read"): Promise<string> {
+export async function connectApp(page: Page, name: string, scope = "read", onConsent?: () => Promise<void>): Promise<string> {
   const registered = await page.request.post("/api/v1/oauth/register", {
     data: { client_name: name, redirect_uris: [callback], token_endpoint_auth_method: "none" },
   });
@@ -29,6 +29,8 @@ export async function connectApp(page: Page, name: string, scope = "read"): Prom
     scope,
   });
   await page.goto(`/api/v1/oauth/authorize?${query}`);
+  await expect(page.getByRole("button", { name: "Connect" })).toBeVisible();
+  await onConsent?.();
   await page.getByRole("button", { name: "Connect" }).click();
   await expect.poll(() => arrived?.searchParams.get("code")).toBeTruthy();
   const granted = await page.request.post("/api/v1/oauth/token", {

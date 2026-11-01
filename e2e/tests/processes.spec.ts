@@ -1,41 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { arrange, condition, connect, node, pickArrow, rename } from "../fixtures/canvas";
 import { signIn } from "../fixtures/session";
-
-const node = (page: Page, label: string) => page.getByRole("article", { name: label });
-
-/** Draws an arrow as a person does: from the lower handle of one node to the upper handle of another. */
-async function connect(page: Page, from: string, to: string) {
-  await node(page, from).locator(".react-flow__handle-bottom").dragTo(node(page, to).locator(".react-flow__handle-top"));
-}
-
-/** Arranges the flow and waits until the view has stopped moving to fit it, so drags start where the nodes are. */
-async function arrange(page: Page) {
-  await page.getByRole("button", { name: "Arrange" }).click();
-  const viewport = page.locator(".react-flow__viewport");
-  let last = "";
-  await expect(async () => {
-    const now = (await viewport.getAttribute("style")) ?? "";
-    const settled = now === last;
-    last = now;
-    expect(settled).toBe(true);
-  }).toPass({ intervals: [150] });
-}
-
-async function rename(page: Page, label: string, name: string) {
-  await node(page, label).click();
-  const field = page.getByRole("region", { name: "Node" }).getByLabel("Name");
-  await field.fill(name);
-  await field.blur();
-}
-
-// A straight arrow is a line with no width, which Playwright counts as hidden; the click goes to it directly.
-const pickArrow = (page: Page, arrow: string) => page.getByLabel(arrow, { exact: true }).dispatchEvent("click");
-
-async function condition(page: Page, arrow: string, label: string) {
-  await pickArrow(page, arrow);
-  await page.getByRole("region", { name: "Arrow" }).getByLabel("Condition").fill(label);
-}
 
 test("an editor draws a process with a decision and publishes it", async ({ page }) => {
   await signIn(page);
