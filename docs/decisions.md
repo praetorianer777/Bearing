@@ -360,3 +360,18 @@ was typed comes first, then one that starts so, then the words' weights.
 One statement searches every kind, so the "as of" day, the newest
 published version of a process and the database's policies hold for
 each the same way.
+
+## Capacity is counted on the days something changes
+
+Capacity is the sum of the holdings' shares, read from the same dated
+relations as every other "as of" answer, so it needs no table of its own
+that could fall out of step. Over a range it is counted only on the
+range's first day and the days a holding, placement, carried role,
+position, unit or leaver starts or ends, and every day between takes the
+count before it: a two-year range of a unit and its sub-units costs a
+few dozen days of work rather than seven hundred. A unit's sub-units are
+those placed under it on each day, so a team counts where it sat then.
+A position's filled seats are at most its seats, so one held twice over
+does not hide a vacancy elsewhere in the unit. Weeks start on Monday,
+and a week or a month is the mean of its working days, so a weekend
+nobody works does not halve it.
