@@ -95,6 +95,12 @@ func TestEveryChangeIsAuditedWithWhoMadeIt(t *testing.T) {
 	var tables []string
 	for _, e := range log.Events {
 		tables = append(tables, e.Table+" "+e.Operation)
+		if _, ok := e.Before["search_vector"]; ok {
+			t.Errorf("%s %s logs the search vector before", e.Table, e.Operation)
+		}
+		if _, ok := e.After["search_vector"]; ok {
+			t.Errorf("%s %s logs the search vector after", e.Table, e.Operation)
+		}
 		if e.ActorID == nil || *e.ActorID != editorID.String() || e.ActorName == nil || *e.ActorName != "editor" {
 			t.Errorf("%s %s was made by %v %v, want the editor", e.Table, e.Operation, e.ActorID, e.ActorName)
 		}
