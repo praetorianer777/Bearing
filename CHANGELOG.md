@@ -20,6 +20,9 @@
   held against the target with gaps marked; editors plan a hire or a
   handover into a position where a gap shows; the grid downloads as CSV
   (#90).
+- **`capacity@1`:** offered to partners at `/meta`, with people also named
+  by the realm's issuer and `sub`. A person's capacity is for the person,
+  their managers and editors; `docs/privacy.md` says who reads what (#91).
 - **Search:** one box along the top finds people, positions, units, roles,
   processes and their steps as they are typed, ignoring case and accents
   and forgiving a slip; Enter opens every result on the search page, as of

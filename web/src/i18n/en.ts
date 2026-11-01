@@ -394,6 +394,7 @@ export const en = {
     legend: "Each cell is the full-time equivalents held, then the target. Marked cells miss people: under target, or with seats nobody fills.",
     unfold: (name: string) => `Show what is inside ${name}`,
     fold: (name: string) => `Hide what is inside ${name}`,
+    hidden: "Only the person, their managers and editors see a person's capacity.",
     rowUnreachable: "This row could not be read.",
     unreachable: "The organisation could not be read. Try again in a moment.",
     export: "Download as CSV",

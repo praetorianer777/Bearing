@@ -416,3 +416,15 @@ planned ahead of somebody in the organisation or of somebody new added
 as external; it needs nothing a holding does not already have, and the
 grid and the gaps close from its first day. The CSV is what is shown,
 one line per row and period, so a spreadsheet can sum and chart it.
+
+## A person's capacity is for them, their managers and editors
+
+Holdings and their shares are the organisation's structure, readable by
+everybody signed in, as the chart shows them; so are sums over a unit, a
+position or a role. A person's own capacity over time is narrower: it is
+where partners will add their load and the days they are away, and those
+are for the person, those above them in the management chain today, and
+editors. A database function says who that is, and the capacity query
+asks it, so the rule holds for every client and every token alike. Who
+is above whom is read on today, not on the days asked about, as it is
+today's manager who plans.

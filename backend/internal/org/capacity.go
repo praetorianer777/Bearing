@@ -24,6 +24,10 @@ const (
 	ByMonth = "month"
 )
 
+// ErrCapacityHidden is a person's capacity asked by somebody who may not see it: only the person, those above them in
+// the management chain and editors may.
+var ErrCapacityHidden = errors.New("only the person, their managers and editors see a person's capacity")
+
 var ErrCapacityRange = fmt.Errorf("give a range from a day to a day no earlier, at most %d days long", MaxCapacityDays)
 
 // CapacityQuery is whose capacity, over which days, in which periods. Exactly one subject is named; SubUnits
@@ -175,6 +179,15 @@ func (s *Service) Capacity(ctx context.Context, q CapacityQuery) ([]CapacityPeri
 		}
 		if !found {
 			return missing
+		}
+		if q.PersonID != nil {
+			var sees bool
+			if err := tx.QueryRow(ctx, `SELECT current_actor_sees_capacity_of($1)`, id).Scan(&sees); err != nil {
+				return err
+			}
+			if !sees {
+				return ErrCapacityHidden
+			}
 		}
 		rows, err := tx.Query(ctx, sql, args...)
 		if err != nil {

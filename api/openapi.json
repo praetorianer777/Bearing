@@ -2627,6 +2627,75 @@
         "x-bearing-role": "editor"
       }
     },
+    "/people/by-subject/capacity": {
+      "get": {
+        "operationId": "realmPersonCapacity",
+        "summary": "A person's capacity, the person named as the realm knows them, by issuer and subject.",
+        "description": "from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days. issuer and subject name the person. Only the person, those above them in the management chain today and editors see it.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "issuer",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapacityResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/people/me": {
       "get": {
         "operationId": "myEntry",
@@ -3137,7 +3206,7 @@
       "get": {
         "operationId": "personCapacity",
         "summary": "A person's capacity over a range, period by period: the full-time equivalents of everything they hold, until they leave.",
-        "description": "from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days.",
+        "description": "from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days. Only the person, those above them in the management chain today and editors see it; anybody else is refused.",
         "tags": [
           "capacity"
         ],

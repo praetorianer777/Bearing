@@ -394,6 +394,7 @@ export const de: Messages = {
     legend: "Jede Zelle zeigt die besetzten Vollzeitäquivalente, dann das Soll. Markierte Zellen fehlen Leute: unter Soll oder mit unbesetzten Plätzen.",
     unfold: (name: string) => `Zeigen, was in ${name} ist`,
     fold: (name: string) => `Verbergen, was in ${name} ist`,
+    hidden: "Die Kapazität einer Person sehen nur sie selbst, ihre Vorgesetzten und Bearbeitende.",
     rowUnreachable: "Diese Zeile konnte nicht gelesen werden.",
     unreachable: "Die Organisation konnte nicht gelesen werden. Bitte gleich noch einmal versuchen.",
     export: "Als CSV herunterladen",

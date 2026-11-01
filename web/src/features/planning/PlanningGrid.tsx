@@ -1,6 +1,6 @@
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { api, unwrap } from "@/api/client";
+import { ApiError, api, unwrap } from "@/api/client";
 import { type CapacityBy, type CapacityPeriod, type PlanningSubject, useCapacityRange } from "@/api/capacity";
 import type { Holding } from "@/api/people";
 import type { Person, Position, Unit } from "@/api/org";
@@ -129,9 +129,15 @@ function GridRow({
         </span>
       </th>
       {capacity.isError ? (
-        <td colSpan={periods.length} className="border-b border-border px-2 py-1.5 text-danger">
-          {t.planning.rowUnreachable}
-        </td>
+        capacity.error instanceof ApiError && capacity.error.status === 403 ? (
+          <td colSpan={periods.length} className="border-b border-border px-2 py-1.5 text-ink-muted">
+            {t.planning.hidden}
+          </td>
+        ) : (
+          <td colSpan={periods.length} className="border-b border-border px-2 py-1.5 text-danger">
+            {t.planning.rowUnreachable}
+          </td>
+        )
       ) : (
         periods.map((p) => <Cell key={p.from} period={byStart.get(p.from)} row={row} />)
       )}

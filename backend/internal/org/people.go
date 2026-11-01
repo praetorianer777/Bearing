@@ -148,6 +148,23 @@ func (s *Service) Person(ctx context.Context, id uuid.UUID) (Person, error) {
 	return out, err
 }
 
+// PersonInRealm is the person the realm knows by issuer and subject.
+func (s *Service) PersonInRealm(ctx context.Context, issuer, subject string) (Person, error) {
+	var out Person
+	err := s.DB.Read(ctx, func(ctx context.Context, q db.DBTX) error {
+		rows, err := q.Query(ctx, `SELECT `+personColumns+` FROM person p WHERE p.issuer = $1 AND p.subject = $2`, issuer, subject)
+		if err != nil {
+			return err
+		}
+		out, err = pgx.CollectExactlyOneRow(rows, scanPerson)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrPersonNotFound
+		}
+		return err
+	})
+	return out, err
+}
+
 // Me is the person linked to the account the context acts for.
 func (s *Service) Me(ctx context.Context) (Person, error) {
 	actor, ok := db.UserFrom(ctx)
