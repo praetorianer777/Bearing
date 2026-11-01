@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { type Member, useUnitPage } from "@/api/org";
 import { UNIT_ICONS, type UnitIconName } from "@/components/icons";
 import { t, useLanguage } from "@/i18n";
+import { UnitGaps } from "@/features/planning/GapList";
 import { TargetSection } from "@/features/planning/TargetSection";
 import { Duties } from "@/features/processes/Duties";
 import { AsOfPicker, Changes, PersonName, PositionName, Section, today, UnitName } from "./common";
@@ -142,6 +143,7 @@ export function UnitPage({ unitId, search, onSearch }: { unitId: string; search:
         )}
       </Section>
       <TargetSection subject={{ unitId: unit.id }} asOf={asOf} />
+      <UnitGaps unitId={unit.id} asOf={asOf} />
       <Duties subject={{ unitId: unit.id }} asOf={asOf} />
       <Changes subject={{ kind: "units", id: unit.id }} />
     </div>

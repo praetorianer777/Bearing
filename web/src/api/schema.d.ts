@@ -336,6 +336,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/gaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where people are missing, or too many, over a range: vacant seats, capacity under or over target, and roles nobody or only one person holds, earliest first.
+         * @description from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on, at most 731 days. unitId keeps to a unit, with subUnits=true to the units placed under it on some day of the range too; left out, the whole organisation. Each gap is a run of days of one size; a unit's target is compared with the unit counted with its sub-units.
+         */
+        get: operations["gaps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/group-grants": {
         parameters: {
             query?: never;
@@ -2207,6 +2227,26 @@ export interface components {
             operation: string;
             table: string;
         };
+        GapResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from: string;
+            kind: string;
+            name: string;
+            size: number;
+            /** Format: uuid */
+            subjectId: string;
+            subjectKind: string;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            to: string;
+            /** Format: uuid */
+            unitId: string | null;
+        };
         GrantResponse: {
             app: string;
             /** Format: uuid */
@@ -3616,6 +3656,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DemoResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    gaps: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                unitId?: string;
+                subUnits?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        from: string;
+                        gaps: components["schemas"]["GapResponse"][];
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        to: string;
+                    };
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */

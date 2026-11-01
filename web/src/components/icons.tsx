@@ -55,6 +55,14 @@ export const ProcessIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const PlanningIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="1.5" />
+    <path d="M3 9h18M9 4v16" />
+    <path d="M12 14h3M12 17h6" />
+  </Icon>
+);
+
 export const SearchIcon = (p: IconProps) => (
   <Icon {...p}>
     <circle cx="11" cy="11" r="6.5" />

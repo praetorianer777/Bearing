@@ -389,3 +389,17 @@ department plans for the whole department, so the page compares it with
 the unit's capacity counted with its sub-units. Capacity answers carry
 the target day by day, a period's being the mean of its days that have
 one.
+
+## Gaps are runs of days of one size
+
+A gap is a subject missing people, or having more than its target, over
+a run of days on which the shortfall keeps one size: a seat half filled
+for three weeks and then empty for two is two gaps, each saying exactly
+what is missing when. Bearing finds four kinds from its own data: seats
+nobody fills, capacity under or over a target, roles nobody holds, and
+roles only one person holds, which have nobody to stand in. A holding
+ending without a successor needs no kind of its own: the vacancy after
+it is a gap from its first day, and a planned holding closes it from
+its first day. Positions are read together in one statement; targets
+and roles reuse the capacity count, which keeps every gap equal to what
+the capacity answers say.

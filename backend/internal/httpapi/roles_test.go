@@ -142,6 +142,7 @@ var mayCall = map[string]auth.Role{
 	"roleCapacity":         "",
 	"personCapacity":       "",
 	"targets":              "",
+	"gaps":                 "",
 	"setTarget":            auth.RoleEditor,
 	"removeTarget":         auth.RoleEditor,
 	"quickSearch":          "",
