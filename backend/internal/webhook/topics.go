@@ -13,10 +13,16 @@ const (
 	TopicReportingLineChanged  = "reporting_line.changed"
 	TopicUnitChanged           = "unit.changed"
 	TopicResponsibilityChanged = "responsibility.changed"
+	TopicHoldingPlanned        = "holding.planned"
+	TopicHoldingStarted        = "holding.started"
+	TopicHoldingEnded          = "holding.ended"
+	TopicPersonLeft            = "person.left"
+	TopicGapChanged            = "capacity.gap_changed"
 )
 
 // Topics are the events an endpoint may take besides TopicAny.
-var Topics = []string{TopicHolderChanged, TopicVacated, TopicReportingLineChanged, TopicUnitChanged, TopicResponsibilityChanged}
+var Topics = []string{TopicHolderChanged, TopicVacated, TopicReportingLineChanged, TopicUnitChanged, TopicResponsibilityChanged,
+	TopicHoldingPlanned, TopicHoldingStarted, TopicHoldingEnded, TopicPersonLeft, TopicGapChanged}
 
 // Change is a row a model table wrote, as webhook_change keeps it.
 type Change struct {
@@ -89,18 +95,30 @@ func Announce(c Change, look Lookup, today string) []Event {
 	case "holding":
 		holding := dated()
 		holding["id"], holding["share"] = c.str("id"), c.row()["share"]
+		var out []Event
 		if role := c.str("role_id"); role != "" {
-			return []Event{{TopicResponsibilityChanged, base(map[string]any{"cause": "role_holder", "role": look.Role(role),
+			out = []Event{{TopicResponsibilityChanged, base(map[string]any{"cause": "role_holder", "role": look.Role(role),
 				"person": look.Person(c.str("person_id")), "holding": holding})}}
+		} else {
+			position := c.str("position_id")
+			out = []Event{{TopicHolderChanged, base(map[string]any{"position": look.Position(position), "person": look.Person(c.str("person_id")),
+				"holding": holding})}}
+			if on := leftOn(c, today); on != "" && look.Vacant(position, on) {
+				out = append(out, Event{TopicVacated, base(map[string]any{"position": look.Position(position), "on": on,
+					"person": look.Person(c.str("person_id"))})})
+			}
 		}
-		position := c.str("position_id")
-		out := []Event{{TopicHolderChanged, base(map[string]any{"position": look.Position(position), "person": look.Person(c.str("person_id")),
-			"holding": holding})}}
-		if on := leftOn(c, today); on != "" && look.Vacant(position, on) {
-			out = append(out, Event{TopicVacated, base(map[string]any{"position": look.Position(position), "on": on,
-				"person": look.Person(c.str("person_id"))})})
+		if topic := lifeOf(c, today); topic != "" {
+			out = append(out, Event{topic, base(HoldingPayload(look, c.row(), holding))})
 		}
 		return out
+	case "person":
+		before, _ := c.Before["left_on"].(string)
+		after, _ := c.After["left_on"].(string)
+		if c.Operation == "update" && after != "" && after != before {
+			return []Event{{TopicPersonLeft, base(map[string]any{"person": look.Person(c.str("id")), "on": after})}}
+		}
+		return nil
 	case "reporting_line":
 		line := dated()
 		line["kind"] = c.row()["kind"]
@@ -127,6 +145,45 @@ func Announce(c Change, look Lookup, today string) []Event {
 			"version": c.row()["number"]})}}
 	}
 	return nil
+}
+
+// HoldingPayload is what a holding's own topics carry: the holding, its person, and the position or the role held.
+func HoldingPayload(look Lookup, row map[string]any, holding map[string]any) map[string]any {
+	str := func(key string) string { v, _ := row[key].(string); return v }
+	out := map[string]any{"holding": holding, "person": look.Person(str("person_id"))}
+	if role := str("role_id"); role != "" {
+		out["role"] = look.Role(role)
+	} else {
+		out["position"] = look.Position(str("position_id"))
+	}
+	return out
+}
+
+// lifeOf is the holding topic a write stands for, if any: one given ahead is planned, one given to hold today has
+// started, one cut short to end by today has ended. The worker announces the starts and ends that come later on
+// their day.
+func lifeOf(c Change, today string) string {
+	from, _ := c.row()["valid_from"].(string)
+	to, _ := c.row()["valid_to"].(string)
+	switch c.Operation {
+	case "insert":
+		if from > today {
+			return TopicHoldingPlanned
+		}
+		if to == "" || to > today {
+			return TopicHoldingStarted
+		}
+	case "update":
+		before, _ := c.Before["valid_to"].(string)
+		if to != "" && to != before && to <= today {
+			return TopicHoldingEnded
+		}
+		was, _ := c.Before["valid_from"].(string)
+		if from != was && from > today {
+			return TopicHoldingPlanned
+		}
+	}
+	return ""
 }
 
 // leftOn is the day a change to a position's holding leaves it, if it does: the new end of a holding cut short, or

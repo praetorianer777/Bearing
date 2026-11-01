@@ -132,6 +132,9 @@ func topicsOf(events []Event) []string {
 
 func TestEachChangeIsAnnouncedAsTheTopicsItMeans(t *testing.T) {
 	look := fakeLookup{vacant: map[string]bool{"p@2026-11-05": true, "p@2026-11-01": true}}
+	if p := HoldingPayload(look, map[string]any{"role_id": "r", "person_id": "x"}, map[string]any{"id": "h"}); p["role"] == nil || p["position"] != nil {
+		t.Errorf("a role's holding says %v", p)
+	}
 	held := map[string]any{"id": "h", "person_id": "x", "position_id": "p", "share": 100, "valid_from": "2026-10-01", "valid_to": nil}
 	ended := map[string]any{"id": "h", "person_id": "x", "position_id": "p", "share": 100, "valid_from": "2026-10-01", "valid_to": "2026-11-05"}
 	actor := uuid.New()
@@ -139,18 +142,23 @@ func TestEachChangeIsAnnouncedAsTheTopicsItMeans(t *testing.T) {
 		change Change
 		want   []string
 	}{
-		"a holder given":         {Change{Table: "holding", Operation: "insert", After: held, ActorID: &actor}, []string{TopicHolderChanged}},
+		"a holder given":         {Change{Table: "holding", Operation: "insert", After: held, ActorID: &actor}, []string{TopicHolderChanged, TopicHoldingStarted}},
+		"a holder planned":       {Change{Table: "holding", Operation: "insert", After: map[string]any{"position_id": "p", "valid_from": "2026-12-01"}}, []string{TopicHolderChanged, TopicHoldingPlanned}},
+		"a start moved ahead":    {Change{Table: "holding", Operation: "update", Before: held, After: map[string]any{"position_id": "q", "valid_from": "2026-12-01"}}, []string{TopicHolderChanged, TopicHoldingPlanned}},
+		"a holding ended today":  {Change{Table: "holding", Operation: "update", Before: held, After: map[string]any{"position_id": "p", "valid_from": "2026-10-01", "valid_to": "2026-11-01"}}, []string{TopicHolderChanged, TopicVacated, TopicHoldingEnded}},
+		"a person leaving":       {Change{Table: "person", Operation: "update", Before: map[string]any{"id": "x"}, After: map[string]any{"id": "x", "left_on": "2026-12-01"}}, []string{TopicPersonLeft}},
+		"a person renamed":       {Change{Table: "person", Operation: "update", Before: map[string]any{"id": "x", "name": "A"}, After: map[string]any{"id": "x", "name": "B"}}, nil},
 		"a holding cut short":    {Change{Table: "holding", Operation: "update", Before: held, After: ended}, []string{TopicHolderChanged, TopicVacated}},
 		"a holding removed":      {Change{Table: "holding", Operation: "delete", Before: held}, []string{TopicHolderChanged, TopicVacated}},
 		"a future one removed":   {Change{Table: "holding", Operation: "delete", Before: map[string]any{"position_id": "p", "valid_from": "2027-01-01"}}, []string{TopicHolderChanged}},
-		"a role held":            {Change{Table: "holding", Operation: "insert", After: map[string]any{"role_id": "r", "person_id": "x"}}, []string{TopicResponsibilityChanged}},
+		"a role held":            {Change{Table: "holding", Operation: "insert", After: map[string]any{"role_id": "r", "person_id": "x"}}, []string{TopicResponsibilityChanged, TopicHoldingStarted}},
 		"a line drawn":           {Change{Table: "reporting_line", Operation: "insert", After: map[string]any{"position_id": "p", "reports_to_id": "q"}}, []string{TopicReportingLineChanged}},
 		"a unit renamed":         {Change{Table: "unit", Operation: "update", After: map[string]any{"id": "u", "name": "U"}}, []string{TopicUnitChanged}},
 		"a unit moved":           {Change{Table: "unit_placement", Operation: "insert", After: map[string]any{"unit_id": "u", "parent_id": "v"}}, []string{TopicUnitChanged}},
 		"a role carried":         {Change{Table: "position_role", Operation: "insert", After: map[string]any{"role_id": "r", "position_id": "p"}}, []string{TopicResponsibilityChanged}},
 		"a deputy named":         {Change{Table: "deputy", Operation: "insert", After: map[string]any{"position_id": "p", "deputy_id": "d", "rank": 1}}, []string{TopicResponsibilityChanged}},
 		"a process published":    {Change{Table: "process_version", Operation: "update", After: map[string]any{"process_id": "pr", "number": 2}}, []string{TopicResponsibilityChanged}},
-		"a table nobody follows": {Change{Table: "person", Operation: "update", After: map[string]any{"id": "x"}}, nil},
+		"a table nobody follows": {Change{Table: "target", Operation: "update", After: map[string]any{"id": "x"}}, nil},
 	} {
 		if got := topicsOf(Announce(c.change, look, "2026-11-01")); !slices.Equal(got, c.want) {
 			t.Errorf("%s: %v, want %v", name, got, c.want)
@@ -284,4 +292,31 @@ func must[T any](v T, err error) T {
 		panic(err)
 	}
 	return v
+}
+
+func TestGapsAreComparedWithoutTheWindowMovingCountingAsAChange(t *testing.T) {
+	position, role := uuid.New(), uuid.New()
+	was := window{From: "2026-11-01", To: "2027-01-30"}
+	now := window{From: "2026-11-02", To: "2027-01-31"}
+	before := []Gap{
+		{Kind: "vacant", SubjectKind: "position", SubjectID: position, From: "2026-11-01", To: "2027-01-30", Size: 1},
+		{Kind: "unheld", SubjectKind: "role", SubjectID: role, From: "2026-11-20", To: "2026-12-01"},
+		{Kind: "under_target", SubjectKind: "unit", SubjectID: role, From: "2026-11-01", To: "2026-11-01", Size: 0.5},
+	}
+	after := []Gap{
+		{Kind: "vacant", SubjectKind: "position", SubjectID: position, From: "2026-11-02", To: "2027-01-31", Size: 1},
+		{Kind: "unheld", SubjectKind: "role", SubjectID: role, From: "2026-11-20", To: "2026-11-25"},
+		{Kind: "single_holder", SubjectKind: "role", SubjectID: role, From: "2026-11-26", To: "2027-01-31", Size: 1},
+	}
+	var got []string
+	for _, e := range DiffGaps(before, was, after, now) {
+		gap := e.Payload["gap"].(map[string]any)
+		got = append(got, fmt.Sprintf("%s %s %v", e.Payload["change"], gap["kind"], gap["to"]))
+	}
+	if want := []string{"changed unheld 2026-11-25", "opened single_holder <nil>", "closed under_target 2026-11-01"}; !slices.Equal(got, want) {
+		t.Errorf("the changes are %v, want %v", got, want)
+	}
+	if len(DiffGaps(after, now, after, now)) != 0 {
+		t.Error("the same gaps changed")
+	}
 }

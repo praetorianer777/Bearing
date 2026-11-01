@@ -72,6 +72,23 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	hooks.Gaps = func(ctx context.Context, from, to string) ([]webhook.Gap, error) {
+		start, err := org.ParseDay(from)
+		if err != nil {
+			return nil, err
+		}
+		end, err := org.ParseDay(to)
+		if err != nil {
+			return nil, err
+		}
+		gaps, err := people.Gaps(ctx, org.GapQuery{From: start, To: end})
+		out := make([]webhook.Gap, len(gaps))
+		for i, g := range gaps {
+			out[i] = webhook.Gap{Kind: g.Kind, SubjectKind: g.SubjectKind, SubjectID: g.SubjectID, Name: g.Name, UnitID: g.UnitID,
+				From: g.From.String(), To: g.To.String(), Size: g.Size}
+		}
+		return out, err
+	}
 	go webhook.NewSender(hooks, log).Run(ctx)
 	log.Info("reading jobs", "stream", cfg.Valkey.JobStream)
 	return worker.Run(ctx)

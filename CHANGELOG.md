@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Webhook topics for resource planning:** `holding.planned`,
+  `holding.started` and `holding.ended`, the last two also sent by the
+  worker on their day when nobody writes then; `person.left`; and
+  `capacity.gap_changed`, when a gap over the next thirteen weeks opens,
+  closes or changes size for a unit, position or role (#94).
+
 - **Webhooks (`webhooks@1`):** administrators name addresses under
   Settings, Webhooks, and Bearing posts changes there, signed and in the
   suite's envelope, as Armature and Stator do: a position's holder

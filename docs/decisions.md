@@ -516,3 +516,18 @@ attempt as in Stator: the organisation is open to everybody signed in,
 so there is no owner whose view could narrow it, and a retry carries
 what the first attempt did. The owner still counts: while whoever saved
 an endpoint is not an administrator, nothing but a ping is sent.
+
+## A day is a writer too
+
+A holding starts and ends on its day whether anybody touches it then or
+not, so the worker sweeps each day once and announces the starts and
+ends written before it; a write that already reached the day announced
+it then, and the sweep leaves it alone. The first sweep only marks the
+day, so turning webhooks on does not replay the past. Gaps are compared
+with the ones the worker saw last, over thirteen weeks from today, after
+any change and when the day turns; a gap is known by its kind, its
+subject and its first day, and one that began before today stays the
+same gap as the window moves, so the calendar alone announces nothing.
+The worker reads them as the administrator owning an endpoint that takes
+the topic, as everybody signed in may, and forgets them while nobody
+listens.

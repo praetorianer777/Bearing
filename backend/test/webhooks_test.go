@@ -270,3 +270,147 @@ func TestWebhooksAreTheAdministratorsAndPostOnlyOutward(t *testing.T) {
 		t.Errorf("/meta does not list webhooks@1: %v", meta.Capabilities)
 	}
 }
+
+// hooked makes a webhook taking topics that posts to rc, removed after the test.
+func hooked(t *testing.T, admin *browser, rc *receiver, topics ...string) webhookJSON {
+	t.Helper()
+	var made struct{ Webhook webhookJSON }
+	if status := admin.do(http.MethodPost, "/webhooks", map[string]any{"name": "Receiver " + uuid.NewString()[:8], "url": rc.url, "topics": topics}, &made); status != http.StatusCreated {
+		t.Fatalf("making the webhook answered %d", status)
+	}
+	super := superuser(t, "BEARING_TEST_SUPERUSER_URL")
+	t.Cleanup(func() {
+		_, _ = super.Exec(context.Background(), `DELETE FROM webhook_endpoint WHERE id = $1`, made.Webhook.ID)
+	})
+	return made.Webhook
+}
+
+// count is how many posts so far match.
+func (rc *receiver) count(match func(received) bool) int {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	n := 0
+	for _, g := range rc.got {
+		if match(g) {
+			n++
+		}
+	}
+	return n
+}
+
+func TestHoldingsArePlannedStartedAndEndedOnTheirDayAndPeopleLeave(t *testing.T) {
+	admin := signedIn(t, adminEmail, adminPassword)
+	editor, _ := withRole(t, admin, "editor")
+	rc := listen(t)
+	hook := hooked(t, admin, rc, "holding.planned", "holding.started", "holding.ended", "person.left")
+	unit := units(t, editor, unitType(t, admin), rootUnit(t, admin), "Planned")[0]
+	ids := positions(t, editor, unit, "Starter", "Ender", "Newcomer")
+	starter, ender, newcomer := ids[0], ids[1], ids[2]
+	ana, ben, cleo := somebody(t, editor), somebody(t, editor), somebody(t, editor)
+
+	planned := give(t, editor, map[string]any{"personId": cleo, "positionId": newcomer, "from": day(10)})
+	got := rc.await(t, "the holding planned", func(g received) bool {
+		return g.envelope.Topic == "holding.planned" && payloadID(g, "holding") == planned.ID
+	})
+	signedBy(t, got, hook.Secret)
+	if payloadID(got, "position") != newcomer || payloadID(got, "person") != cleo {
+		t.Errorf("the plan says %+v", got.envelope.Payload)
+	}
+
+	// Written yesterday for today, as moving them onto today unseen makes them: the worker announces them today, as
+	// nobody writes on the day itself.
+	starting := give(t, editor, map[string]any{"personId": ana, "positionId": starter, "from": day(1)})
+	ending := give(t, editor, map[string]any{"personId": ben, "positionId": ender, "from": day(-20), "to": day(1)})
+	super := superuser(t, "BEARING_TEST_SUPERUSER_URL")
+	ctx := context.Background()
+	tx, err := super.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sql := range []string{
+		`SET LOCAL session_replication_role = replica`,
+		`UPDATE holding SET valid_from = current_date, created_at = now() - interval '1 day', updated_at = now() - interval '1 day' WHERE id = '` + starting.ID + `'`,
+		`UPDATE holding SET valid_to = current_date, created_at = now() - interval '1 day', updated_at = now() - interval '1 day' WHERE id = '` + ending.ID + `'`,
+		`DELETE FROM webhook_sweep`,
+		`INSERT INTO webhook_sweep (day) VALUES (current_date - 1)`,
+	} {
+		if _, err := tx.Exec(ctx, sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	started := func(g received) bool {
+		return g.envelope.Topic == "holding.started" && payloadID(g, "holding") == starting.ID
+	}
+	ended := func(g received) bool {
+		return g.envelope.Topic == "holding.ended" && payloadID(g, "holding") == ending.ID
+	}
+	if g := rc.await(t, "the holding started today", started); g.envelope.Payload["actor"] != nil || payloadID(g, "person") != ana {
+		t.Errorf("the start says %+v", g.envelope.Payload)
+	}
+	rc.await(t, "the holding ended today", ended)
+
+	editor.do(http.MethodPost, "/people/"+ben+"/leave", map[string]any{"on": day(5)}, nil)
+	left := rc.await(t, "the person leaving", func(g received) bool { return g.envelope.Topic == "person.left" && payloadID(g, "person") == ben })
+	if left.envelope.Payload["on"] != day(5) {
+		t.Errorf("the leaving says %+v", left.envelope.Payload)
+	}
+
+	// Long enough for a second sweep and a second fan out to have run, had either posted anything again.
+	time.Sleep(5 * time.Second)
+	for name, match := range map[string]func(received) bool{"started": started, "ended": ended,
+		"planned": func(g received) bool {
+			return g.envelope.Topic == "holding.planned" && payloadID(g, "holding") == planned.ID
+		}} {
+		if n := rc.count(match); n != 1 {
+			t.Errorf("%s was posted %d times", name, n)
+		}
+	}
+}
+
+func TestAGapChangeIsPostedWhenAHoldingIsPlannedIntoIt(t *testing.T) {
+	admin := signedIn(t, adminEmail, adminPassword)
+	editor, _ := withRole(t, admin, "editor")
+	rc := listen(t)
+	hooked(t, admin, rc, "capacity.gap_changed")
+	super := superuser(t, "BEARING_TEST_SUPERUSER_URL")
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		var seen bool
+		if err := super.QueryRow(context.Background(), `SELECT EXISTS (SELECT 1 FROM webhook_gap_window)`).Scan(&seen); err != nil {
+			t.Fatal(err)
+		}
+		if seen {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the worker never read the gaps")
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	unit := units(t, editor, unitType(t, admin), rootUnit(t, admin), "Gappy")[0]
+	position := positions(t, editor, unit, "Wanted")[0]
+	gapOf := func(g received) map[string]any {
+		gap, _ := g.envelope.Payload["gap"].(map[string]any)
+		return gap
+	}
+	opened := rc.await(t, "the vacancy opened", func(g received) bool {
+		gap := gapOf(g)
+		return g.envelope.Topic == "capacity.gap_changed" && gap["subjectId"] == position && gap["kind"] == "vacant" && g.envelope.Payload["change"] == "opened"
+	})
+	if gapOf(opened)["to"] != nil || gapOf(opened)["size"] != 1.0 {
+		t.Errorf("the vacancy opened as %+v", opened.envelope.Payload)
+	}
+
+	give(t, editor, map[string]any{"personId": somebody(t, editor), "positionId": position, "from": day(10)})
+	changed := rc.await(t, "the vacancy cut short", func(g received) bool {
+		gap := gapOf(g)
+		return g.envelope.Topic == "capacity.gap_changed" && gap["subjectId"] == position && g.envelope.Payload["change"] == "changed"
+	})
+	if gapOf(changed)["to"] != day(9) {
+		t.Errorf("the vacancy now says %+v", changed.envelope.Payload)
+	}
+}

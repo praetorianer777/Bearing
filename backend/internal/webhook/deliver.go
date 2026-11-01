@@ -97,13 +97,7 @@ func (s *Service) FanOut(ctx context.Context) (int, error) {
 					if look.err != nil {
 						return look.err
 					}
-					payload, err := json.Marshal(e.Payload)
-					if err != nil {
-						return err
-					}
-					if _, err := tx.Exec(ctx, `INSERT INTO webhook_delivery (endpoint_id, event_id, topic, payload, occurred_at, next_attempt_at, version)
-						SELECT id, $1, $2, $3, $4, now(), version FROM webhook_endpoint
-						WHERE enabled AND ($2 = ANY (topics) OR $5 = ANY (topics))`, uuid.Must(uuid.NewV7()), e.Topic, payload, c.At, TopicAny); err != nil {
+					if err := queue(ctx, tx, e.Topic, e.Payload, c.At); err != nil {
 						return err
 					}
 				}
