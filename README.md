@@ -15,14 +15,19 @@ An installation serves one organisation. It runs alone with local accounts,
 or signs in through the suite's Keycloak realm `dynamo` and offers what it
 knows to the other tools over its API, its webhooks and MCP.
 
-Pre-1.0 and in planning. What is planned and why:
+Version 0.1.0 is the proof of concept: the organisation model, its views,
+processes with their responsibilities, and an assistant asking it over MCP.
+[`docs/poc.md`](docs/poc.md) walks through it with pictures, and
+[`CHANGELOG.md`](CHANGELOG.md) lists what it holds. What comes next and
+why:
 
 - [`docs/plan.md`](docs/plan.md): the domain model, the architecture, the
   milestones and what the proof of concept holds.
 - [`docs/decisions.md`](docs/decisions.md): the decisions taken so far and
   their reasons.
 - [`docs/integration.md`](docs/integration.md): the capabilities Bearing
-  proposes to offer the suite.
+  offers the suite and proposes to: OAuth for partner apps, token exchange,
+  MCP and personal access tokens among them.
 - The [milestones](https://github.com/praetorianer777/Bearing/milestones) and
   [issues](https://github.com/praetorianer777/Bearing/issues).
 
@@ -48,6 +53,7 @@ make test-integration  # the integration suite against the running stack
 make check-web   # the web client's lint, type check and unit tests
 make web-dev     # the web client with hot reload, against the running stack's api
 make test-e2e    # the browser suite against the running stack (ONLY=<grep> for some of it)
+make poc-screenshots  # walk through the proof of concept and keep its pictures in docs/poc
 make help        # every target
 ./run-tests.sh   # the whole gate, as CI and the push hook run it (--list names its layers)
 ```
