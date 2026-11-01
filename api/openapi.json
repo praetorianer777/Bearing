@@ -16,6 +16,9 @@
       "name": "accounts"
     },
     {
+      "name": "armature"
+    },
+    {
       "name": "audit"
     },
     {
@@ -435,6 +438,179 @@
           }
         },
         "x-bearing-role": "administrator"
+      }
+    },
+    "/armature/connection": {
+      "delete": {
+        "operationId": "disconnectArmature",
+        "summary": "Forget the Armature and every grant made there.",
+        "tags": [
+          "armature"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      },
+      "get": {
+        "operationId": "armatureConnection",
+        "summary": "The Armature Bearing reads demand from, and the app it is registered there as; null when none is.",
+        "tags": [
+          "armature"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/Connection"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "connection"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      },
+      "put": {
+        "operationId": "connectArmature",
+        "summary": "Name the Armature and the partner app Bearing is registered there as, as Dynamo's connect job does.",
+        "description": "The app is one registered at Armature for token exchange, with the realm client Bearing signs people in through. Grants made with another Armature end.",
+        "tags": [
+          "armature"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connection": {
+                      "$ref": "#/components/schemas/Connection"
+                    }
+                  },
+                  "required": [
+                    "connection"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      }
+    },
+    "/armature/me": {
+      "delete": {
+        "operationId": "forgetArmature",
+        "summary": "End your own grant at Armature; the next sign-in through the realm makes a new one.",
+        "tags": [
+          "armature"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "armatureStatus",
+        "summary": "Whether Bearing reads Armature as you: not_configured, not_connected or connected.",
+        "description": "Signing in through the realm trades the sign-in for a grant at Armature, when Armature offers oauth.token-exchange@1.",
+        "tags": [
+          "armature"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArmatureStatusResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/audit": {
@@ -8581,6 +8757,70 @@
         }
       }
     },
+    "/units/{unitID}/demand": {
+      "get": {
+        "operationId": "unitDemand",
+        "summary": "A unit's capacity against what the work asks of its people, week by week, with Armature.",
+        "description": "from and to are days written 2006-01-02; the view starts on the Monday of from, this week's when left out, and shows 13 weeks, at most 26. Capacity and targets are Bearing's; allocations, load and days away are Armature's resource-load@1, read as the caller, each person counting at their share in the unit. Without Armature, or without the capability, partner says why and the demand stays null. People allocated over 100 percent, or loaded beyond their share, are named to editors and counted for everybody.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "unitID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subUnits",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemandResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/units/{unitID}/members": {
       "get": {
         "operationId": "members",
@@ -9388,6 +9628,17 @@
           "role"
         ]
       },
+      "ArmatureStatusResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
       "ArrowBody": {
         "type": "object",
         "properties": {
@@ -9670,6 +9921,45 @@
           "createdAt"
         ]
       },
+      "Connection": {
+        "type": "object",
+        "properties": {
+          "baseUrl": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "baseUrl",
+          "clientId",
+          "updatedAt"
+        ]
+      },
+      "ConnectionInput": {
+        "type": "object",
+        "properties": {
+          "baseUrl": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "clientSecret": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseUrl",
+          "clientId",
+          "clientSecret"
+        ]
+      },
       "Consent": {
         "type": "object",
         "properties": {
@@ -9868,6 +10158,114 @@
         },
         "required": [
           "themeId"
+        ]
+      },
+      "DemandResponse": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "over": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OverResponse"
+            }
+          },
+          "partner": {
+            "$ref": "#/components/schemas/PartnerResponse"
+          },
+          "subUnits": {
+            "type": "boolean"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "unmatched": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberResponse"
+            }
+          },
+          "warnings": {
+            "type": "integer"
+          },
+          "weeks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DemandWeekResponse"
+            }
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "subUnits",
+          "partner",
+          "weeks",
+          "over",
+          "warnings",
+          "unmatched"
+        ]
+      },
+      "DemandWeekResponse": {
+        "type": "object",
+        "properties": {
+          "allocatedFte": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "daysAway": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "fte": {
+            "type": "number"
+          },
+          "loadHours": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "nominalHours": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "people": {
+            "type": "integer"
+          },
+          "start": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "target": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "start",
+          "fte",
+          "target",
+          "people",
+          "allocatedFte",
+          "loadHours",
+          "nominalHours",
+          "daysAway"
         ]
       },
       "DemoPartResponse": {
@@ -11211,6 +11609,48 @@
           "description"
         ]
       },
+      "OverResponse": {
+        "type": "object",
+        "properties": {
+          "allocationPercent": {
+            "type": "number"
+          },
+          "loadHours": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nominalHours": {
+            "type": "number"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "share": {
+            "type": "integer"
+          },
+          "week": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          }
+        },
+        "required": [
+          "personId",
+          "name",
+          "week",
+          "reason",
+          "allocationPercent",
+          "loadHours",
+          "nominalHours",
+          "share"
+        ]
+      },
       "PartnerRequest": {
         "type": "object",
         "properties": {
@@ -11228,6 +11668,20 @@
           "name",
           "write",
           "keycloakClientId"
+        ]
+      },
+      "PartnerResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
         ]
       },
       "PasswordRequest": {

@@ -785,6 +785,26 @@ export const de: Messages = {
     single: "nur eine Person hat sie",
     span: (from: string, to: string) => `${from} bis ${to}`,
   },
+  demand: {
+    title: "Bedarf aus Armature",
+    intro:
+      "Was die Arbeit in Armature von den Menschen dieser Einheit verlangt, Woche für Woche, gegen das, was die Einheit hat. Jede Person zählt mit ihrem Anteil an der Einheit.",
+    caption: "Kapazität, Ziel und Bedarf aus Armature je Woche.",
+    week: "Woche",
+    fte: "Vorhanden",
+    target: "Ziel",
+    allocated: "Zugeteilt",
+    load: "Last, Stunden",
+    nominal: "Stunden da",
+    away: "Tage abwesend",
+    unreachable: "Der Bedarf konnte nicht gelesen werden. Versuchen Sie es gleich noch einmal.",
+    warnings: (n: number) => (n === 1 ? "1 Person ist über ihre Woche hinaus verplant" : `${n} Mal ist eine Person über ihre Woche hinaus verplant`),
+    overAllocated: (name: string, week: string, percent: number) => `${name}, Woche vom ${week}: zu ${percent} Prozent zugeteilt.`,
+    overLoaded: (name: string, week: string, load: number, nominal: number, share: number) =>
+      `${name}, Woche vom ${week}: ${load} Stunden Arbeit für einen Anteil von ${share} Prozent an ${nominal} Stunden.`,
+    namedToEditors: "Wer, sehen Bearbeitende.",
+    unmatched: (names: string) => `Armature kennt nicht: ${names}.`,
+  },
   planning: {
     title: "Planung",
     intro: "Wo der Organisation Leute fehlen oder sie mehr hat als ihr Soll, aus Besetzungen, Plätzen und Soll.",

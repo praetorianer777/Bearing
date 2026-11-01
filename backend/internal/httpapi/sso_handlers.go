@@ -103,6 +103,7 @@ func (s *Server) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 		s.Fresh.Note(r.Context(), "s:"+auth.SessionKey(token), lsn)
 	}
 	s.setSession(w, token)
+	s.Armature.ConnectAtSignIn(r.Context(), a.ID, id.AccessToken)
 	s.Log.Info("signed in through single sign-on", "account", a.ID)
 	http.Redirect(w, r, s.AppURL+safeNext(next), http.StatusFound)
 }

@@ -60,6 +60,9 @@ type Identity struct {
 	Groups  []string
 	// AuthTime is when the person last proved who they are at the provider, zero when the token does not say.
 	AuthTime time.Time
+	// AccessToken is the provider's access token of the sign-in, which a partner of the same realm trades for a
+	// grant of its own; it is never stored.
+	AccessToken string
 }
 
 // login is what is kept between sending the browser to the provider and its coming back.
@@ -179,6 +182,7 @@ func (s *Service) Finish(ctx context.Context, state, code string) (Identity, str
 	if err != nil {
 		return Identity{}, l.Next, err
 	}
+	id.AccessToken = token.AccessToken
 	return *id, l.Next, nil
 }
 

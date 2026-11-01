@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Demand from Armature:** with Armature connected, the planning page
+  shows a unit's capacity against what the work there asks of its
+  people, week by week: allocations, load, working hours and days away,
+  each person at their share in the unit, with who is given out beyond
+  their week. Signing in through the realm trades the sign-in for a
+  grant at Armature, so Bearing reads Armature as the person. Without
+  Armature, or with one too old for `resource-load@1`, the page says
+  what is missing. `GET/PUT/DELETE /api/v1/armature/connection`,
+  `GET/DELETE /api/v1/armature/me`, `GET /api/v1/units/{id}/demand`
+  (#92).
+
 - **Cards for chips (`org-embed@1`):** partners show a person, position,
   unit or role as a chip with a line beneath its name and a link back to
   Bearing, by id or a person by the realm's subject, and find them by

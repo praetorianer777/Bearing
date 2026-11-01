@@ -9,7 +9,7 @@ test("the planning page and a unit's page show where people are missing", async 
   await expect(page.getByRole("heading", { level: 1, name: "Planning" })).toBeVisible();
   const gaps = page.getByRole("list", { name: "Gaps" });
   await expect(gaps.getByRole("listitem").filter({ hasText: "Head of Quality" }).first()).toContainText("1 seat vacant");
-  await expect(page.getByRole("table")).toContainText("Kestrel Works");
+  await expect(page.getByRole("table", { name: /^Full-time equivalents/ })).toContainText("Kestrel Works");
   expect((await new AxeBuilder({ page }).include("main").analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
   await page.goto("/search?q=quality");
