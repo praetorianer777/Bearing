@@ -64,9 +64,14 @@ export function PositionPage({ positionId, search, onSearch }: { positionId: str
         </div>
         <AsOfPicker value={asOf} onChange={(day) => onSearch({ asOf: day })} />
       </header>
-      <Link to="/organisation" search={{ focus: `unit:${position.unitId}`, asOf: search.asOf }} className="self-start text-sm text-accent hover:underline">
-        {t.position.onChart}
-      </Link>
+      <div className="flex flex-wrap gap-4">
+        <Link to="/organisation" search={{ focus: `unit:${position.unitId}`, asOf: search.asOf }} className="text-sm text-accent hover:underline">
+          {t.position.onChart}
+        </Link>
+        <Link to="/explore" search={{ node: `position:${position.id}`, asOf: search.asOf }} className="text-sm text-accent hover:underline">
+          {t.explore.link}
+        </Link>
+      </div>
       <div className="grid gap-5 md:grid-cols-2">
         <Section title={t.position.holders} empty={t.position.vacant}>
           {position.holders.length > 0 && (

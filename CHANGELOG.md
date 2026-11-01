@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Graph explorer:** any unit, position, person or role and what is
+  around it, opened node by node, following reporting lines, holdings,
+  roles, deputies, units and responsibilities as switched on, as of a
+  day; reached from each page, the relations also listed as sentences
+  (#22).
 - **CSV import and export:** units, positions, people and holdings out to
   four CSV files as of a day, and back in: a preview lists what each row
   would add or change and the rows that cannot be imported, by line; the

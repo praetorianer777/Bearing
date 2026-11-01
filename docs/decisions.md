@@ -461,3 +461,18 @@ nothing, recording the row a refusal met. Export is the organisation of
 one day and the holdings not ended by then, not its history, and leaves
 out roles held directly; the change log and the dated relations keep
 the history.
+
+## The explorer opens one node at a time
+
+The chart answers who reports to whom; the explorer answers what is
+around one thing, for the questions the chart does not: who holds what,
+which roles a position carries, who stands in, and which steps a person,
+position, role or unit answers for. It starts from one node and shows
+what it is related to by the relations switched on; any node shown may
+be opened in turn. Nodes are placed in columns by their distance from
+the start, which keeps a neighbourhood readable without a layout engine,
+and lines run outward with the arrow pointing the way the relation reads.
+It reads the organisation of a day already loaded for the chart, and the
+responsibilities only of the nodes opened. Every relation shown is also
+listed as a sentence under the canvas, for the keyboard and screen
+readers.
