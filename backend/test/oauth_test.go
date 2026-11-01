@@ -114,6 +114,7 @@ func token(t *testing.T, form url.Values, basic *registered) (int, tokens) {
 // the replica has them, and returns their ids.
 func connected(t *testing.T, b *browser, client string) []string {
 	t.Helper()
+	replicated(t)
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		var apps struct {

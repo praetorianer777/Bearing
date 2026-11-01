@@ -76,6 +76,14 @@ func sees(t *testing.T, cluster *db.Cluster, ctx context.Context, id string) boo
 }
 
 // waitForReplica waits until the replica has replayed everything the primary has written so far.
+// replicated waits until the replica has replayed everything written so far. A browser reads its own writes, but
+// another's only once the replica has them, and the read router may answer one read from the primary and the next
+// from the replica; waiting here keeps a later read from going back in time.
+func replicated(t *testing.T) {
+	t.Helper()
+	waitForReplica(t, superuser(t, "BEARING_TEST_REPLICA_SUPERUSER_URL"), superuser(t, "BEARING_TEST_SUPERUSER_URL"))
+}
+
 func waitForReplica(t *testing.T, replica, primary interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }) {
