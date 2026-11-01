@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { api, unwrap } from "@/api/client";
+import { NobodyThere } from "@/features/planning/NobodyThere";
 import { TargetSection } from "@/features/planning/TargetSection";
 import { Duties } from "@/features/processes/Duties";
 import { t, useLanguage } from "@/i18n";
@@ -68,6 +69,7 @@ export function RolePage({ roleId, search, onSearch }: { roleId: string; search:
         </Section>
       </div>
       <TargetSection subject={{ roleId: role.id }} asOf={asOf} />
+      <NobodyThere subject={{ roleId: role.id }} />
       <Duties subject={{ roleId: role.id }} asOf={asOf} />
       {editor && <RoleChanges key={role.id} role={role} />}
       <div className="flex flex-wrap gap-4">

@@ -8,6 +8,7 @@ import { inlineLink, today } from "@/features/org/common";
 import { t, useLanguage } from "@/i18n";
 import { DemandSection } from "./DemandSection";
 import { daysAfter, Gaps } from "./GapList";
+import { NobodyThere } from "./NobodyThere";
 import { PlanForm } from "./PlanForm";
 import { PlanningGrid } from "./PlanningGrid";
 
@@ -100,6 +101,9 @@ export function PlanningPage({ search, onSearch }: { search: PlanningSearch; onS
         ) : (
           gaps.data && <Gaps gaps={gaps.data} />
         )}
+        <div className="mt-4">
+          <NobodyThere subject={{ unitId: search.unit }} />
+        </div>
       </section>
     </div>
   );

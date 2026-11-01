@@ -125,6 +125,29 @@ null and `partner` says why: `not_configured`, `not_connected`,
 asks for Armature to be updated. Answers are kept a minute per reader,
 never as the truth.
 
+### Nobody there
+
+With the days away Armature gives, Bearing finds the working days a
+position, a role or a process step has neither its holder nor a deputy
+there:
+
+```
+GET /api/v1/absences?from=&to=&unitId=&subUnits=true
+GET /api/v1/roles/{id}/absences?from=&to=
+GET /api/v1/processes/{id}/absences?from=&to=&version=
+```
+
+A position counts its holders, then the holders of its deputies; a role
+those who hold it directly or through a position carrying it, and those
+positions' deputies; a process step its responsible and accountable
+parties. A day has nobody there when every one of them is away; somebody
+Armature does not know counts as there, and a position nobody holds is a
+vacancy, which `capacity@1` lists. Runs of working days come with their
+first and last day and how many working days they hold. No person is
+named and no reason is given; even so only editors see them, as only they
+see a person's load, and anybody else gets `hidden`. The planning page,
+a role's page and a process's page show them.
+
 ### `resource-load@1`, proposed to Armature
 
 Bearing asks, as the reader, and Armature answers only what that reader may

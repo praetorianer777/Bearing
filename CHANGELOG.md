@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Nobody there:** with Armature's days away, the planning page, a
+  role's page and a process's page show editors the working days a
+  position, a role or a step's responsible or accountable party has
+  neither its holder nor a deputy there; no person is named and no
+  reason given. `GET /api/v1/absences`, `GET /api/v1/roles/{id}/absences`,
+  `GET /api/v1/processes/{id}/absences` (#93).
+
 - **Demand from Armature:** with Armature connected, the planning page
   shows a unit's capacity against what the work there asks of its
   people, week by week: allocations, load, working hours and days away,

@@ -113,3 +113,24 @@ export const useDemand = (unitId: string | undefined, range: { from: string; to:
       ),
     enabled: !!unitId,
   });
+
+export type Absences = components["schemas"]["AbsencesResponse"];
+
+/** Whose days with nobody there: the whole organisation's or a unit's positions, a role, or a process's steps. */
+export type AbsenceSubject = { unitId?: string } | { roleId: string } | { processId: string };
+
+/** The working days a subject has neither holder nor deputy there, from Armature; for editors, hidden for the rest. */
+export const useAbsences = (subject: AbsenceSubject, range: { from?: string; to?: string } = {}) =>
+  useQuery({
+    queryKey: ["absences", subjectKey(subject as Record<string, string>), range.from ?? "", range.to ?? ""],
+    queryFn: async () => {
+      const query = { ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) };
+      const answer =
+        "roleId" in subject
+          ? await api.GET("/roles/{roleID}/absences", { params: { path: { roleID: subject.roleId }, query } })
+          : "processId" in subject
+            ? await api.GET("/processes/{processID}/absences", { params: { path: { processID: subject.processId }, query } })
+            : await api.GET("/absences", { params: { query: { ...query, ...(subject.unitId ? { unitId: subject.unitId, subUnits: "true" } : {}) } } });
+      return unwrap(answer);
+    },
+  });

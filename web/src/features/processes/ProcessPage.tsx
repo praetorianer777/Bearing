@@ -1,3 +1,4 @@
+import { NobodyThere } from "@/features/planning/NobodyThere";
 import { ReactFlowProvider } from "@xyflow/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
@@ -577,6 +578,7 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
               <FormError error={publish.error} />
             </section>
           )}
+          {process.latest !== null && <NobodyThere subject={{ processId: process.id }} />}
           <section aria-labelledby={`${process.id}-versions`}>
             <h2 id={`${process.id}-versions`} className="mb-2 text-sm font-semibold">
               {t.process.versions}

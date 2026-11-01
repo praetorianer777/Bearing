@@ -185,6 +185,68 @@
         ]
       }
     },
+    "/absences": {
+      "get": {
+        "operationId": "absences",
+        "summary": "The working days a position has neither its holder nor a deputy there, in a unit or the whole organisation, with Armature.",
+        "description": "from and to are days written 2006-01-02, this week's Monday and 13 weeks on when left out, at most 26 weeks. A working day has nobody there when every holder and every deputy is away, as Armature's resource-load@1 says, read as the caller; somebody Armature does not know counts as there, and a subject nobody holds is a vacancy, not this. Absences never carry a reason. Only editors see them; for anybody else hidden is true. unitId narrows to one unit, with subUnits=true also the units inside it.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subUnits",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsencesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/accounts": {
       "get": {
         "operationId": "accounts",
@@ -5955,6 +6017,70 @@
         "x-bearing-role": "editor"
       }
     },
+    "/processes/{processID}/absences": {
+      "get": {
+        "operationId": "processAbsences",
+        "summary": "The working days a step's responsible or accountable party has nobody there, with Armature.",
+        "description": "from and to are days written 2006-01-02, this week's Monday and 13 weeks on when left out, at most 26 weeks. A working day has nobody there when every holder and every deputy is away, as Armature's resource-load@1 says, read as the caller; somebody Armature does not know counts as there, and a subject nobody holds is a vacancy, not this. Absences never carry a reason. Only editors see them; for anybody else hidden is true. version names a published version, the newest when left out.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "processID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsencesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/processes/{processID}/audit": {
       "get": {
         "operationId": "processAudit",
@@ -6759,6 +6885,63 @@
           }
         },
         "x-bearing-role": "editor"
+      }
+    },
+    "/roles/{roleID}/absences": {
+      "get": {
+        "operationId": "roleAbsences",
+        "summary": "The working days nobody who has a role is there, deputies of the positions carrying it included, with Armature.",
+        "description": "from and to are days written 2006-01-02, this week's Monday and 13 weeks on when left out, at most 26 weeks. A working day has nobody there when every holder and every deputy is away, as Armature's resource-load@1 says, read as the caller; somebody Armature does not know counts as there, and a subject nobody holds is a vacancy, not this. Absences never carry a reason. Only editors see them; for anybody else hidden is true.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "roleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsencesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/roles/{roleID}/audit": {
@@ -9512,6 +9695,91 @@
         "required": [
           "code",
           "message"
+        ]
+      },
+      "AbsenceGapResponse": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "integer"
+          },
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "responsible",
+              "accountable",
+              "consulted",
+              "informed"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "stepKey": {
+            "type": "string"
+          },
+          "stepName": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subjectKind": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          }
+        },
+        "required": [
+          "subjectKind",
+          "subjectId",
+          "name",
+          "from",
+          "to",
+          "days"
+        ]
+      },
+      "AbsencesResponse": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AbsenceGapResponse"
+            }
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "partner": {
+            "$ref": "#/components/schemas/PartnerResponse"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "partner",
+          "hidden",
+          "gaps"
         ]
       },
       "AcceptInvitationRequest": {

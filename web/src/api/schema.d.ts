@@ -55,6 +55,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/absences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The working days a position has neither its holder nor a deputy there, in a unit or the whole organisation, with Armature.
+         * @description from and to are days written 2006-01-02, this week's Monday and 13 weeks on when left out, at most 26 weeks. A working day has nobody there when every holder and every deputy is away, as Armature's resource-load@1 says, read as the caller; somebody Armature does not know counts as there, and a subject nobody holds is a vacancy, not this. Absences never carry a reason. Only editors see them; for anybody else hidden is true. unitId narrows to one unit, with subUnits=true also the units inside it.
+         */
+        get: operations["absences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/accounts": {
         parameters: {
             query?: never;
@@ -1634,6 +1654,26 @@ export interface paths {
         patch: operations["updateProcess"];
         trace?: never;
     };
+    "/processes/{processID}/absences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The working days a step's responsible or accountable party has nobody there, with Armature.
+         * @description from and to are days written 2006-01-02, this week's Monday and 13 weeks on when left out, at most 26 weeks. A working day has nobody there when every holder and every deputy is away, as Armature's resource-load@1 says, read as the caller; somebody Armature does not know counts as there, and a subject nobody holds is a vacancy, not this. Absences never carry a reason. Only editors see them; for anybody else hidden is true. version names a published version, the newest when left out.
+         */
+        get: operations["processAbsences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/processes/{processID}/audit": {
         parameters: {
             query?: never;
@@ -1826,6 +1866,26 @@ export interface paths {
         head?: never;
         /** Change a role's key, name or description; what is left out stays. */
         patch: operations["updateRole"];
+        trace?: never;
+    };
+    "/roles/{roleID}/absences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The working days nobody who has a role is there, deputies of the positions carrying it included, with Armature.
+         * @description from and to are days written 2006-01-02, this week's Monday and 13 weeks on when left out, at most 26 weeks. A working day has nobody there when every holder and every deputy is away, as Armature's resource-load@1 says, read as the caller; somebody Armature does not know counts as there, and a subject nobody holds is a vacancy, not this. Absences never carry a reason. Only editors see them; for anybody else hidden is true.
+         */
+        get: operations["roleAbsences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/roles/{roleID}/audit": {
@@ -2548,6 +2608,42 @@ export interface components {
             };
             message: string;
             requestId?: string;
+        };
+        AbsenceGapResponse: {
+            days: number;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from: string;
+            /** @enum {string} */
+            kind?: "responsible" | "accountable" | "consulted" | "informed";
+            name: string;
+            stepKey?: string;
+            stepName?: string;
+            /** Format: uuid */
+            subjectId: string;
+            subjectKind: string;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            to: string;
+        };
+        AbsencesResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from: string;
+            gaps: components["schemas"]["AbsenceGapResponse"][];
+            hidden: boolean;
+            partner: components["schemas"]["PartnerResponse"];
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            to: string;
         };
         AcceptInvitationRequest: {
             name: string;
@@ -3898,6 +3994,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResourceMetadata"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    absences: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                unitId?: string;
+                subUnits?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbsencesResponse"];
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */
@@ -7732,6 +7862,41 @@ export interface operations {
             };
         };
     };
+    processAbsences: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                version?: string;
+            };
+            header?: never;
+            path: {
+                processID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbsencesResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     processAudit: {
         parameters: {
             query?: {
@@ -8202,6 +8367,40 @@ export interface operations {
                     "application/json": {
                         role: components["schemas"]["OrgRoleResponse"];
                     };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    roleAbsences: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path: {
+                roleID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbsencesResponse"];
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */

@@ -801,6 +801,11 @@ export const en = {
     namedToEditors: "Editors see who.",
     unmatched: (names: string) => `Armature does not know: ${names}.`,
   },
+  nobodyThere: {
+    title: "Nobody there",
+    none: "Somebody is there every working day.",
+    step: (step: string, party: string, kind: string) => `${step}: ${party}, ${kind}`,
+  },
   planning: {
     title: "Planning",
     intro: "Where the organisation misses people, or has more than its targets, from its holdings, seats and targets.",

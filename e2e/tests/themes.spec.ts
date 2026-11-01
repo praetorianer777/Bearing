@@ -82,8 +82,11 @@ test("a theme made in the editor is shared, used by a member on their own browse
   await page.getByRole("menuitem", { name: "Delete" }).click();
   await expect(page.getByRole("status")).toHaveText(`Deleted ${name}.`);
 
-  await tess.reload();
-  await expect.poll(() => canvas(tess)).toBe(builtIn);
+  // The deletion is another person's write, which reaches Tess's reads once the replica has it.
+  await expect(async () => {
+    await tess.reload();
+    await expect.poll(() => canvas(tess), { timeout: 2000 }).toBe(builtIn);
+  }).toPass();
   await tess.context().close();
 });
 
