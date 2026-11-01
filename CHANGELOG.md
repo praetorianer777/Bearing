@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **CSV import and export:** units, positions, people and holdings out to
+  four CSV files as of a day, and back in: a preview lists what each row
+  would add or change and the rows that cannot be imported, by line; the
+  worker runs the import in one transaction, all or nothing.
+  `GET /api/v1/export/{kind}`, `POST /api/v1/imports`,
+  `POST /api/v1/imports/{id}/run` (#24).
 - **Editing the organisation:** editors add, change, move and archive
   units and positions, give positions and end or remove holdings, change
   people's entries and mark them gone, and add, change and delete roles,

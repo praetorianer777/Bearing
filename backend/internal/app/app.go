@@ -18,6 +18,7 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/jobs"
 	"github.com/praetorianer777/bearing/backend/internal/oauth"
 	"github.com/praetorianer777/bearing/backend/internal/org"
+	"github.com/praetorianer777/bearing/backend/internal/orgcsv"
 	"github.com/praetorianer777/bearing/backend/internal/sso"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
 )
@@ -56,6 +57,7 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 		AppURL:         cfg.Auth.AppURL,
 		Themes:         &theme.Service{DB: cluster},
 		Org:            people,
+		Imports:        &orgcsv.Imports{DB: cluster, Org: people, Queue: jobs.NewQueue(valkey, cfg.Valkey.JobStream)},
 	}
 	authorization := &oauth.Service{DB: cluster, Issuer: cfg.Auth.AppURL, Log: log,
 		AccountFor: func(ctx context.Context, id auth.Identity) (auth.Account, error) {
