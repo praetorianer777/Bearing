@@ -7,6 +7,10 @@
   up to two years, with a position's and a unit's seats filled and
   vacant; planned holdings and leavers count on their days.
   `GET /api/v1/{units,positions,roles,people}/{id}/capacity` (#87).
+- **Targets:** what a unit, a position or a role should have, dated and
+  audited; editors set one for a span on the subject's page, which shows
+  it against what the subject has on the day. Capacity answers carry the
+  target. `GET/POST /api/v1/targets`, `DELETE /api/v1/targets/{id}` (#88).
 - **Search:** one box along the top finds people, positions, units, roles,
   processes and their steps as they are typed, ignoring case and accents
   and forgiving a slip; Enter opens every result on the search page, as of

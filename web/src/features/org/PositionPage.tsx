@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { usePositionPage } from "@/api/org";
 import type { Link as Reached } from "@/api/people";
 import { t, useLanguage } from "@/i18n";
+import { TargetSection } from "@/features/planning/TargetSection";
 import { Duties } from "@/features/processes/Duties";
 import { AsOfPicker, Changes, PersonName, PositionName, RoleName, Section, today, UnitName } from "./common";
 import type { DaySearch } from "./UnitPage";
@@ -152,6 +153,7 @@ export function PositionPage({ positionId, search, onSearch }: { positionId: str
           </ul>
         )}
       </Section>
+      <TargetSection subject={{ positionId: position.id }} asOf={asOf} />
       <Duties subject={{ positionId: position.id }} asOf={asOf} />
       <Changes subject={{ kind: "positions", id: position.id }} />
     </div>

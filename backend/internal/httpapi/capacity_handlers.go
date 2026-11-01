@@ -17,6 +17,9 @@ type capacityPeriodResponse struct {
 	To   org.Day `json:"to"`
 	// FTE is the full-time equivalents the holdings add up to, each counting its share of the person's week.
 	FTE float64 `json:"fte"`
+	// Target is the mean of the subject's target on the days of the period that have one; null when none has, and
+	// for people.
+	Target *float64 `json:"target"`
 	// Seats, Filled and Vacant are in seats, for positions and units only.
 	Seats  *float64 `json:"seats,omitempty"`
 	Filled *float64 `json:"filled,omitempty"`
@@ -102,7 +105,7 @@ func (s *Server) capacity(w http.ResponseWriter, r *http.Request, param string, 
 	}
 	out := capacityResponse{From: q.From, To: q.To, By: q.By, SubUnits: q.SubUnits && q.UnitID != nil, Periods: make([]capacityPeriodResponse, len(periods))}
 	for i, p := range periods {
-		out.Periods[i] = capacityPeriodResponse{From: p.From, To: p.To, FTE: p.FTE, Seats: p.Seats, Filled: p.Filled, Vacant: p.Vacant, People: p.People}
+		out.Periods[i] = capacityPeriodResponse{From: p.From, To: p.To, FTE: p.FTE, Target: p.Target, Seats: p.Seats, Filled: p.Filled, Vacant: p.Vacant, People: p.People}
 	}
 	respondJSON(w, http.StatusOK, out)
 }

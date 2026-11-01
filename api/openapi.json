@@ -5904,6 +5904,164 @@
         }
       }
     },
+    "/targets": {
+      "get": {
+        "operationId": "targets",
+        "summary": "A unit's, a position's or a role's targets, oldest first: what it should have, in full-time equivalents, and from when until when.",
+        "description": "Name one of unitId, positionId and roleId. asOf, a day written 2006-01-02, keeps to the target on that day. A unit's target is for the unit with everything inside it.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "positionId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "targets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TargetResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "targets"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "setTarget",
+        "summary": "Set what a unit, a position or a role should have for a span, from a day until a day or for good.",
+        "description": "What was set for those days gives way: a target inside the span goes, one reaching into it ends where the span starts or starts where it ends, and one reaching over it is split around it.",
+        "tags": [
+          "capacity"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TargetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "target": {
+                      "$ref": "#/components/schemas/TargetResponse"
+                    }
+                  },
+                  "required": [
+                    "target"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/targets/{targetID}": {
+      "delete": {
+        "operationId": "removeTarget",
+        "summary": "Take a target away for all its days.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "targetID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
     "/themes": {
       "get": {
         "operationId": "themes",
@@ -7268,6 +7426,12 @@
           "seats": {
             "type": "number"
           },
+          "target": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
           "to": {
             "type": "string",
             "format": "date",
@@ -7281,6 +7445,7 @@
           "from",
           "to",
           "fte",
+          "target",
           "people"
         ]
       },
@@ -9713,6 +9878,94 @@
           "name",
           "kind",
           "responsibilities"
+        ]
+      },
+      "TargetRequest": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "fte": {
+            "type": "number"
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "fte"
+        ]
+      },
+      "TargetResponse": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "fte": {
+            "type": "number"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "positionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "roleId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "unitId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "unitId",
+          "positionId",
+          "roleId",
+          "fte",
+          "from",
+          "to"
         ]
       },
       "ThemeAssetResponse": {

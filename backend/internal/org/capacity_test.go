@@ -70,3 +70,18 @@ func TestAPeriodOfOnlyAWeekendCountsItsDays(t *testing.T) {
 		t.Errorf("a weekend alone: %+v", got)
 	}
 }
+
+func TestAPeriodsTargetIsTheMeanOfTheDaysThatHaveOne(t *testing.T) {
+	two, four := 2.0, 4.0
+	days := []capacityDay{
+		{day: mustDay(t, "2026-11-02").Time()},
+		{day: mustDay(t, "2026-11-03").Time(), target: &two},
+		{day: mustDay(t, "2026-11-04").Time(), target: &four},
+	}
+	if got := periodsOf(days, ByWeek, false); len(got) != 1 || got[0].Target == nil || *got[0].Target != 3 {
+		t.Errorf("the week's target: %+v", got)
+	}
+	if got := periodsOf(days[:1], ByWeek, false); got[0].Target != nil {
+		t.Errorf("a week without a target: %+v", got[0])
+	}
+}

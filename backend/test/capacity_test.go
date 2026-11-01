@@ -10,6 +10,7 @@ import (
 type capacityPeriod struct {
 	From, To              string
 	FTE                   float64
+	Target                *float64
 	Seats, Filled, Vacant *float64
 	People                int
 }

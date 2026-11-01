@@ -375,3 +375,17 @@ A position's filled seats are at most its seats, so one held twice over
 does not hide a vacancy elsewhere in the unit. Weeks start on Monday,
 and a week or a month is the mean of its working days, so a weekend
 nobody works does not halve it.
+
+## A target set for some days replaces what was set for them
+
+A target is dated like every relation, and a subject has one on any day.
+Setting one for a span paints over what was there: a target inside the
+span goes, one reaching into it is cut at the span's edge, and one
+reaching over it is split around it. An editor who wants six from
+January then only says so, rather than ending the old target first, and
+a planned change for a quarter leaves the target after it standing. A
+unit's target is for the unit with everything inside it, as a head of
+department plans for the whole department, so the page compares it with
+the unit's capacity counted with its sub-units. Capacity answers carry
+the target day by day, a period's being the mean of its days that have
+one.

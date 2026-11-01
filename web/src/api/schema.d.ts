@@ -1588,6 +1588,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A unit's, a position's or a role's targets, oldest first: what it should have, in full-time equivalents, and from when until when.
+         * @description Name one of unitId, positionId and roleId. asOf, a day written 2006-01-02, keeps to the target on that day. A unit's target is for the unit with everything inside it.
+         */
+        get: operations["targets"];
+        put?: never;
+        /**
+         * Set what a unit, a position or a role should have for a span, from a day until a day or for good.
+         * @description What was set for those days gives way: a target inside the span goes, one reaching into it ends where the span starts or starts where it ends, and one reaching over it is split around it.
+         */
+        post: operations["setTarget"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/targets/{targetID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Take a target away for all its days. */
+        delete: operations["removeTarget"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/themes": {
         parameters: {
             query?: never;
@@ -1972,6 +2013,7 @@ export interface components {
             fte: number;
             people: number;
             seats?: number;
+            target: number | null;
             /**
              * Format: date
              * @description A calendar day, written 2006-01-02.
@@ -2698,6 +2740,46 @@ export interface components {
             kind: "start" | "step" | "decision" | "subprocess" | "end";
             name: string;
             responsibilities: components["schemas"]["ResolvedResponsibilityResponse"][];
+        };
+        TargetRequest: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            fte: number;
+            /** Format: uuid */
+            positionId?: string;
+            /** Format: uuid */
+            roleId?: string;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            to?: string;
+            /** Format: uuid */
+            unitId?: string;
+        };
+        TargetResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from: string;
+            fte: number;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            positionId: string | null;
+            /** Format: uuid */
+            roleId: string | null;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            to: string | null;
+            /** Format: uuid */
+            unitId: string | null;
         };
         ThemeAssetResponse: {
             contentType: string;
@@ -6711,6 +6793,106 @@ export interface operations {
                         steps: components["schemas"]["PublishedStepResponse"][];
                     };
                 };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    targets: {
+        parameters: {
+            query?: {
+                unitId?: string;
+                positionId?: string;
+                roleId?: string;
+                asOf?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        targets: components["schemas"]["TargetResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    setTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TargetRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        target: components["schemas"]["TargetResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    removeTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                targetID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description An error, in the one shape every endpoint uses. */
             default: {

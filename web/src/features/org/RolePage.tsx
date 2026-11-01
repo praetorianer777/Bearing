@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, unwrap } from "@/api/client";
+import { TargetSection } from "@/features/planning/TargetSection";
 import { Duties } from "@/features/processes/Duties";
 import { t, useLanguage } from "@/i18n";
 import { AsOfPicker, PersonName, PositionName, Section, today } from "./common";
@@ -63,6 +64,7 @@ export function RolePage({ roleId, search, onSearch }: { roleId: string; search:
           )}
         </Section>
       </div>
+      <TargetSection subject={{ roleId: role.id }} asOf={asOf} />
       <Duties subject={{ roleId: role.id }} asOf={asOf} />
     </div>
   );
