@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useId } from "react";
 import { usePeople } from "@/api/people";
+import { AddPerson, useEditor } from "@/features/org/edit";
 import { t, useLanguage } from "@/i18n";
 
 export type PeopleSearch = { q?: string; left?: boolean };
@@ -12,9 +13,15 @@ export function PeoplePage({ search, onSearch }: { search: PeopleSearch; onSearc
   useLanguage();
   const ids = useId();
   const people = usePeople(today(), search.q ?? "", search.left ?? false);
+  const editor = useEditor();
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-4 px-6 py-8">
-      <h1 className="text-2xl font-semibold">{t.people.title}</h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h1 className="text-2xl font-semibold">{t.people.title}</h1>
+        <Link to="/roles" className="text-sm text-accent hover:underline">
+          {t.roleList.all}
+        </Link>
+      </div>
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex min-w-64 flex-1 flex-col gap-1 text-sm">
           <label htmlFor={`${ids}-q`} className="text-ink-muted">
@@ -47,6 +54,7 @@ export function PeoplePage({ search, onSearch }: { search: PeopleSearch; onSearc
           ))}
         </ul>
       )}
+      {editor && <AddPerson />}
     </div>
   );
 }

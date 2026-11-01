@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { type Link as Reached, usePersonPage } from "@/api/people";
+import { PersonChanges, useEditor } from "@/features/org/edit";
 import { t, useLanguage } from "@/i18n";
 import { Duties } from "@/features/processes/Duties";
 import { AsOfPicker, Changes, PersonName, PositionName, RoleName, Section, today, UnitName } from "../org/common";
@@ -77,6 +78,7 @@ export function PersonPage({ personId, search, onSearch }: { personId: string; s
   useLanguage();
   const asOf = search.asOf ?? today();
   const page = usePersonPage(personId, asOf);
+  const editor = useEditor();
   if (page.isError) return <p className="px-6 py-8 text-sm text-danger">{t.person.unreachable}</p>;
   if (!page.data) return null;
   const { person, chain, reports } = page.data;
@@ -138,6 +140,7 @@ export function PersonPage({ personId, search, onSearch }: { personId: string; s
         {view.history.length > 0 && <HeldList items={view.history} dated />}
       </Section>
       <Duties subject={{ personId: person.id }} asOf={asOf} />
+      {editor && <PersonChanges key={person.id} person={person} />}
       <Changes subject={{ kind: "people", id: person.id }} />
     </div>
   );

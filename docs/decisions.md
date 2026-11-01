@@ -428,3 +428,17 @@ editors. A database function says who that is, and the capacity query
 asks it, so the rule holds for every client and every token alike. Who
 is above whom is read on today, not on the days asked about, as it is
 today's manager who plans.
+
+## Editors change the organisation where they read it
+
+Each page of a unit, position, person or role ends with the changes an
+editor may make there, each folded under its name, so the page reads the
+same for everybody and an editor opens only the change they want. Every
+change that holds from a day asks for the day, today unless they say
+otherwise, so a reorganisation planned for next month is entered now and
+shows from then. On the chart, a card dropped onto another proposes the
+change rather than making it: the position reports to the other, or, for
+a unit's head, the unit moves into the other's unit, from a day the
+editor confirms; the card goes back until then, as a dropped card on its
+own only keeps where it was put. The chart is for the pointer; every
+change it offers is also a form on the page, for the keyboard.

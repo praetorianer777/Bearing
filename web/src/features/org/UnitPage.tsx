@@ -5,6 +5,7 @@ import { t, useLanguage } from "@/i18n";
 import { UnitGaps } from "@/features/planning/GapList";
 import { TargetSection } from "@/features/planning/TargetSection";
 import { Duties } from "@/features/processes/Duties";
+import { UnitChanges, useEditor } from "./edit";
 import { AsOfPicker, Changes, PersonName, PositionName, Section, today, UnitName } from "./common";
 
 export type DaySearch = { asOf?: string };
@@ -29,6 +30,7 @@ export function UnitPage({ unitId, search, onSearch }: { unitId: string; search:
   useLanguage();
   const asOf = search.asOf ?? today();
   const page = useUnitPage(unitId, asOf);
+  const editor = useEditor();
   if (page.isError) return <p className="px-6 py-8 text-sm text-danger">{t.unit.unreachable}</p>;
   if (!page.data) return null;
   const { unit, units, types, positions, members } = page.data;
@@ -145,6 +147,7 @@ export function UnitPage({ unitId, search, onSearch }: { unitId: string; search:
       <TargetSection subject={{ unitId: unit.id }} asOf={asOf} />
       <UnitGaps unitId={unit.id} asOf={asOf} />
       <Duties subject={{ unitId: unit.id }} asOf={asOf} />
+      {editor && <UnitChanges key={`${unit.id}-${asOf}`} unit={unit} units={units} types={types} />}
       <Changes subject={{ kind: "units", id: unit.id }} />
     </div>
   );
