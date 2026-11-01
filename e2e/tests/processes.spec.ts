@@ -140,6 +140,24 @@ test("the demo's supplier invoice reads in swimlanes, one per responsible party"
   expect((await new AxeBuilder({ page }).include("main").analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 });
 
+test("the demo's order to delivery shows what its second version changed", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/processes");
+  await page.getByRole("link", { name: "Order to delivery" }).click();
+  await page.getByLabel("Showing").selectOption("2");
+  await page.getByLabel("Compare with").selectOption("1");
+  const changes = page.getByRole("region", { name: "Changes from Version 1 to Version 2" });
+  const nodes = changes.getByRole("list", { name: "Nodes changed" });
+  await expect(nodes.getByRole("listitem")).toHaveCount(2);
+  await expect(nodes.getByRole("listitem").filter({ hasText: "Decision: Within the credit limit?" })).toContainText("added");
+  await expect(nodes.getByRole("listitem").filter({ hasText: "Step: Ask for prepayment" })).toContainText("added");
+  await expect(changes.getByRole("list", { name: "Arrows changed" }).getByRole("listitem").filter({ hasText: "removed" })).toHaveCount(1);
+  await expect(node(page, "Decision: Within the credit limit?").getByText("added")).toBeVisible();
+  expect((await new AxeBuilder({ page }).include("main").analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  await nodes.getByRole("button", { name: "Step: Ask for prepayment" }).click();
+  await expect(page.getByRole("region", { name: "Node" }).getByRole("list", { name: "Responsibilities" })).toContainText("Accountant");
+});
+
 // In the demo the Head of Quality is vacant; the Test lab lead stands in as the first deputy.
 test("a step's responsibilities come down to people, a deputy standing in for a vacant position", async ({ page }) => {
   await signIn(page);

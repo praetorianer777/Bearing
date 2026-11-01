@@ -270,3 +270,16 @@ ELK's, because ELK cannot hold nodes to lanes: rows run down the flow,
 loops not pushing anything further down, and every arrow travels only
 in the gaps between rows and the gutters between columns, where no node
 stands, so none crosses a node.
+
+## Versions are compared in the browser, by key
+
+Both versions of a comparison are read through the API that already
+serves them, and the difference is worked out in the browser: nothing
+new to store or serve. Nodes and arrows are the same across versions by
+key, as every draft is copied from the version before it. Places and
+routes are left out, as they change how a process is drawn, not what it
+says. The canvas shows the later version with what was removed put back
+where it stood, each node marked added, removed or changed, and the
+changes are listed beside it. A draft set against a version cannot be
+edited until the comparison is put away, as removed nodes stand on the
+canvas among its own.

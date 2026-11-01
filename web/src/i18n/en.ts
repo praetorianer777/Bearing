@@ -377,6 +377,16 @@ export const en = {
     laneGroups: { role: "Role", position: "Position", unit: "Unit" },
     nobodyLane: "Nobody responsible",
   },
+  compare: {
+    with: "Compare with",
+    nothing: "Nothing",
+    title: (from: string, to: string) => `Changes from ${from} to ${to}`,
+    same: "Nothing that the process says changed between them; only how it is drawn, if anything.",
+    nodes: "Nodes changed",
+    arrows: "Arrows changed",
+    marks: { added: "added", removed: "removed", changed: "changed" },
+    fields: { name: "name", kind: "kind", description: "description", subprocess: "subprocess", ends: "where it leads", label: "condition" },
+  },
   raci: {
     title: "Responsibilities",
     none: "Nobody named yet.",

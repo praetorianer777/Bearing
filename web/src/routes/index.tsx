@@ -128,10 +128,12 @@ const processRoute = createRoute({
   path: "/processes/$processId",
   validateSearch: (search: Record<string, unknown>): ProcessSearch => {
     const version = Number(search.version);
+    const against = Number(search.against);
     return {
       ...(Number.isInteger(version) && version >= 1 ? { version } : {}),
       ...(search.view === "matrix" || search.view === "lanes" ? { view: search.view } : {}),
       ...(isDay(search.asOf) ? { asOf: search.asOf } : {}),
+      ...(Number.isInteger(against) && against >= 1 ? { against } : {}),
     };
   },
   component: function Process() {

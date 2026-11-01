@@ -371,6 +371,51 @@ describe("responsibilities on steps", () => {
   });
 });
 
+describe("comparing versions", () => {
+  it("marks what the draft adds and removes against a version, lists it, and leads from the list to it", async () => {
+    serve();
+    const user = userEvent.setup();
+    renderApp("/processes/inv");
+    await nodeCard("Step: Book it");
+    await user.selectOptions(screen.getByLabelText("Compare with"), "1");
+    const changes = await screen.findByRole("region", { name: "Changes from Version 1 to Draft" });
+    const nodes = within(changes).getByRole("list", { name: "Nodes changed" });
+    expect(within(nodes).getByRole("button", { name: "Step: Book it" }).closest("li")).toHaveTextContent("added");
+    expect(within(nodes).getByRole("button", { name: "Step: Old check" }).closest("li")).toHaveTextContent("removed");
+    expect(within(changes).getByRole("list", { name: "Arrows changed" })).toHaveTextContent("From Over the limit? to Book it (Yes)");
+    expect(within(await nodeCard("Step: Old check")).getByText("removed")).toBeInTheDocument();
+    expect(within(await nodeCard("Step: Book it")).getByText("added")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("toolbar", { name: "Add" })).not.toBeInTheDocument();
+    await user.click(within(nodes).getByRole("button", { name: "Step: Old check" }));
+    expect(within(screen.getByRole("region", { name: "Node" })).getByDisplayValue("Old check")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Compare with"), "");
+    expect(await screen.findByRole("button", { name: "Undo" })).toBeInTheDocument();
+    expect(screen.queryByRole("article", { name: "Step: Old check" })).not.toBeInTheDocument();
+  });
+
+  it("says when two versions say the same", async () => {
+    serve("member", {
+      "GET /processes/inv": () => ({
+        body: { process: { ...invoice, versions: [...invoice.versions, { ...invoice.versions[0], number: 2 }] } },
+      }),
+      "GET /processes/inv/versions/2": () => ({
+        body: {
+          version: {
+            ...invoice.versions[0],
+            number: 2,
+            nodes: [node("in", "start", "Invoice arrives", { x: 50 }), node("old", "step", "Old check"), node("out", "end", "Paid")],
+            arrows: [],
+          },
+        },
+      }),
+    });
+    renderApp("/processes/inv?version=2&against=1");
+    expect(await screen.findByText(/^Nothing that the process says changed/)).toBeInTheDocument();
+  });
+});
+
 describe("a process in swimlanes", () => {
   it("lays the draft out in lanes by who is responsible, read-only, and switches back to the canvas", async () => {
     serve();
