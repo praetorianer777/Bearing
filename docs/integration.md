@@ -2,9 +2,9 @@
 
 Proposed. None of these names is in Dynamo's `docs/compatibility.md` yet;
 each is added there by pull request before Bearing reports it. Bearing serves
-`theme-export@1`, `oauth.partner-tokens@1`, `oauth.token-exchange@1` and
-`mcp@1` already, in the shape the siblings serve them, and lists them at
-`/meta`.
+`theme-export@1`, `oauth.partner-tokens@1`, `oauth.token-exchange@1`,
+`mcp@1` and `capacity@1` already, in the shape the siblings serve them where
+they share one, and lists them at `/meta`.
 
 ## MCP
 
@@ -56,6 +56,40 @@ and stops working the moment it is revoked or its day passes. A token can
 neither make another token nor connect an app; that needs the person
 signed in.
 
+## Capacity
+
+`capacity@1` is what the organisation has, in full-time equivalents, against
+what it should have, over a range of days. Every answer is read as the person
+the call acts for.
+
+```
+GET /api/v1/units/{id}/capacity?from=&to=&by=day|week|month&subUnits=true
+GET /api/v1/positions/{id}/capacity?from=&to=&by=
+GET /api/v1/roles/{id}/capacity?from=&to=&by=
+GET /api/v1/people/{id}/capacity?from=&to=&by=
+GET /api/v1/people/by-subject/capacity?issuer=&subject=&from=&to=&by=
+GET /api/v1/targets?unitId=|positionId=|roleId=&asOf=
+GET /api/v1/gaps?from=&to=&unitId=&subUnits=true
+```
+
+- A range runs from `from` to `to`, both counted, today and thirteen weeks
+  on by default, at most 731 days.
+- A period is a day, a week from Monday or a month; a week or a month is
+  the mean of its working days in the range, and the first and last are
+  cut by it.
+- Each period has `fte`, what the holdings' shares add up to; `people`, the
+  most holding on one day; `target`, the mean target of its days that have
+  one; and for positions and units `seats`, `filled` and `vacant`.
+- A unit counts its positions, with `subUnits` those of the units placed
+  under it on each day; its target is for the unit with everything inside.
+- A role counts its holders directly and through the positions carrying it.
+- A gap is a run of days of one size: `vacant` seats, `under_target` or
+  `over_target`, a role `unheld` or with a `single_holder`.
+- A person's capacity is for the person, those above them in the management
+  chain today, and editors; anybody else is refused with 403. Sums over a
+  unit, a position or a role are for everybody signed in. Partners name a
+  person by the realm's issuer and `sub` with `by-subject`.
+
 ## Trading a realm token
 
 A partner app of the suite that signs people in through the realm is
@@ -98,7 +132,7 @@ features, not data.
   "product": "bearing",
   "build": { "version": "0.1.0" },
   "apiVersion": "1",
-  "capabilities": ["mcp@1", "oauth.partner-tokens@1", "oauth.token-exchange@1", "theme-export@1"]
+  "capabilities": ["capacity@1", "mcp@1", "oauth.partner-tokens@1", "oauth.token-exchange@1", "theme-export@1"]
 }
 ```
 
@@ -123,5 +157,6 @@ one.
 |---|---|---|
 | `org-directory@1` | A person by `sub` with their positions, roles and units; search; a unit's tree; the management chain up from a person and their reports down. | Rotor, Armature, Exciter, Stator |
 | `responsibility@1` | Who holds a role or answers for a process step on a date, deputies included, and the managers of a person a given number of levels up. | Rotor approvals, Armature routing, Exciter ownership |
+| `capacity@1` | Full-time equivalents of units, positions, roles and people over a range, against dated targets, and the gaps where people are missing. | Armature, Stator, Rotor |
 | `org-embed@1` | Person, role and unit cards for chips, found by the words typed so far. | Stator, Armature |
 | `process-remote-links@1` | Another tool puts links to its objects on a process step, keyed by url, a link with the same url replacing the one there. | Stator, Exciter, Armature, Rotor |

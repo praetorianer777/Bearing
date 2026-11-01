@@ -141,6 +141,7 @@ var mayCall = map[string]auth.Role{
 	"positionCapacity":     "",
 	"roleCapacity":         "",
 	"personCapacity":       "",
+	"realmPersonCapacity":  "",
 	"targets":              "",
 	"gaps":                 "",
 	"setTarget":            auth.RoleEditor,

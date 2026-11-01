@@ -45,7 +45,7 @@ const period = (from: string, to: string, fte: number, extra: object = {}) => ({
 // Two weeks from Monday 2 November 2026.
 const weeks = [period("2026-11-02", "2026-11-08", 0), period("2026-11-09", "2026-11-15", 0)];
 
-function planning(account: object = ADMIN) {
+function planning(account: object = ADMIN, hidden = false) {
   const posted: { path: string; body: unknown }[] = [];
   fakeAPI({
     ...signedInAs(account),
@@ -79,7 +79,9 @@ function planning(account: object = ADMIN) {
       },
     },
     "GET /positions/ceo/capacity": { body: { periods: weeks } },
-    "GET /people/ana/capacity": { body: { periods: [period("2026-11-02", "2026-11-08", 0.5), period("2026-11-09", "2026-11-15", 0.5)] } },
+    "GET /people/ana/capacity": hidden
+      ? { status: 403, body: { error: { code: "forbidden", message: "No." } } }
+      : { body: { periods: [period("2026-11-02", "2026-11-08", 0.5), period("2026-11-09", "2026-11-15", 0.5)] } },
     "GET /people/new/capacity": { body: { periods: weeks } },
     "GET /holdings": {
       body: {
@@ -176,10 +178,12 @@ describe("the planning grid", () => {
   });
 
   it("offers no planning to a member, and counts by month on asking", async () => {
-    const { router } = planning({ ...ADMIN, role: "member", ownRole: "member" });
+    const { router } = planning({ ...ADMIN, role: "member", ownRole: "member" }, true);
     await userEvent.click(await screen.findByRole("button", { name: "Show what is inside Quality" }));
     expect(await screen.findByRole("rowheader", { name: /Head of Quality/ })).toBeVisible();
     expect(screen.queryByRole("button", { name: /Plan a holder/ })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Show what is inside Head of Quality" }));
+    expect(await within(rowNamed("Ana Analyst")).findByText("Only the person, their managers and editors see a person's capacity.")).toBeVisible();
     await userEvent.selectOptions(screen.getByLabelText("Count by"), "month");
     await waitFor(() => expect(router.state.location.search).toEqual({ from: "2026-11-02", by: "month" }));
     expect(await screen.findByRole("columnheader", { name: "Nov 2026" })).toBeVisible();

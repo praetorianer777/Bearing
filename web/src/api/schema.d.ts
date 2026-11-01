@@ -791,6 +791,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/by-subject/capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A person's capacity, the person named as the realm knows them, by issuer and subject.
+         * @description from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days. issuer and subject name the person. Only the person, those above them in the management chain today and editors see it.
+         */
+        get: operations["realmPersonCapacity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/me": {
         parameters: {
             query?: never;
@@ -912,7 +932,7 @@ export interface paths {
         };
         /**
          * A person's capacity over a range, period by period: the full-time equivalents of everything they hold, until they leave.
-         * @description from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days.
+         * @description from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days. Only the person, those above them in the management chain today and editors see it; anybody else is refused.
          */
         get: operations["personCapacity"];
         put?: never;
@@ -4816,6 +4836,41 @@ export interface operations {
                     "application/json": {
                         person: components["schemas"]["PersonResponse"];
                     };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    realmPersonCapacity: {
+        parameters: {
+            query?: {
+                issuer?: string;
+                subject?: string;
+                from?: string;
+                to?: string;
+                by?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapacityResponse"];
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */

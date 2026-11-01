@@ -78,14 +78,46 @@ func readRange(r *http.Request, fields map[string]string) (org.Day, org.Day) {
 	return from, to
 }
 
+// handleRealmPersonCapacity is a person's capacity named as partners know them, by the realm's issuer and sub.
+func (s *Server) handleRealmPersonCapacity(w http.ResponseWriter, r *http.Request) {
+	issuer, subject := r.URL.Query().Get("issuer"), r.URL.Query().Get("subject")
+	if issuer == "" || subject == "" {
+		respondError(w, r, s.Log, ErrValidation(map[string]string{"subject": "Name the person by issuer and subject, as the realm does."}))
+		return
+	}
+	p, err := s.Org.PersonInRealm(r.Context(), issuer, subject)
+	if err != nil {
+		respondError(w, r, s.Log, capacityError(err))
+		return
+	}
+	s.capacityOf(w, r, func(q *org.CapacityQuery) { q.PersonID = &p.ID })
+}
+
+// capacityError says a refusal about capacity in the API's terms.
+func capacityError(err error) error {
+	switch {
+	case errors.Is(err, org.ErrCapacityRange):
+		return ErrValidation(map[string]string{"to": sentence(err.Error())})
+	case errors.Is(err, org.ErrCapacityHidden):
+		return ErrForbidden(sentence(err.Error()))
+	case errors.Is(err, org.ErrNotFound), errors.Is(err, org.ErrPositionNotFound), errors.Is(err, org.ErrRoleNotFound), errors.Is(err, org.ErrPersonNotFound):
+		return ErrNotFound()
+	}
+	return err
+}
+
 func (s *Server) capacity(w http.ResponseWriter, r *http.Request, param string, subject func(uuid.UUID, *org.CapacityQuery)) {
 	id, ok := s.pathID(w, r, param)
 	if !ok {
 		return
 	}
+	s.capacityOf(w, r, func(q *org.CapacityQuery) { subject(id, q) })
+}
+
+func (s *Server) capacityOf(w http.ResponseWriter, r *http.Request, subject func(*org.CapacityQuery)) {
 	v := r.URL.Query()
 	q := org.CapacityQuery{By: v.Get("by"), SubUnits: v.Get("subUnits") == "true"}
-	subject(id, &q)
+	subject(&q)
 	if q.By == "" {
 		q.By = org.ByWeek
 	}
@@ -99,15 +131,8 @@ func (s *Server) capacity(w http.ResponseWriter, r *http.Request, param string, 
 		return
 	}
 	periods, err := s.Org.Capacity(r.Context(), q)
-	switch {
-	case errors.Is(err, org.ErrCapacityRange):
-		respondError(w, r, s.Log, ErrValidation(map[string]string{"to": sentence(err.Error())}))
-		return
-	case errors.Is(err, org.ErrNotFound), errors.Is(err, org.ErrPositionNotFound), errors.Is(err, org.ErrRoleNotFound), errors.Is(err, org.ErrPersonNotFound):
-		respondError(w, r, s.Log, ErrNotFound())
-		return
-	case err != nil:
-		respondError(w, r, s.Log, err)
+	if err != nil {
+		respondError(w, r, s.Log, capacityError(err))
 		return
 	}
 	out := capacityResponse{From: q.From, To: q.To, By: q.By, SubUnits: q.SubUnits && q.UnitID != nil, Periods: make([]capacityPeriodResponse, len(periods))}
