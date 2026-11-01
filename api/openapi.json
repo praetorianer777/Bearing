@@ -43,6 +43,9 @@
       "name": "roles"
     },
     {
+      "name": "search"
+    },
+    {
       "name": "themes"
     },
     {
@@ -5510,6 +5513,137 @@
         "x-bearing-role": "editor"
       }
     },
+    "/search": {
+      "get": {
+        "operationId": "search",
+        "summary": "Search people, positions, units, roles, processes and the steps of processes, grouped by kind, best first.",
+        "description": "q needs two letters or more; every word is found as the start of a word, ignoring case and accents, a description's words also stemmed in English and German, and a name typed with a slip by its likeness. A name that is what was typed comes first. asOf, a day written 2006-01-02, today when left out, keeps to the people, positions and units there on that day; steps are those of the newest published version, or of the draft of a process not published yet. limit caps each kind, 10 when left out, at most 50. A step's id is its process's, with stepKey and version naming it there.",
+        "tags": [
+          "search"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search/quick": {
+      "get": {
+        "operationId": "quickSearch",
+        "summary": "The best few hits of any kind for a search box being typed in.",
+        "description": "As search finds, in one list ordered best first; limit is 8 when left out, at most 20.",
+        "tags": [
+          "search"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "hits": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SearchHitResponse"
+                      }
+                    },
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "hits",
+                    "query"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/steps": {
       "get": {
         "operationId": "whoDoes",
@@ -9047,6 +9181,95 @@
         "required": [
           "jsonrpc",
           "id"
+        ]
+      },
+      "SearchHitResponse": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stepKey": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name",
+          "detail"
+        ]
+      },
+      "SearchResponse": {
+        "type": "object",
+        "properties": {
+          "asOf": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchHitResponse"
+            }
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchHitResponse"
+            }
+          },
+          "processes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchHitResponse"
+            }
+          },
+          "query": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchHitResponse"
+            }
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchHitResponse"
+            }
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchHitResponse"
+            }
+          }
+        },
+        "required": [
+          "asOf",
+          "query",
+          "people",
+          "positions",
+          "units",
+          "roles",
+          "processes",
+          "steps"
         ]
       },
       "SelfEditableBody": {

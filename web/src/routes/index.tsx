@@ -12,6 +12,7 @@ import { type PersonSearch, PersonPage } from "@/features/people/PersonPage";
 import { type ProcessSearch, ProcessPage } from "@/features/processes/ProcessPage";
 import { ProcessesPage } from "@/features/processes/ProcessesPage";
 import { type WhoDoesSearch, WhoDoesPage } from "@/features/processes/WhoDoesPage";
+import { type SearchPageSearch, SearchPage } from "@/features/search/SearchPage";
 import { AccountsPage } from "@/features/settings/Accounts";
 import { ExampleDataPage } from "@/features/settings/ExampleData";
 import { ConsentPage } from "@/features/connect/ConsentPage";
@@ -159,6 +160,19 @@ const whoDoesRoute = createRoute({
     return <WhoDoesPage search={search} onSearch={(next) => navigate({ search: next, replace: true })} />;
   },
 });
+const searchRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/search",
+  validateSearch: (search: Record<string, unknown>): SearchPageSearch => ({
+    ...(typeof search.q === "string" && search.q ? { q: search.q } : {}),
+    ...(isDay(search.asOf) ? { asOf: search.asOf } : {}),
+  }),
+  component: function Search() {
+    const search = searchRoute.useSearch();
+    const navigate = searchRoute.useNavigate();
+    return <SearchPage search={search} onSearch={(next) => navigate({ search: next, replace: true })} />;
+  },
+});
 const roleRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/roles/$roleId",
@@ -246,6 +260,7 @@ const routeTree = rootRoute.addChildren([
     processesRoute,
     processRoute,
     whoDoesRoute,
+    searchRoute,
     roleRoute,
     accountsRoute,
     themesRoute,

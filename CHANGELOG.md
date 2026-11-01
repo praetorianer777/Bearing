@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Search:** one box along the top finds people, positions, units, roles,
+  processes and their steps as they are typed, ignoring case and accents
+  and forgiving a slip; Enter opens every result on the search page, as of
+  a day. `GET /api/v1/search` and `/search/quick`, and the MCP `search`
+  tool answers from them (#21).
+
 ## 0.1.0 (2026-11-01)
 
 The proof of concept: Bearing on its own, from setting it up to an assistant
