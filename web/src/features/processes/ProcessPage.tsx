@@ -23,11 +23,13 @@ import { t, useLanguage } from "@/i18n";
 import { arrange } from "./arrange";
 import { type Edit, edit, type Flow, type Point, start } from "./editor";
 import { FlowCanvas, type LaneShown, Palette, type Selection } from "./FlowCanvas";
+import { Changes } from "./Changes";
+import { diff } from "./diff";
 import { NOBODY, swimlanes } from "./lanes";
 import { type Party, useParties } from "./raci";
 import { NodeResponsibilities, RaciMatrix } from "./Responsibilities";
 
-export type ProcessSearch = { version?: number; view?: "lanes" | "matrix"; asOf?: string };
+export type ProcessSearch = { version?: number; view?: "lanes" | "matrix"; asOf?: string; against?: number };
 
 const inputClass = "w-full rounded-md border border-border-strong bg-surface px-2 py-1.5 text-sm text-ink";
 
@@ -295,27 +297,35 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
   const save = useSaveDraft(process.id);
   const publish = usePublish(process.id);
 
-  const editable = mayEdit && viewing === undefined;
+  const against = search.against !== viewing ? search.against : undefined;
+  const earlier = useProcessVersion(process.id, against);
+  // Comparing is reading: the draft is changed on its own, not while it is set against a version.
+  const editable = mayEdit && viewing === undefined && against === undefined;
   const shown: Flow = useMemo(
     () => (viewing === undefined ? history.present : { nodes: version.data?.nodes ?? [], arrows: version.data?.arrows ?? [] }),
     [viewing, history.present, version.data],
   );
+  const compared = useMemo(
+    () => (against !== undefined && earlier.data ? diff({ nodes: earlier.data.nodes ?? [], arrows: earlier.data.arrows ?? [] }, shown) : undefined),
+    [against, earlier.data, shown],
+  );
+  const base = compared?.merged ?? shown;
   // A view nobody may change can still be laid out for reading; the layout goes with the version it was made for.
   const [tidy, setTidy] = useState<{ for: string; places: Record<string, Point>; routes: Record<string, number[]> } | undefined>();
-  const tidyFor = `${viewing ?? "draft"}`;
+  const tidyFor = `${viewing ?? "draft"}|${against ?? ""}`;
   const tidied = tidy && tidy.for === tidyFor ? tidy : undefined;
   const flow: Flow = tidied
     ? {
-        nodes: shown.nodes.map((n) => ({ ...n, ...(tidied.places[n.key] ?? {}) })),
-        arrows: shown.arrows.map((a) => ({ ...a, route: tidied.routes[a.key] ?? [] })),
+        nodes: base.nodes.map((n) => ({ ...n, ...(tidied.places[n.key] ?? {}) })),
+        arrows: base.arrows.map((a) => ({ ...a, route: tidied.routes[a.key] ?? [] })),
       }
-    : shown;
+    : base;
   const onTidy = () => {
     if (tidied) {
       setTidy(undefined);
       return;
     }
-    arrange(shown).then((laid) => setTidy({ for: tidyFor, ...laid }));
+    arrange(base).then((laid) => setTidy({ for: tidyFor, ...laid }));
   };
   // Lanes are read off the flow as it stands, so they follow every edit made beside them.
   const inLanes = useMemo(() => (search.view === "lanes" ? swimlanes(shown) : undefined), [search.view, shown]);
@@ -421,6 +431,28 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
             ))}
           </select>
         </div>
+        <div className="flex flex-col gap-1 text-xs text-ink-muted">
+          <label htmlFor={`${process.id}-against`}>{t.compare.with}</label>
+          <select
+            id={`${process.id}-against`}
+            value={against ?? ""}
+            onChange={(e) => {
+              setSelection(null);
+              onSearch({ ...search, against: e.target.value ? Number(e.target.value) : undefined });
+            }}
+            disabled={versions.length === 0}
+            className="h-9 rounded-md border border-border-strong bg-surface px-2 text-sm text-ink"
+          >
+            <option value="">{t.compare.nothing}</option>
+            {versions
+              .filter((v) => v.number !== viewing)
+              .map((v) => (
+                <option key={v.number} value={v.number}>
+                  {t.process.version(v.number)}
+                </option>
+              ))}
+          </select>
+        </div>
         <AsOfPicker value={asOf} onChange={(day) => onSearch({ ...search, asOf: day })} />
         <fieldset className="flex h-9 overflow-hidden rounded-md border border-border-strong text-sm">
           <legend className="sr-only">{t.process.viewAs}</legend>
@@ -471,7 +503,7 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
         <div className="relative min-h-[60vh] flex-1 md:min-h-0">
           {search.view === "matrix" ? (
             <RaciMatrix
-              flow={flow}
+              flow={shown}
               nameOf={parties.nameOf}
               onPick={(key) => {
                 setSelection({ kind: "node", key });
@@ -487,9 +519,10 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
               onEdit={dispatch}
               flagged={flagged}
               subprocesses={names}
-              fitKey={`${process.id}|${viewing ?? "draft"}|${flow.nodes.length > 0}|${arranged}|${tidied ? "tidy" : "drawn"}|${search.view ?? "canvas"}`}
+              fitKey={`${process.id}|${viewing ?? "draft"}|${flow.nodes.length > 0}|${arranged}|${tidied ? "tidy" : "drawn"}|${search.view ?? "canvas"}|${against ?? ""}`}
               parties={parties.names}
               lanes={lanes}
+              marks={search.view === undefined ? compared?.marks : undefined}
             />
           )}
         </div>
@@ -510,6 +543,14 @@ function Editor({ process, search, onSearch }: { process: Process; search: Proce
               onRemove={removePicked}
             />
           </section>
+          {compared && against !== undefined && (
+            <section aria-labelledby={`${process.id}-changes`}>
+              <h2 id={`${process.id}-changes`} className="mb-2 text-sm font-semibold">
+                {t.compare.title(t.process.version(against), viewing === undefined ? t.process.draft : t.process.version(viewing))}
+              </h2>
+              <Changes diff={compared} nameOf={parties.nameOf} onPick={setSelection} />
+            </section>
+          )}
           {viewing === undefined && (
             <section aria-labelledby={`${process.id}-problems`}>
               <h2 id={`${process.id}-problems`} className="mb-2 text-sm font-semibold">

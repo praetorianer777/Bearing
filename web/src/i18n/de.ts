@@ -378,6 +378,16 @@ export const de: Messages = {
     laneGroups: { role: "Rolle", position: "Stelle", unit: "Einheit" },
     nobodyLane: "Niemand verantwortlich",
   },
+  compare: {
+    with: "Vergleichen mit",
+    nothing: "Nichts",
+    title: (from: string, to: string) => `Änderungen von ${from} zu ${to}`,
+    same: "Am Inhalt des Prozesses hat sich zwischen beiden nichts geändert, allenfalls an der Zeichnung.",
+    nodes: "Geänderte Knoten",
+    arrows: "Geänderte Pfeile",
+    marks: { added: "neu", removed: "entfernt", changed: "geändert" },
+    fields: { name: "Name", kind: "Art", description: "Beschreibung", subprocess: "Teilprozess", ends: "Verbindung", label: "Bedingung" },
+  },
   raci: {
     title: "Verantwortlichkeiten",
     none: "Noch niemand benannt.",

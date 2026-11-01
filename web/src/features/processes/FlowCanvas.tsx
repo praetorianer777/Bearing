@@ -22,6 +22,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FlowNode, NodeKind } from "@/api/processes";
 import { t } from "@/i18n";
 import { NODE_SIZE } from "./arrange";
+import type { Mark } from "./diff";
 import { type Edit, type Flow, freeSpot, freshKey, mayConnect } from "./editor";
 import { partyOf } from "./raci";
 import { routePath, sides } from "./routing";
@@ -29,9 +30,9 @@ import { routePath, sides } from "./routing";
 /** What is picked on the canvas: one node or one arrow, by key. */
 export type Selection = { kind: "node" | "arrow"; key: string } | null;
 
-type NodeData = { node: FlowNode; flagged: boolean; subprocess?: { id: string; name: string }; accountable?: string };
+type NodeData = { node: FlowNode; flagged: boolean; subprocess?: { id: string; name: string }; accountable?: string; mark?: Mark };
 type Tone = "plain" | "picked" | "lit" | "dim" | "flagged";
-type ArrowData = { route: number[]; label: string; tone: Tone };
+type ArrowData = { route: number[]; label: string; tone: Tone; mark?: Mark };
 type FlowEdgeView = Edge<ArrowData, "flow">;
 type FlowNodeView = Node<NodeData>;
 type LaneData = { name: string; group?: string; even: boolean };
@@ -67,33 +68,47 @@ function Ends({ kind }: { kind: NodeKind }) {
   );
 }
 
+const markClass: Record<Mark, string> = {
+  added: "bg-success-subtle text-success border-success",
+  removed: "bg-danger-subtle text-danger border-danger",
+  changed: "bg-warning-subtle text-warning border-warning",
+};
+
+/** A badge saying what a comparison found of a node: added, removed or changed. */
+function MarkBadge({ mark }: { mark?: Mark }) {
+  if (!mark) return null;
+  return <span className={`absolute -top-2.5 right-2 rounded border px-1 text-[10px] leading-4 font-medium ${markClass[mark]}`}>{t.compare.marks[mark]}</span>;
+}
+
 function Label({ node }: { node: FlowNode }) {
   return <span className={node.name ? "" : "italic text-ink-subtle"}>{node.name || t.process.unnamed}</span>;
 }
 
 function TerminalNode({ data, selected }: NodeProps<FlowNodeView>) {
-  const { node, flagged } = data;
+  const { node, flagged, mark } = data;
   return (
     <article
       aria-label={`${t.process.kinds[node.kind]}: ${node.name}`}
-      className={`flex items-center justify-center rounded-full border-2 px-4 text-sm font-medium ${tone(flagged, selected)} ${node.kind === "start" ? "bg-accent-subtle text-ink" : "bg-surface-sunken text-ink"}`}
+      className={`relative flex items-center justify-center rounded-full border-2 px-4 text-sm font-medium ${tone(flagged, selected)} ${node.kind === "start" ? "bg-accent-subtle text-ink" : "bg-surface-sunken text-ink"}`}
       style={NODE_SIZE[node.kind]}
     >
       <Ends kind={node.kind} />
+      <MarkBadge mark={mark} />
       <Label node={node} />
     </article>
   );
 }
 
 function StepNode({ data, selected }: NodeProps<FlowNodeView>) {
-  const { node, flagged, subprocess, accountable } = data;
+  const { node, flagged, subprocess, accountable, mark } = data;
   return (
     <article
       aria-label={`${t.process.kinds[node.kind]}: ${node.name}`}
-      className={`flex flex-col items-center justify-center rounded-md bg-surface px-3 text-center text-sm shadow-sm ${node.kind === "subprocess" ? "border-4 border-double" : "border"} ${tone(flagged, selected)}`}
+      className={`relative flex flex-col items-center justify-center rounded-md bg-surface px-3 text-center text-sm shadow-sm ${node.kind === "subprocess" ? "border-4 border-double" : "border"} ${tone(flagged, selected)}`}
       style={NODE_SIZE[node.kind]}
     >
       <Ends kind={node.kind} />
+      <MarkBadge mark={mark} />
       <Label node={node} />
       {accountable && (
         <span className="max-w-full truncate text-xs text-ink-subtle">
@@ -114,7 +129,7 @@ function StepNode({ data, selected }: NodeProps<FlowNodeView>) {
 }
 
 function DecisionNode({ data, selected }: NodeProps<FlowNodeView>) {
-  const { node, flagged } = data;
+  const { node, flagged, mark } = data;
   const { width, height } = NODE_SIZE.decision;
   const stroke = selected ? "var(--color-accent)" : flagged ? "var(--color-warning)" : "var(--color-border-strong)";
   return (
@@ -133,6 +148,7 @@ function DecisionNode({ data, selected }: NodeProps<FlowNodeView>) {
         />
       </svg>
       <Ends kind="decision" />
+      <MarkBadge mark={mark} />
       <span className="relative max-w-[60%] leading-tight">
         <Label node={node} />
       </span>
@@ -157,6 +173,12 @@ function LaneNode({ data, width, height }: NodeProps<LaneView>) {
 
 const nodeTypes = { start: TerminalNode, end: TerminalNode, step: StepNode, subprocess: StepNode, decision: DecisionNode, lane: LaneNode };
 const LANE = "lane|";
+
+const markColour: Record<Mark, string> = {
+  added: "var(--color-success)",
+  removed: "var(--color-danger)",
+  changed: "var(--color-warning)",
+};
 
 const toneColour: Record<Tone, string> = {
   plain: "var(--color-ink-muted)",
@@ -233,6 +255,7 @@ export function FlowCanvas({
   fitKey,
   parties,
   lanes = [],
+  marks,
 }: {
   flow: Flow;
   editable: boolean;
@@ -247,6 +270,8 @@ export function FlowCanvas({
   parties: Map<string, string>;
   /** Lanes to draw behind the nodes, read-only. */
   lanes?: LaneShown[];
+  /** What a comparison found of each node and arrow, by key. */
+  marks?: Map<string, Mark>;
 }) {
   const view = useReactFlow();
   // React Flow measures each node once drawn and hides it until then; the sizes are kept apart from the flow.
@@ -295,7 +320,7 @@ export function FlowCanvas({
           position: { x: n.x, y: n.y },
           selected: selection?.kind === "node" && selection.key === n.key,
           measured: measured[n.key],
-          style: focused && !litNodes.has(n.key) ? { opacity: 0.35 } : undefined,
+          style: focused && !litNodes.has(n.key) ? { opacity: 0.35 } : marks?.get(n.key) === "removed" ? { opacity: 0.6 } : undefined,
           data: {
             node: n,
             flagged: flagged.has(n.key),
@@ -306,18 +331,20 @@ export function FlowCanvas({
                 .map((r) => parties.get(partyOf(r)))
                 .filter(Boolean)
                 .join(", ") || undefined,
+            mark: marks?.get(n.key),
           },
         }),
       ),
     ],
-    [lanes, flow.nodes, selection, measured, flagged, subprocesses, parties, focused, litNodes],
+    [lanes, flow.nodes, selection, measured, flagged, subprocesses, parties, focused, litNodes, marks],
   );
 
   const nameOf = new Map(flow.nodes.map((n) => [n.key, n.name || t.process.unnamed]));
   const edges: FlowEdgeView[] = flow.arrows.map((a) => {
     const picked = selection?.kind === "arrow" && selection.key === a.key;
     const tone: Tone = picked ? "picked" : litArrows.has(a.key) ? "lit" : focused ? "dim" : flagged.has(a.key) ? "flagged" : "plain";
-    const colour = toneColour[tone];
+    const mark = marks?.get(a.key);
+    const colour = tone === "plain" && mark ? markColour[mark] : toneColour[tone];
     const ends = chosen[a.key];
     return {
       id: a.key,
@@ -328,14 +355,14 @@ export function FlowCanvas({
       type: "flow",
       selected: picked,
       zIndex: tone === "lit" || tone === "picked" ? 1 : 0,
-      data: { route: a.route, label: a.label, tone },
+      data: { route: a.route, label: a.label, tone, mark },
       style: {
         stroke: colour,
-        strokeWidth: tone === "lit" || tone === "picked" ? 2.5 : 1.5,
-        strokeDasharray: flagged.has(a.key) ? "5 3" : undefined,
+        strokeWidth: tone === "lit" || tone === "picked" || mark ? 2.5 : 1.5,
+        strokeDasharray: flagged.has(a.key) || mark === "removed" ? "5 3" : undefined,
       },
       markerEnd: { type: MarkerType.ArrowClosed, color: colour },
-      ariaLabel: t.process.arrowFromTo(nameOf.get(a.from) ?? a.from, nameOf.get(a.to) ?? a.to),
+      ariaLabel: `${t.process.arrowFromTo(nameOf.get(a.from) ?? a.from, nameOf.get(a.to) ?? a.to)}${mark ? ` (${t.compare.marks[mark]})` : ""}`,
     };
   });
 
