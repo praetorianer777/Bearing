@@ -138,6 +138,19 @@ var mayCall = map[string]auth.Role{
 	"whoDoes":              "",
 	"demo":                 auth.RoleAdministrator,
 	"loadDemo":             auth.RoleAdministrator,
+	"oauthMetadata":        anybody,
+	"resourceMetadata":     anybody,
+	"mcpResourceMetadata":  anybody,
+	"registerApp":          anybody,
+	"authorize":            anybody,
+	"consent":              "",
+	"decide":               "",
+	"token":                anybody,
+	"revoke":               anybody,
+	"connectedApps":        "",
+	"disconnect":           "",
+	"apps":                 auth.RoleAdministrator,
+	"removeApp":            auth.RoleAdministrator,
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {

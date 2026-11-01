@@ -80,6 +80,9 @@ export function AccountMenu() {
               <Link to="/settings/profile" onClick={() => setOpen(false)} className="mt-1.5 inline-block text-sm text-accent hover:underline">
                 {t.account.profile}
               </Link>
+              <Link to="/settings/connected-apps" onClick={() => setOpen(false)} className="mt-1 block text-sm text-accent hover:underline">
+                {t.account.connectedApps}
+              </Link>
             </div>
           )}
           <fieldset>

@@ -66,9 +66,10 @@ func Spec() *openapi.Document {
 		Components: openapi.Components{
 			SecuritySchemes: map[string]openapi.SecurityScheme{
 				"session": {Type: "apiKey", In: "cookie", Name: config.DefaultSessionCookie, Description: "The cookie a sign-in sets."},
+				"bearer":  {Type: "http", Scheme: "bearer", Description: "An access token a connected app holds."},
 			},
 		},
-		Security: []map[string][]string{{"session": {}}},
+		Security: []map[string][]string{{"session": {}}, {"bearer": {}}},
 	}
 	errorSchema := b.Schema(reflect.TypeOf(errorEnvelope{}))
 	tags := map[string]bool{}
@@ -107,6 +108,11 @@ func (op operation) describe(b *openapi.Builder, errorSchema *openapi.Schema) *o
 	if op.request != nil {
 		o.RequestBody = &openapi.RequestBody{Required: true, Content: map[string]openapi.MediaType{
 			"application/json": {Schema: b.SchemaOf(op.request)},
+		}}
+	}
+	if op.form != nil {
+		o.RequestBody = &openapi.RequestBody{Required: true, Content: map[string]openapi.MediaType{
+			"application/x-www-form-urlencoded": {Schema: b.SchemaOf(op.form)},
 		}}
 	}
 	for status, body := range op.responses {

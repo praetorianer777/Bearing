@@ -16,6 +16,7 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/freshness"
 	"github.com/praetorianer777/bearing/backend/internal/httpapi"
 	"github.com/praetorianer777/bearing/backend/internal/jobs"
+	"github.com/praetorianer777/bearing/backend/internal/oauth"
 	"github.com/praetorianer777/bearing/backend/internal/org"
 	"github.com/praetorianer777/bearing/backend/internal/sso"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
@@ -55,6 +56,7 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 		AppURL:         cfg.Auth.AppURL,
 		Themes:         &theme.Service{DB: cluster},
 		Org:            people,
+		OAuth:          &oauth.Service{DB: cluster, Issuer: cfg.Auth.AppURL, Log: log},
 	}
 	if cfg.OIDC.Enabled() {
 		backchannel, err := sso.ParseBackchannel(cfg.OIDC.Backchannel)

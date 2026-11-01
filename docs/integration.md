@@ -2,8 +2,26 @@
 
 Proposed. None of these names is in Dynamo's `docs/compatibility.md` yet;
 each is added there by pull request before Bearing reports it. Bearing serves
-`theme-export@1` already, in the shape the siblings serve it, and lists it at
-`/meta`.
+`theme-export@1` and `oauth.partner-tokens@1` already, in the shape the
+siblings serve them, and lists them at `/meta`.
+
+## Connecting an app
+
+An app reads every address from
+`/.well-known/oauth-authorization-server`, and an MCP client finds that
+document through `/.well-known/oauth-protected-resource/api/v1/mcp`, which
+a 401 at the MCP endpoint names. The app registers itself at
+`POST /api/v1/oauth/register` and waits, pending, until an administrator
+allows it by connecting it once on the consent page; an app nobody allows
+within a day is removed. Then anybody signed in connects it there, by
+authorization code with PKCE S256, for `read`, or `read write` to change
+what their role lets them. The grant acts at the MCP endpoint only: its
+access token lives an hour, its refresh token 90 days from its last use,
+and both rotate at each refresh. A refresh token or a code presented a
+second time ends the grant. People disconnect their apps under Connected
+apps; administrators remove an app for everybody there too. Tokens carry
+their kind in their prefix: `bearing_oat_` access, `bearing_ort_`
+refresh, `bearing_ocs_` client secret.
 
 `GET /api/v1/meta` lists, under `capabilities`, the integration features this
 build offers, as stable names with a version, in the scheme the suite uses. A
