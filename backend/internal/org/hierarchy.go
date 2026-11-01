@@ -32,12 +32,16 @@ type Holder struct {
 	PersonID uuid.UUID
 	Name     string
 	Share    int
+	// Issuer and Subject are how the realm knows them; nil for somebody it does not.
+	Issuer, Subject *string
 }
 
 // Member is somebody holding a position in a unit on a day.
 type Member struct {
 	PersonID   uuid.UUID
 	Name       string
+	Issuer     *string
+	Subject    *string
 	PositionID uuid.UUID
 	Title      string
 	UnitID     uuid.UUID
@@ -78,7 +82,7 @@ func walkQuery(d direction, dotted bool) string {
 			FROM reporting_line l JOIN reached r ON l.near = r.position_id
 			WHERE $3 AND l.valid_from <= $2 AND (l.valid_to IS NULL OR l.valid_to > $2) ` + kind + guard + `
 		)
-		SELECT r.position_id, p.title, p.unit_id, p.head_of_unit, r.from_id, r.kind, r.depth, h.id, h.person_id, pe.name, h.share
+		SELECT r.position_id, p.title, p.unit_id, p.head_of_unit, r.from_id, r.kind, r.depth, h.id, h.person_id, pe.name, h.share, pe.issuer, pe.subject
 		FROM reached r JOIN position p ON p.id = r.position_id
 		LEFT JOIN (holding h JOIN person pe ON pe.id = h.person_id)
 			ON h.position_id = r.position_id AND h.valid_from <= $2 AND (h.valid_to IS NULL OR h.valid_to > $2)
@@ -170,14 +174,14 @@ func walk(ctx context.Context, q db.DBTX, from []uuid.UUID, asOf Day, d directio
 	for rows.Next() {
 		var r reached
 		var holding, person *uuid.UUID
-		var name *string
+		var name, issuer, subject *string
 		var share *int
-		if err := rows.Scan(&r.PositionID, &r.Title, &r.UnitID, &r.head, &r.From, &r.Kind, &r.Depth, &holding, &person, &name, &share); err != nil {
+		if err := rows.Scan(&r.PositionID, &r.Title, &r.UnitID, &r.head, &r.From, &r.Kind, &r.Depth, &holding, &person, &name, &share, &issuer, &subject); err != nil {
 			return nil, err
 		}
 		if holding != nil && !seen[*holding] {
 			seen[*holding] = true
-			held[r.PositionID] = append(held[r.PositionID], Holder{PersonID: *person, Name: *name, Share: *share})
+			held[r.PositionID] = append(held[r.PositionID], Holder{PersonID: *person, Name: *name, Share: *share, Issuer: issuer, Subject: subject})
 		}
 		if slices.Contains(from, r.PositionID) {
 			continue
@@ -236,7 +240,7 @@ func (s *Service) Members(ctx context.Context, unitID uuid.UUID, asOf Day, subUn
 				SELECT pl.unit_id FROM unit_placement pl JOIN tree t ON pl.parent_id = t.id
 				WHERE $3 AND pl.valid_from <= $2 AND (pl.valid_to IS NULL OR pl.valid_to > $2)
 			)
-			SELECT h.person_id, pe.name, p.id, p.title, p.unit_id, p.head_of_unit, h.id, h.share
+			SELECT h.person_id, pe.name, pe.issuer, pe.subject, p.id, p.title, p.unit_id, p.head_of_unit, h.id, h.share
 			FROM tree t JOIN position p ON p.unit_id = t.id
 			JOIN holding h ON h.position_id = p.id AND h.valid_from <= $2 AND (h.valid_to IS NULL OR h.valid_to > $2)
 			JOIN person pe ON pe.id = h.person_id`, unitID, asOf.Time(), subUnits)
@@ -245,7 +249,7 @@ func (s *Service) Members(ctx context.Context, unitID uuid.UUID, asOf Day, subUn
 		}
 		out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (Member, error) {
 			var m Member
-			err := row.Scan(&m.PersonID, &m.Name, &m.PositionID, &m.Title, &m.UnitID, &m.HeadOfUnit, &m.HoldingID, &m.Share)
+			err := row.Scan(&m.PersonID, &m.Name, &m.Issuer, &m.Subject, &m.PositionID, &m.Title, &m.UnitID, &m.HeadOfUnit, &m.HoldingID, &m.Share)
 			return m, err
 		})
 		if err != nil {

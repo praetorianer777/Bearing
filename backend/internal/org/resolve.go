@@ -15,6 +15,8 @@ type Resolved struct {
 	PersonID uuid.UUID
 	Name     string
 	Share    int
+	// Issuer and Subject are how the realm knows them; nil for somebody it does not.
+	Issuer, Subject *string
 	// PositionID is the position that brings them in; nil when they hold a role directly.
 	PositionID *uuid.UUID
 	// DeputyFor is the vacant position they stand in for, through PositionID, its deputy.
@@ -203,7 +205,7 @@ func standingFor(ctx context.Context, q db.DBTX, all []Responsibility, asOf Day)
 		positions = append(positions, d[1])
 	}
 
-	rows, err := q.Query(ctx, `SELECT h.position_id, h.role_id, h.person_id, n.name, h.share FROM holding h JOIN person n ON n.id = h.person_id
+	rows, err := q.Query(ctx, `SELECT h.position_id, h.role_id, h.person_id, n.name, h.share, n.issuer, n.subject FROM holding h JOIN person n ON n.id = h.person_id
 		WHERE (h.position_id = ANY ($1) OR h.role_id = ANY ($3)) AND h.valid_from <= $2 AND (h.valid_to IS NULL OR h.valid_to > $2)
 		ORDER BY n.name, h.person_id`, positions, day, roles)
 	if err != nil {
@@ -211,7 +213,7 @@ func standingFor(ctx context.Context, q db.DBTX, all []Responsibility, asOf Day)
 	}
 	var position, role *uuid.UUID
 	var r Resolved
-	_, err = pgx.ForEachRow(rows, []any{&position, &role, &r.PersonID, &r.Name, &r.Share}, func() error {
+	_, err = pgx.ForEachRow(rows, []any{&position, &role, &r.PersonID, &r.Name, &r.Share, &r.Issuer, &r.Subject}, func() error {
 		if position != nil {
 			held := *position
 			r.PositionID = &held

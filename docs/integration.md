@@ -3,7 +3,7 @@
 Proposed. None of these names is in Dynamo's `docs/compatibility.md` yet;
 each is added there by pull request before Bearing reports it. Bearing serves
 `theme-export@1`, `oauth.partner-tokens@1`, `oauth.token-exchange@1`,
-`mcp@1` and `capacity@1` already, in the shape the siblings serve them where
+`mcp@1`, `capacity@1`, `org-directory@1` and `responsibility@1` already, in the shape the siblings serve them where
 they share one, and lists them at `/meta`.
 
 ## MCP
@@ -90,6 +90,44 @@ GET /api/v1/gaps?from=&to=&unitId=&subUnits=true
   unit, a position or a role are for everybody signed in. Partners name a
   person by the realm's issuer and `sub` with `by-subject`.
 
+## Directory and responsibility
+
+`org-directory@1` is who the organisation has and how it hangs together;
+`responsibility@1` is who answers for something. Both read as the person
+the call acts for, on the day `asOf` names, today when left out. Partners
+name people by the realm's issuer and `sub`; every person in an answer
+carries `issuer` and `subject`, null for somebody the realm does not know.
+
+```
+GET /api/v1/people/by-subject?issuer=&subject=&asOf=
+GET /api/v1/people/{id}/entry?asOf=
+GET /api/v1/people/by-subject/chain?issuer=&subject=&dotted=
+GET /api/v1/people/by-subject/reports?issuer=&subject=&all=&dotted=
+GET /api/v1/people/{id}/chain, /people/{id}/reports
+GET /api/v1/units/{id}/tree?asOf=
+GET /api/v1/search?q=
+GET /api/v1/roles/{id}/people?asOf=
+GET /api/v1/processes/{id}/steps/{key}/people?asOf=&version=
+GET /api/v1/people/{id}/managers?levels=&asOf=
+GET /api/v1/people/by-subject/managers?issuer=&subject=&levels=&asOf=
+```
+
+- An entry is the person with the positions they hold, heads of units
+  first, each with its unit and share, and the roles they have, directly
+  or `through` a position.
+- A unit's tree is the unit and every unit inside it, each after the one
+  it is part of, with its `depth` below the first.
+- A role comes down to those holding it directly, then for each position
+  carrying it its holders, or when it is vacant the holders of its first
+  deputy with any, marked `deputyFor`. A step comes down to people the
+  same way, a unit to its head.
+- `managers` are the positions exactly `levels` solid lines up, one when
+  left out, with who they come down to; a person holding two positions
+  has a manager in each chain, and none where the chain ends sooner. This
+  is what an approval routed to "the manager two levels up" asks.
+- An unknown subject answers 404; a call without both issuer and subject
+  answers 422.
+
 ## Trading a realm token
 
 A partner app of the suite that signs people in through the realm is
@@ -132,7 +170,8 @@ features, not data.
   "product": "bearing",
   "build": { "version": "0.1.0" },
   "apiVersion": "1",
-  "capabilities": ["capacity@1", "mcp@1", "oauth.partner-tokens@1", "oauth.token-exchange@1", "theme-export@1"]
+  "capabilities": ["capacity@1", "mcp@1", "oauth.partner-tokens@1", "oauth.token-exchange@1", "org-directory@1",
+    "responsibility@1", "theme-export@1"]
 }
 ```
 

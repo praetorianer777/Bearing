@@ -392,6 +392,7 @@ type resolvedJSON struct {
 	Name       string
 	PositionID *string
 	DeputyFor  *string
+	Subject    *string
 }
 
 type stepPeopleJSON struct {

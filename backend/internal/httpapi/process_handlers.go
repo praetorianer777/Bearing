@@ -365,6 +365,9 @@ type resolvedResponse struct {
 	PersonID uuid.UUID `json:"personId"`
 	Name     string    `json:"name"`
 	Share    int       `json:"share"`
+	// Issuer and Subject are how the realm knows them; null for somebody it does not.
+	Issuer  *string `json:"issuer"`
+	Subject *string `json:"subject"`
 	// PositionID is the position that brings them in; null when they hold the role directly.
 	PositionID *uuid.UUID `json:"positionId"`
 	// DeputyFor is the vacant position they stand in for, as its deputy; null when they stand for themselves.
