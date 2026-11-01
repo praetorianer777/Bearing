@@ -16,7 +16,7 @@ const sorted = (value) => {
 };
 // Bearing's own part of the realm, which Dynamo does not hold until Bearing joins the suite; it is
 // left out of both sides, so the shared realm is compared and Bearing's part never makes a difference.
-const BEARING_CLIENTS = ["bearing"];
+const BEARING_CLIENTS = ["bearing", "bearing-partner"];
 const BEARING_GROUPS = ["bearing-administrators"];
 const withoutBearing = (realm) => ({
   ...realm,

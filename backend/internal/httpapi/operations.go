@@ -411,7 +411,7 @@ var operations = []operation{
 		summary: "Connect the app, or cancel; the answer says where the browser goes back to. An administrator connecting an app nobody allowed allows it for everybody.",
 		request: consentRequest{}, responses: map[int]any{http.StatusOK: redirectResponse{}}},
 	{method: http.MethodPost, path: oauth.TokenPath, id: "token", handle: (*Server).handleToken, tag: "oauth",
-		summary: "The token endpoint: an authorization code or a refresh token traded for an access token of an hour and a new refresh token.",
+		summary: "The token endpoint: an authorization code or a refresh token traded for an access token of an hour and a new refresh token; or a token exchanged (RFC 8693), a partner's realm token for a grant, or an app's own access token for a narrower one.",
 		public:  true, form: tokenForm{}, responses: map[int]any{http.StatusOK: oauth.TokenResponse{}, http.StatusBadRequest: oauth.Error{}}},
 	{method: http.MethodPost, path: oauth.RevokePath, id: "revoke", handle: (*Server).handleRevoke, tag: "oauth",
 		summary: "End the grant an access or refresh token belongs to (RFC 7009).", public: true, form: revokeForm{},
@@ -423,6 +423,9 @@ var operations = []operation{
 	{method: http.MethodGet, path: "/oauth/clients", id: "apps", handle: (*Server).handleClients, tag: "oauth",
 		summary: "Every app that registered itself, allowed or waiting for an administrator.", role: administrator,
 		responses: map[int]any{http.StatusOK: env{"clients": []clientResponse{}}}},
+	{method: http.MethodPost, path: "/oauth/clients", id: "registerPartner", handle: (*Server).handleRegisterPartner, tag: "oauth",
+		summary: "Register a partner app for token exchange, with the realm client its people sign in through. Its secret is shown this once.",
+		role:    administrator, request: partnerRequest{}, responses: map[int]any{http.StatusCreated: env{"client": clientResponse{}, "secret": ""}}},
 	{method: http.MethodDelete, path: "/oauth/clients/{clientID}", id: "removeApp", handle: (*Server).handleRemoveClient, tag: "oauth",
 		summary: "Remove an app and disconnect it from everybody.", role: administrator, responses: map[int]any{http.StatusNoContent: nil}},
 }

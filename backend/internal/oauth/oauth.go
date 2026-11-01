@@ -4,6 +4,7 @@
 package oauth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -14,20 +15,33 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/db"
 )
 
 // CapabilityPartnerTokens is what /meta lists for the consent flow, under the name the siblings list it by.
 const CapabilityPartnerTokens = "oauth.partner-tokens@1"
 
+// CapabilityTokenExchange is what /meta lists for trading a realm token, with the promise the siblings' carries.
+const CapabilityTokenExchange = "oauth.token-exchange@1"
+
 // The RFCs' names, and the grants the token endpoint serves.
 const (
 	GrantAuthorizationCode = "authorization_code"
 	GrantRefreshToken      = "refresh_token"
+	GrantTokenExchange     = "urn:ietf:params:oauth:grant-type:token-exchange"
+	TokenTypeAccess        = "urn:ietf:params:oauth:token-type:access_token"
 )
 
 // GrantTypes are the grants the metadata names.
-var GrantTypes = []string{GrantAuthorizationCode, GrantRefreshToken}
+var GrantTypes = []string{GrantAuthorizationCode, GrantRefreshToken, GrantTokenExchange}
+
+// What an app is: one that registered itself for the consent page, or a partner an administrator registered for
+// token exchange.
+const (
+	KindRegistered = "registered"
+	KindPartner    = "partner"
+)
 
 // An app that registered itself is pending until an administrator allows it.
 const (
@@ -92,6 +106,11 @@ func (e *RefusedError) Error() string { return e.Sentence }
 // Service is the authorization server.
 type Service struct {
 	DB *db.Cluster
+	// Realm verifies a realm access token a partner trades, issued to its client azp; nil is a Bearing without
+	// single sign-on, where there is none to trade.
+	Realm func(ctx context.Context, raw, azp string) (auth.Identity, error)
+	// AccountFor is the account somebody the realm vouches for has, as single sign-on finds or makes it.
+	AccountFor func(ctx context.Context, id auth.Identity) (auth.Account, error)
 	// Issuer is BEARING_APP_URL, the base of every address in the metadata.
 	Issuer string
 	Log    *slog.Logger

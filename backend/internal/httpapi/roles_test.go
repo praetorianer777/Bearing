@@ -151,6 +151,7 @@ var mayCall = map[string]auth.Role{
 	"disconnect":           "",
 	"apps":                 auth.RoleAdministrator,
 	"removeApp":            auth.RoleAdministrator,
+	"registerPartner":      auth.RoleAdministrator,
 }
 
 func TestEveryOperationAgainstEveryRole(t *testing.T) {

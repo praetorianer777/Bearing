@@ -21,11 +21,14 @@ import (
 
 // TokenResponse is the token endpoint's answer (RFC 6749 section 5.1).
 type TokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int    `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ExpiresIn   int    `json:"expires_in"`
+	// RefreshToken is left out of a narrower token's answer, which lives its hour at most and is not renewed.
+	RefreshToken string `json:"refresh_token,omitempty"`
 	Scope        string `json:"scope"`
+	// IssuedTokenType answers a token exchange (RFC 8693 section 2.2.1).
+	IssuedTokenType string `json:"issued_token_type,omitempty"`
 }
 
 // Credentials are how an app says who it is at the token and revocation endpoints.
@@ -68,19 +71,21 @@ type clientRow struct {
 	ID           uuid.UUID
 	Name         string
 	Scopes       []string
-	Status       string
+	Kind, Status string
 	ClientURI    string
 	RedirectURIs []string
-	digest       []byte
+	// KeycloakClientID is the realm client a partner's people sign in through; nil for an app that registered itself.
+	KeycloakClientID *string
+	digest           []byte
 }
 
 // loadClient reads an app, a pending one nobody allowed in time read as gone.
 func (s *Service) loadClient(ctx context.Context, tx db.DBTX, id uuid.UUID) (*clientRow, error) {
 	var c clientRow
 	err := tx.QueryRow(ctx, `
-		SELECT id, name, scopes, status, client_uri, redirect_uris, secret_hash
+		SELECT id, name, scopes, kind, status, client_uri, redirect_uris, keycloak_client_id, secret_hash
 		FROM oauth_client WHERE id = $1 AND (status = 'allowed' OR created_at >= $2)`, id, s.now().Add(-PendingClientTTL)).
-		Scan(&c.ID, &c.Name, &c.Scopes, &c.Status, &c.ClientURI, &c.RedirectURIs, &c.digest)
+		Scan(&c.ID, &c.Name, &c.Scopes, &c.Kind, &c.Status, &c.ClientURI, &c.RedirectURIs, &c.KeycloakClientID, &c.digest)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNoSuchClient
 	}
@@ -118,9 +123,11 @@ func (s *Service) authenticate(ctx context.Context, tx db.DBTX, cred Credentials
 }
 
 // singleParams may each be sent once at most.
-var singleParams = []string{"grant_type", "code", "redirect_uri", "code_verifier", "refresh_token", "scope", "client_id", "client_secret", "resource"}
+var singleParams = []string{"grant_type", "code", "redirect_uri", "code_verifier", "refresh_token", "scope", "client_id", "client_secret", "resource",
+	"subject_token", "subject_token_type", "requested_token_type", "audience", ParamExpiresIn}
 
-// Token serves the token endpoint: a code redeemed for a grant, or a grant's refresh token traded for new tokens.
+// Token serves the token endpoint: a code redeemed for a grant, a grant's refresh token traded for new tokens, or a
+// token exchanged.
 func (s *Service) Token(ctx context.Context, cred Credentials, form url.Values) (*TokenResponse, error) {
 	for _, name := range singleParams {
 		if len(form[name]) > 1 {
@@ -142,8 +149,11 @@ func (s *Service) Token(ctx context.Context, cred Credentials, form url.Values) 
 	}); err != nil {
 		return nil, err
 	}
-	if resource := form.Get("resource"); resource != "" && !s.resourceMatches(resource) {
+	if resource := form.Get("resource"); client.Kind == KindRegistered && resource != "" && !s.resourceMatches(resource) {
 		return nil, refuse(http.StatusBadRequest, "invalid_target", "The one resource is Bearing's MCP endpoint, "+s.Resource()+".")
+	}
+	if grant == GrantTokenExchange {
+		return s.exchange(ctx, client, form)
 	}
 	var (
 		out     *TokenResponse
@@ -186,6 +196,9 @@ func active(ctx context.Context, tx db.DBTX, account uuid.UUID) (bool, error) {
 // redeem trades a code for the person's one grant for the app, made afresh: the consent just given says what it may
 // do. A code used twice ends the grant it made, as RFC 6749 section 10.5 asks, though the answer refuses.
 func (s *Service) redeem(ctx context.Context, tx db.DBTX, client *clientRow, form url.Values) (*TokenResponse, error, error) {
+	if client.Kind != KindRegistered {
+		return nil, refuse(http.StatusBadRequest, "unauthorized_client", client.Name+" trades realm tokens; it is never given a code."), nil
+	}
 	if err := required(form, "code", "redirect_uri", "code_verifier"); err != nil {
 		return nil, err, nil
 	}
@@ -227,7 +240,7 @@ func (s *Service) redeem(ctx context.Context, tx db.DBTX, client *clientRow, for
 	if ok, err := active(ctx, tx, account); err != nil || !ok {
 		return nil, ended(), err
 	}
-	out, id, err := s.issue(ctx, tx, client, account, scopes)
+	out, id, err := s.issue(ctx, tx, client, account, scopes, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -237,8 +250,8 @@ func (s *Service) redeem(ctx context.Context, tx db.DBTX, client *clientRow, for
 	return out, nil, nil
 }
 
-// issue makes the grant, replacing one the person held for the app.
-func (s *Service) issue(ctx context.Context, tx db.DBTX, client *clientRow, account uuid.UUID, scopes []string) (*TokenResponse, uuid.UUID, error) {
+// issue makes the grant, replacing one the person held for the app; mcpOnly holds it to the MCP endpoint.
+func (s *Service) issue(ctx context.Context, tx db.DBTX, client *clientRow, account uuid.UUID, scopes []string, mcpOnly bool) (*TokenResponse, uuid.UUID, error) {
 	access, accessDigest, err := auth.NewPrefixedToken(auth.AccessTokenPrefix)
 	if err != nil {
 		return nil, uuid.Nil, err
@@ -254,8 +267,8 @@ func (s *Service) issue(ctx context.Context, tx db.DBTX, client *clientRow, acco
 	var id uuid.UUID
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO api_token (account_id, name, token_hash, scopes, expires_at, client_id, refresh_hash, access_expires_at, mcp_only)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true) RETURNING id`,
-		account, client.Name, accessDigest, scopes, now.Add(RefreshTokenTTL), client.ID, refreshDigest, now.Add(AccessTokenTTL)).Scan(&id); err != nil {
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+		account, client.Name, accessDigest, scopes, now.Add(RefreshTokenTTL), client.ID, refreshDigest, now.Add(AccessTokenTTL), mcpOnly).Scan(&id); err != nil {
 		return nil, uuid.Nil, fmt.Errorf("store the grant: %w", err)
 	}
 	return &TokenResponse{AccessToken: access, TokenType: "Bearer", ExpiresIn: int(AccessTokenTTL / time.Second),
@@ -331,7 +344,13 @@ func (s *Service) Revoke(ctx context.Context, cred Credentials, token string) er
 			return err
 		}
 		digest := auth.HashToken(token)
-		_, err = tx.Exec(ctx, `DELETE FROM api_token WHERE client_id = $2 AND (token_hash = $1 OR refresh_hash = $1)`, digest, client.ID)
+		tag, err := tx.Exec(ctx, `DELETE FROM api_token WHERE client_id = $2 AND (token_hash = $1 OR refresh_hash = $1)`, digest, client.ID)
+		if err != nil || tag.RowsAffected() > 0 {
+			return err
+		}
+		_, err = tx.Exec(ctx, `
+			DELETE FROM oauth_exchanged_token x USING api_token t
+			WHERE x.token_hash = $1 AND t.id = x.grant_id AND t.client_id = $2`, digest, client.ID)
 		return err
 	})
 	return err

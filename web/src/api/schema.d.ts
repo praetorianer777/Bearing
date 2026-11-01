@@ -619,7 +619,8 @@ export interface paths {
         /** Every app that registered itself, allowed or waiting for an administrator. */
         get: operations["apps"];
         put?: never;
-        post?: never;
+        /** Register a partner app for token exchange, with the realm client its people sign in through. Its secret is shown this once. */
+        post: operations["registerPartner"];
         delete?: never;
         options?: never;
         head?: never;
@@ -704,7 +705,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** The token endpoint: an authorization code or a refresh token traded for an access token of an hour and a new refresh token. */
+        /** The token endpoint: an authorization code or a refresh token traded for an access token of an hour and a new refresh token; or a token exchanged (RFC 8693), a partner's realm token for a grant, or an app's own access token for a narrower one. */
         post: operations["token"];
         delete?: never;
         options?: never;
@@ -1799,6 +1800,8 @@ export interface components {
             createdAt: string;
             /** Format: uuid */
             id: string;
+            keycloakClientId: string;
+            kind: string;
             name: string;
             people: number;
             redirectUris: string[];
@@ -2174,6 +2177,11 @@ export interface components {
             name: string;
             positions?: string[];
         };
+        PartnerRequest: {
+            keycloakClientId: string;
+            name: string;
+            write: boolean;
+        };
         PasswordRequest: {
             password: string;
         };
@@ -2507,6 +2515,7 @@ export interface components {
             shape: components["schemas"]["ThemeShape"];
         };
         TokenForm: {
+            bearing_expires_in?: string;
             client_id?: string;
             client_secret?: string;
             code?: string;
@@ -2514,13 +2523,17 @@ export interface components {
             grant_type: string;
             redirect_uri?: string;
             refresh_token?: string;
+            requested_token_type?: string;
             resource?: string;
             scope?: string;
+            subject_token?: string;
+            subject_token_type?: string;
         };
         TokenResponse: {
             access_token: string;
             expires_in: number;
-            refresh_token: string;
+            issued_token_type?: string;
+            refresh_token?: string;
             scope: string;
             token_type: string;
         };
@@ -3971,6 +3984,42 @@ export interface operations {
                 content: {
                     "application/json": {
                         clients: components["schemas"]["ClientResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    registerPartner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        client: components["schemas"]["ClientResponse"];
+                        secret: string;
                     };
                 };
             };
