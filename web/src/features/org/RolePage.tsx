@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { api, unwrap } from "@/api/client";
 import { TargetSection } from "@/features/planning/TargetSection";
 import { Duties } from "@/features/processes/Duties";
 import { t, useLanguage } from "@/i18n";
+import { RoleChanges, useEditor } from "./edit";
 import { AsOfPicker, PersonName, PositionName, Section, today } from "./common";
 import type { DaySearch } from "./UnitPage";
 
@@ -10,6 +12,7 @@ import type { DaySearch } from "./UnitPage";
 export function RolePage({ roleId, search, onSearch }: { roleId: string; search: DaySearch; onSearch: (next: DaySearch) => void }) {
   useLanguage();
   const asOf = search.asOf ?? today();
+  const editor = useEditor();
   const page = useQuery({
     queryKey: ["role-page", roleId, asOf],
     queryFn: async () => {
@@ -66,6 +69,10 @@ export function RolePage({ roleId, search, onSearch }: { roleId: string; search:
       </div>
       <TargetSection subject={{ roleId: role.id }} asOf={asOf} />
       <Duties subject={{ roleId: role.id }} asOf={asOf} />
+      {editor && <RoleChanges key={role.id} role={role} />}
+      <Link to="/roles" className="self-start text-sm text-accent hover:underline">
+        {t.roleList.all}
+      </Link>
     </div>
   );
 }

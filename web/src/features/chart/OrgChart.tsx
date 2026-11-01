@@ -17,8 +17,10 @@ import {
 import "@xyflow/react/dist/style.css";
 import { Link } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useMoveUnit, useSetReportsTo } from "@/api/edit";
 import { useOrganisation } from "@/api/org";
-import { Button } from "@/components/ui";
+import { Button, Field, FormError } from "@/components/ui";
+import { useEditor } from "@/features/org/edit";
 import { LoadExampleData } from "@/features/settings/ExampleData";
 import { t, useLanguage } from "@/i18n";
 import { exportChart } from "./exportImage";
@@ -104,6 +106,60 @@ const TOP_MARGIN = 24;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+/**
+ * What a card dropped onto another may change, from a day: the dropped position reports to the other, or, when it
+ * heads its unit, the unit moves into the other's. The card goes back to where it was until the change is made.
+ */
+export function DropChange({ source, target, onDone }: { source: Card; target: Card; onDone: () => void }) {
+  const id = useId();
+  const reports = useSetReportsTo();
+  const move = useMoveUnit();
+  const movable = source.head && source.unitId !== target.unitId;
+  const [what, setWhat] = useState<"report" | "move">(movable ? "move" : "report");
+  const [from, setFrom] = useState(today());
+  const confirm = () =>
+    what === "move"
+      ? move.mutate({ unitID: source.unitId, parentId: target.unitId, from }, { onSuccess: onDone })
+      : reports.mutate({ positionID: source.id, reportsToId: target.id, from }, { onSuccess: onDone });
+  return (
+    <section
+      aria-labelledby={id}
+      className="absolute inset-x-4 top-4 z-20 rounded-xl border border-border-strong bg-surface-overlay p-4 text-sm shadow-2 sm:right-auto sm:w-[28rem]"
+    >
+      <h2 id={id} className="font-semibold">
+        {t.chart.drop.title}
+      </h2>
+      <fieldset className="mt-2 flex flex-col gap-1.5">
+        <legend className="sr-only">{t.chart.drop.what}</legend>
+        <label className="flex items-center gap-2">
+          <input type="radio" name={`${id}-what`} checked={what === "report"} onChange={() => setWhat("report")} />
+          {t.chart.drop.report(source.title, target.title)}
+        </label>
+        {movable && (
+          <label className="flex items-center gap-2">
+            <input type="radio" name={`${id}-what`} checked={what === "move"} onChange={() => setWhat("move")} />
+            {t.chart.drop.move(source.unitName, target.unitName)}
+          </label>
+        )}
+      </fieldset>
+      <div className="mt-3 max-w-48">
+        <Field label={t.chart.drop.from} type="date" required value={from} onChange={(e) => setFrom(e.target.value)} />
+      </div>
+      <div className="mt-2">
+        <FormError error={what === "move" ? move.error : reports.error} />
+      </div>
+      <div className="mt-3 flex gap-2">
+        <Button onClick={confirm} disabled={move.isPending || reports.isPending || !from}>
+          {t.chart.drop.confirm}
+        </Button>
+        <Button variant="secondary" onClick={onDone}>
+          {t.chart.drop.cancel}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 export type ChartSearch = { asOf?: string; focus?: string };
 
 /** Reads "unit:<id>" or "person:<id>", as the address keeps a focus. */
@@ -124,6 +180,9 @@ function Chart({ search, onSearch }: { search: ChartSearch; onSearch: (next: Cha
   const [nodes, setNodes] = useState<CardNode[]>([]);
   const flow = useReactFlow();
   const ids = useId();
+  const editor = useEditor();
+  const [drop, setDrop] = useState<{ source: Card; target: Card } | null>(null);
+  const dragFrom = useRef<Point | null>(null);
 
   const graph = useMemo(
     () => (organisation.data ? chartGraph(organisation.data, { collapsed, focus: parseFocus(search.focus), deputies }) : { cards: [], lines: [] }),
@@ -179,6 +238,13 @@ function Chart({ search, onSearch }: { search: ChartSearch; onSearch: (next: Cha
 
   const onNodesChange = (changes: NodeChange<CardNode>[]) => setNodes((was) => applyNodeChanges(changes, was));
   const keep = (_: unknown, node: CardNode) => {
+    const over = editor ? flow.getIntersectingNodes(node).find((n) => n.id !== node.id) : undefined;
+    if (over && dragFrom.current) {
+      const back = dragFrom.current;
+      setNodes((was) => was.map((n) => (n.id === node.id ? { ...n, position: back } : n)));
+      setDrop({ source: node.data, target: over.data as Card });
+      return;
+    }
     const next = { ...kept, [node.id]: node.position };
     setKept(next);
     writePlaces(next);
@@ -265,6 +331,7 @@ function Chart({ search, onSearch }: { search: ChartSearch; onSearch: (next: Cha
             <LoadExampleData />
           </div>
         )}
+        {drop && <DropChange key={`${drop.source.id}-${drop.target.id}`} source={drop.source} target={drop.target} onDone={() => setDrop(null)} />}
         <ChartActions.Provider value={actions}>
           <ReactFlow
             aria-label={t.chart.title}
@@ -272,6 +339,9 @@ function Chart({ search, onSearch }: { search: ChartSearch; onSearch: (next: Cha
             edges={edges}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
+            onNodeDragStart={(_, node) => {
+              dragFrom.current = node.position;
+            }}
             onNodeDragStop={keep}
             nodesConnectable={false}
             minZoom={0.1}

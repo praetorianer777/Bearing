@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Editing the organisation:** editors add, change, move and archive
+  units and positions, give positions and end or remove holdings, change
+  people's entries and mark them gone, and add, change and delete roles,
+  each from a day, on the pages where they read them; a new roles page
+  lists every role. On the chart a card dropped onto another proposes
+  that it reports there, or that its unit moves there, from a day (#23).
 - **Capacity:** full-time equivalents of a person, a position, a unit
   with or without its sub-units, and a role, per day, week or month over
   up to two years, with a position's and a unit's seats filled and

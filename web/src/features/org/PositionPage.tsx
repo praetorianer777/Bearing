@@ -4,6 +4,7 @@ import type { Link as Reached } from "@/api/people";
 import { t, useLanguage } from "@/i18n";
 import { TargetSection } from "@/features/planning/TargetSection";
 import { Duties } from "@/features/processes/Duties";
+import { PositionChanges, useEditor } from "./edit";
 import { AsOfPicker, Changes, PersonName, PositionName, RoleName, Section, today, UnitName } from "./common";
 import type { DaySearch } from "./UnitPage";
 
@@ -37,6 +38,7 @@ export function PositionPage({ positionId, search, onSearch }: { positionId: str
   useLanguage();
   const asOf = search.asOf ?? today();
   const page = usePositionPage(positionId, asOf);
+  const editor = useEditor();
   if (page.isError) return <p className="px-6 py-8 text-sm text-danger">{t.position.unreachable}</p>;
   if (!page.data) return null;
   const { position, history, chain, reports, units, positions, people, roles } = page.data;
@@ -155,6 +157,7 @@ export function PositionPage({ positionId, search, onSearch }: { positionId: str
       </Section>
       <TargetSection subject={{ positionId: position.id }} asOf={asOf} />
       <Duties subject={{ positionId: position.id }} asOf={asOf} />
+      {editor && <PositionChanges key={`${position.id}-${asOf}`} position={position} positions={positions} people={people} holdings={history} />}
       <Changes subject={{ kind: "positions", id: position.id }} />
     </div>
   );
