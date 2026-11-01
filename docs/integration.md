@@ -3,7 +3,8 @@
 Proposed. None of these names is in Dynamo's `docs/compatibility.md` yet;
 each is added there by pull request before Bearing reports it. Bearing serves
 `theme-export@1`, `oauth.partner-tokens@1`, `oauth.token-exchange@1`,
-`mcp@1`, `capacity@1`, `org-directory@1` and `responsibility@1` already, in the shape the siblings serve them where
+`mcp@1`, `capacity@1`, `org-directory@1`, `responsibility@1` and `webhooks@1`
+already, in the shape the siblings serve them where
 they share one, and lists them at `/meta`.
 
 ## MCP
@@ -128,6 +129,79 @@ GET /api/v1/people/by-subject/managers?issuer=&subject=&levels=&asOf=
 - An unknown subject answers 404; a call without both issuer and subject
   answers 422.
 
+## Webhooks
+
+`webhooks@1` posts changes to the organisation to the addresses
+administrators name under Settings, Webhooks, with the routes, envelope and
+signing Armature and Stator use:
+
+```
+GET    /api/v1/webhooks
+POST   /api/v1/webhooks                       {name, url, topics, enabled?, version?}
+PATCH  /api/v1/webhooks/{id}                  the same, name, url and topics again
+DELETE /api/v1/webhooks/{id}
+GET    /api/v1/webhooks/{id}/deliveries?limit=
+POST   /api/v1/webhooks/{id}/deliveries/{deliveryId}/redeliver
+POST   /api/v1/webhooks/{id}/test
+POST   /api/v1/webhooks/{id}/rotate-secret
+```
+
+Every delivery is one envelope:
+
+```json
+{
+  "version": 1,
+  "id": "0199e1c2-7d4a-7c11-9b1e-3f0a2b4c5d6e",
+  "source": "bearing",
+  "topic": "position.vacated",
+  "occurredAt": "2026-11-01T09:30:00Z",
+  "payload": {
+    "change": "changed",
+    "position": { "id": "...", "title": "Head of QA", "unitId": "...", "headOfUnit": true },
+    "person": { "id": "...", "name": "Ada", "issuer": "https://...", "subject": "..." },
+    "on": "2026-12-01",
+    "actor": { "id": "...", "name": "Eve Editor" }
+  }
+}
+```
+
+| Header | What it carries |
+|---|---|
+| `X-Bearing-Event` | The topic, as in the body. |
+| `X-Bearing-Delivery` | This attempt's id; a retry and a redelivery each have their own. |
+| `X-Bearing-Webhook-Version` | The envelope version of the body. |
+| `X-Bearing-Signature-256` | `sha256=` and the hex HMAC-SHA256 of the raw body, keyed with the secret. |
+| `X-Bearing-Timestamp` | When this attempt was sent, in Unix seconds. |
+| `X-Bearing-Signature-Timestamped-256` | `sha256=` and the hex HMAC-SHA256 of the timestamp, a dot and the raw body. |
+
+- `id` is the event's, the same on every retry and redelivery; `actor` is
+  the account that made the change, null when Bearing made it itself.
+- Any 2xx within ten seconds delivers; anything else is tried again after
+  1 minute, 5 minutes, 30 minutes, 2 hours and 12 hours, six attempts in
+  all. An endpoint that has failed six times and for a day is turned off;
+  turning it on again starts afresh. Test posts a `ping` at once, even to
+  an endpoint that is off. The log keeps every attempt for 30 days.
+- A new secret, `bearing_whs_`, is shown once; rotating it ends the old one
+  at once. Secrets are sealed with `BEARING_SECRET_KEY` (32 bytes, base64),
+  which the api and the worker share; without it no webhook can be made.
+- An address inside the server's own network is refused, when it is saved
+  and on every attempt, unless `BEARING_OUTBOUND_ALLOW` names its host or
+  range.
+- Whoever saves an endpoint owns it; while its owner is not an
+  administrator, nothing but a ping is sent and the rest is `withheld`.
+
+| Topic | Sent when | Payload beside `change` and `actor` |
+|---|---|---|
+| `position.holder_changed` | A holding of a position is given, changed or removed. | `position`, `person`, `holding` {id, share, from, to} |
+| `position.vacated` | A holding is cut short or removed and leaves its position with nobody on that day. | `position`, `person` who left, `on` |
+| `reporting_line.changed` | A solid or dotted line is drawn, ended or removed. | `position`, `reportsTo`, `line` {kind, from, to} |
+| `unit.changed` | A unit is added, renamed, archived or removed (`cause` unit), or moved (`cause` placement). | `unit`, `placement` {parentId, from, to} |
+| `responsibility.changed` | A role is held directly (`role_holder`), carried by a position (`role_carrier`), a deputy is named (`deputy`) or a process version is published (`process_published`). | by `cause`: `role`, `person`, `holding`, `position`, `carried`, `deputy`, `rank`, `process`, `version` |
+
+`change` is `added`, `changed` or `removed`. Dates are days, written
+2006-01-02. A payload is read when the change is announced, a moment after
+it is made, so it names things as they stood then.
+
 ## Trading a realm token
 
 A partner app of the suite that signs people in through the realm is
@@ -171,7 +245,7 @@ features, not data.
   "build": { "version": "0.1.0" },
   "apiVersion": "1",
   "capabilities": ["capacity@1", "mcp@1", "oauth.partner-tokens@1", "oauth.token-exchange@1", "org-directory@1",
-    "responsibility@1", "theme-export@1"]
+    "responsibility@1", "theme-export@1", "webhooks@1"]
 }
 ```
 

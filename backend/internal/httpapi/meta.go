@@ -40,6 +40,10 @@ var integrationCapabilities = []capability{
 			"GET /people/by-subject/managers"}},
 	{name: "mcp@1", promise: "An assistant works with the organisation over MCP as the person whose token it holds: POST /mcp, every tool reading.",
 		operations: []string{"POST /mcp"}},
+	{name: "webhooks@1", promise: "Endpoints subscribed to topics, their deliveries, a redelivery, a test delivery and a new secret, each delivery the suite's versioned envelope, signed and retried.",
+		operations: []string{"GET /webhooks", "POST /webhooks", "PATCH /webhooks/{webhookID}", "DELETE /webhooks/{webhookID}",
+			"GET /webhooks/{webhookID}/deliveries", "POST /webhooks/{webhookID}/deliveries/{deliveryID}/redeliver",
+			"POST /webhooks/{webhookID}/test", "POST /webhooks/{webhookID}/rotate-secret"}},
 	{name: "theme-export@1", promise: "A theme exported and imported as one armature-theme/1 file.",
 		operations: []string{"GET /themes/{themeID}/export", "POST /themes/import"}},
 }

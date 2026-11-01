@@ -10,6 +10,7 @@ export function SettingsNav() {
           ["/settings/accounts", t.accounts.title],
           ["/settings/unit-types", t.unitTypes.title],
           ["/settings/themes", t.themes.title],
+          ["/settings/webhooks", t.webhooks.title],
           ["/settings/example-data", t.demo.title],
         ] as const
       ).map(([to, label]) => (

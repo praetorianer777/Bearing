@@ -14,6 +14,7 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/org"
 	"github.com/praetorianer777/bearing/backend/internal/orgcsv"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
+	"github.com/praetorianer777/bearing/backend/internal/webhook"
 )
 
 // APIPrefix is where every operation but the probes is served.
@@ -51,6 +52,8 @@ type Server struct {
 	Org *org.Service
 	// Imports previews CSV imports and queues them for the worker.
 	Imports *orgcsv.Imports
+	// Webhooks keeps the endpoints changes are posted to.
+	Webhooks *webhook.Service
 	// OAuth is the authorization server for partner apps; nil serves none of it and takes no bearer tokens.
 	OAuth OAuth
 

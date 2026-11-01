@@ -498,3 +498,21 @@ the same rule a process step follows. Bearing does not skip an empty
 chair to the next one up; whether to climb further is the partner's
 rule, and the answer says the chair is vacant through `deputyFor` or no
 people at all.
+
+## Webhooks hear the tables, and read a payload once
+
+Webhooks keep the siblings' contract to the letter: routes, envelope,
+headers, signing, the retry schedule and turning off an endpoint that
+fails for a day, so a receiver written for Armature or Stator serves
+Bearing too. How changes reach them is Bearing's own. Triggers on the
+tables a topic follows note each change in `webhook_change`, in the
+transaction that makes it, and only while some endpoint is on; the
+worker turns each into its topics, queues a delivery for every endpoint
+subscribed and deletes the change in one transaction, so nothing is
+announced twice or lost. The audit log is not the source: it leaves out
+publishing a process, and it is kept for good where the outbox is
+emptied. A payload is read when the change is announced, not at every
+attempt as in Stator: the organisation is open to everybody signed in,
+so there is no owner whose view could narrow it, and a retry carries
+what the first attempt did. The owner still counts: while whoever saved
+an endpoint is not an administrator, nothing but a ping is sent.

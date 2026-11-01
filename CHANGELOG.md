@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **Webhooks (`webhooks@1`):** administrators name addresses under
+  Settings, Webhooks, and Bearing posts changes there, signed and in the
+  suite's envelope, as Armature and Stator do: a position's holder
+  changes, a position is left empty, a reporting line or a unit changes,
+  or who is responsible changes. A failed post is tried again for a
+  day, an endpoint failing that long is turned off, and its log shows
+  every attempt, which can be sent again; Test posts a ping. Secrets are
+  shown once and sealed with the new `BEARING_SECRET_KEY`;
+  `BEARING_OUTBOUND_ALLOW` lets posts reach hosts inside the server's
+  own network. `GET/POST /api/v1/webhooks`,
+  `PATCH/DELETE /api/v1/webhooks/{id}`,
+  `GET /api/v1/webhooks/{id}/deliveries`,
+  `POST /api/v1/webhooks/{id}/deliveries/{deliveryId}/redeliver`,
+  `POST /api/v1/webhooks/{id}/test`,
+  `POST /api/v1/webhooks/{id}/rotate-secret` (#42).
+
 - **`org-directory@1` and `responsibility@1`:** partners look a person
   up by the realm's issuer and subject, with their positions, units and
   roles, and walk the chain up and the reports down from them; read a

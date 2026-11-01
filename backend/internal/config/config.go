@@ -3,6 +3,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"os"
 	"strings"
@@ -52,6 +53,16 @@ type Config struct {
 	Mail      Mail
 	OIDC      OIDC
 	Bootstrap Bootstrap
+	Outbound  Outbound
+}
+
+// Outbound is what Bearing needs to post to addresses people name, as webhooks do.
+type Outbound struct {
+	// SecretKey seals the secrets Bearing keeps to use again, such as a webhook's signing secret; nil without one,
+	// and then no webhook can be made.
+	SecretKey []byte
+	// Allow names, comma separated, the hosts and ranges inside the server's own network Bearing may post to.
+	Allow string
 }
 
 // OIDC is the identity provider people may sign in through; without an issuer the sign-in page offers passwords only.
@@ -192,6 +203,14 @@ func Load() (Config, error) {
 		ClientSecret: os.Getenv("BEARING_OIDC_CLIENT_SECRET"),
 		GroupsClaim:  l.str("BEARING_OIDC_GROUPS_CLAIM", DefaultGroupsClaim),
 		Backchannel:  l.str("BEARING_OIDC_BACKCHANNEL", ""),
+	}
+	cfg.Outbound.Allow = l.str("BEARING_OUTBOUND_ALLOW", "")
+	if raw := os.Getenv("BEARING_SECRET_KEY"); raw != "" {
+		key, err := base64.StdEncoding.DecodeString(raw)
+		if err != nil || len(key) != 32 {
+			l.problem("BEARING_SECRET_KEY is not 32 bytes in base64; make one with openssl rand -base64 32.")
+		}
+		cfg.Outbound.SecretKey = key
 	}
 	if cfg.OIDC.Enabled() && cfg.OIDC.ClientID == "" {
 		l.problem("BEARING_OIDC_ISSUER is set without BEARING_OIDC_CLIENT_ID; name the client Bearing is registered as at the provider.")

@@ -65,6 +65,9 @@
     },
     {
       "name": "units"
+    },
+    {
+      "name": "webhooks"
     }
   ],
   "paths": {
@@ -8607,6 +8610,418 @@
           }
         }
       }
+    },
+    "/webhooks": {
+      "get": {
+        "operationId": "webhooks",
+        "summary": "The addresses changes to the organisation are posted to, by name.",
+        "tags": [
+          "webhooks"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "webhooks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Webhook"
+                      }
+                    }
+                  },
+                  "required": [
+                    "webhooks"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      },
+      "post": {
+        "operationId": "createWebhook",
+        "summary": "Post the topics named to an address, signed with a secret shown this once.",
+        "description": "topics are the events to post, or * for every one. Each delivery is the versioned envelope, signed in X-Bearing-Signature-256 over the body and X-Bearing-Signature-Timestamped-256 over X-Bearing-Timestamp, a dot and the body. A failed attempt is tried again after 1, 5 and 30 minutes, 2 and 12 hours; a webhook failing for a day is turned off. An address inside the server's own network is refused unless BEARING_OUTBOUND_ALLOW names it.",
+        "tags": [
+          "webhooks"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "webhook": {
+                      "$ref": "#/components/schemas/Webhook"
+                    }
+                  },
+                  "required": [
+                    "webhook"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      }
+    },
+    "/webhooks/{webhookID}": {
+      "delete": {
+        "operationId": "deleteWebhook",
+        "summary": "Remove a webhook and its log.",
+        "tags": [
+          "webhooks"
+        ],
+        "parameters": [
+          {
+            "name": "webhookID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      },
+      "patch": {
+        "operationId": "updateWebhook",
+        "summary": "Change a webhook's name, address, topics or whether it is on; whoever saves it owns it.",
+        "description": "Name, url and topics are given again; enabled and version left out stay as they are.",
+        "tags": [
+          "webhooks"
+        ],
+        "parameters": [
+          {
+            "name": "webhookID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "webhook": {
+                      "$ref": "#/components/schemas/Webhook"
+                    }
+                  },
+                  "required": [
+                    "webhook"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      }
+    },
+    "/webhooks/{webhookID}/deliveries": {
+      "get": {
+        "operationId": "webhookDeliveries",
+        "summary": "A webhook's log: every attempt, newest first.",
+        "description": "limit is at most 200, 50 when left out.",
+        "tags": [
+          "webhooks"
+        ],
+        "parameters": [
+          {
+            "name": "webhookID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deliveries": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WebhookDelivery"
+                      }
+                    }
+                  },
+                  "required": [
+                    "deliveries"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      }
+    },
+    "/webhooks/{webhookID}/deliveries/{deliveryID}/redeliver": {
+      "post": {
+        "operationId": "redeliverWebhook",
+        "summary": "Send a logged event again, now, with the same event id.",
+        "tags": [
+          "webhooks"
+        ],
+        "parameters": [
+          {
+            "name": "webhookID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "deliveryID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "delivery": {
+                      "$ref": "#/components/schemas/WebhookDelivery"
+                    }
+                  },
+                  "required": [
+                    "delivery"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      }
+    },
+    "/webhooks/{webhookID}/rotate-secret": {
+      "post": {
+        "operationId": "rotateWebhookSecret",
+        "summary": "Give a webhook a new secret, shown this once; the old one stops working at once.",
+        "tags": [
+          "webhooks"
+        ],
+        "parameters": [
+          {
+            "name": "webhookID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "webhook": {
+                      "$ref": "#/components/schemas/Webhook"
+                    }
+                  },
+                  "required": [
+                    "webhook"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      }
+    },
+    "/webhooks/{webhookID}/test": {
+      "post": {
+        "operationId": "testWebhook",
+        "summary": "Post a ping to a webhook now, even while it is off, and answer how it went.",
+        "tags": [
+          "webhooks"
+        ],
+        "parameters": [
+          {
+            "name": "webhookID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "delivery": {
+                      "$ref": "#/components/schemas/WebhookDelivery"
+                    }
+                  },
+                  "required": [
+                    "delivery"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "administrator"
+      }
     }
   },
   "components": {
@@ -12405,6 +12820,205 @@
           "publishedBy",
           "publisherName",
           "note"
+        ]
+      },
+      "Webhook": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "disabledReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "failures": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/WebhookOwner"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "secret": {
+            "type": "string"
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "url": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "url",
+          "topics",
+          "enabled",
+          "version",
+          "disabledReason",
+          "failures",
+          "owner",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "WebhookDelivery": {
+        "type": "object",
+        "properties": {
+          "attempt": {
+            "type": "integer"
+          },
+          "attemptedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deliveredAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "error": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "manual": {
+            "type": "boolean"
+          },
+          "nextAttemptAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "delivered",
+              "failed",
+              "withheld",
+              "cancelled"
+            ]
+          },
+          "status": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "topic": {
+            "type": "string"
+          },
+          "webhookId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "webhookId",
+          "eventId",
+          "topic",
+          "attempt",
+          "manual",
+          "state",
+          "status",
+          "error",
+          "nextAttemptAt",
+          "attemptedAt",
+          "deliveredAt",
+          "createdAt"
+        ]
+      },
+      "WebhookInput": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "url": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "topics"
+        ]
+      },
+      "WebhookOwner": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ]
       }
     },

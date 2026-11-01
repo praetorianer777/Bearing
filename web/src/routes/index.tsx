@@ -19,6 +19,7 @@ import { type SearchPageSearch, SearchPage } from "@/features/search/SearchPage"
 import { type PlanningSearch, PlanningPage } from "@/features/planning/PlanningPage";
 import { AccountsPage } from "@/features/settings/Accounts";
 import { ExampleDataPage } from "@/features/settings/ExampleData";
+import { WebhooksPage } from "@/features/settings/Webhooks";
 import { ConsentPage } from "@/features/connect/ConsentPage";
 import { ConnectedAppsPage } from "@/features/settings/ConnectedApps";
 import { ProfilePage } from "@/features/settings/Profile";
@@ -279,6 +280,14 @@ const exampleDataRoute = createRoute({
   },
   component: ExampleDataPage,
 });
+const webhooksRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/settings/webhooks",
+  beforeLoad: ({ context }) => {
+    if (context.me.role !== "administrator") throw redirect({ to: "/" });
+  },
+  component: WebhooksPage,
+});
 const profileRoute = createRoute({ getParentRoute: () => appRoute, path: "/settings/profile", component: ProfilePage });
 const tokensRoute = createRoute({ getParentRoute: () => appRoute, path: "/settings/tokens", component: TokensPage });
 const connectedAppsRoute = createRoute({ getParentRoute: () => appRoute, path: "/settings/connected-apps", component: ConnectedAppsPage });
@@ -313,6 +322,7 @@ const routeTree = rootRoute.addChildren([
     themeRoute,
     unitTypesRoute,
     exampleDataRoute,
+    webhooksRoute,
     profileRoute,
     connectedAppsRoute,
     tokensRoute,

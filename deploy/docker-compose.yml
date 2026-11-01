@@ -24,6 +24,10 @@ x-app-env: &app-env
   BEARING_OIDC_CLIENT_ID: bearing
   BEARING_OIDC_CLIENT_SECRET: bearing-dev-secret
   BEARING_OIDC_BACKCHANNEL: http://localhost:${KEYCLOAK_PORT:-8180}=http://keycloak:8080
+  # Seals webhook secrets; the api and the worker need the same one. For development only.
+  BEARING_SECRET_KEY: ${BEARING_SECRET_KEY:-YmVhcmluZyBkZXZlbG9wbWVudCBzZWNyZXQga2V5ISE=}
+  # The integration suite's receiver, which runs in the test container under this name on the stack's network.
+  BEARING_OUTBOUND_ALLOW: webhook-receiver
 
 # The installation's first administrator, which the seed sets up. For development only.
 x-bootstrap-env: &bootstrap-env

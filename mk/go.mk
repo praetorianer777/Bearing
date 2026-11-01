@@ -68,7 +68,7 @@ check-go: fmt-check vet test-go openapi-check ## The backend gate: formatting, v
 # The Go toolchain on the stack's network with what the integration suite reads. Reads go to the replica as they do
 # in the running api, so the suite proves read-your-writes rather than stepping around it.
 STACK_PG_URL = postgres://$(1):$(2)@$(3):5432/bearing?sslmode=disable
-DOCKER_GO_STACK = $(call go_run,--network $(STACK_NET) \
+DOCKER_GO_STACK = $(call go_run,--network $(STACK_NET) --network-alias webhook-receiver \
 	-e BEARING_DB_PRIMARY_URL='$(call STACK_PG_URL,bearing_app,$(APP_DB_PASSWORD),postgres-primary)' \
 	-e BEARING_DB_REPLICA_URLS='$(call STACK_PG_URL,bearing_app,$(APP_DB_PASSWORD),postgres-replica)' \
 	-e BEARING_DB_ADMIN_URL='$(call STACK_PG_URL,bearing_admin,$(ADMIN_DB_PASSWORD),postgres-primary)' \
@@ -84,6 +84,8 @@ DOCKER_GO_STACK = $(call go_run,--network $(STACK_NET) \
 	-e BEARING_OIDC_CLIENT_ID=bearing \
 	-e BEARING_OIDC_CLIENT_SECRET=bearing-dev-secret \
 	-e BEARING_OIDC_BACKCHANNEL=http://localhost:$(KEYCLOAK_PORT)=http://keycloak:8080 \
+	-e BEARING_SECRET_KEY=YmVhcmluZyBkZXZlbG9wbWVudCBzZWNyZXQga2V5ISE= \
+	-e BEARING_OUTBOUND_ALLOW=webhook-receiver \
 	$(1))
 
 INTEGRATION_TIMEOUT ?= 10m

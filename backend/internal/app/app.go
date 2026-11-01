@@ -21,6 +21,7 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/orgcsv"
 	"github.com/praetorianer777/bearing/backend/internal/sso"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
+	"github.com/praetorianer777/bearing/backend/internal/webhook"
 )
 
 // NewServer is the api's HTTP server over cluster and valkey, as cfg sets it up.
@@ -43,6 +44,10 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 	if cfg.Mail.SMTPAddr != "" {
 		accounts.Mail = jobs.NewQueue(valkey, cfg.Valkey.JobStream)
 	}
+	hooks, err := webhook.FromConfig(cfg.Outbound, cluster, log)
+	if err != nil {
+		return nil, err
+	}
 	srv := &httpapi.Server{
 		DB:             cluster,
 		Fresh:          freshness.NewValkeyTracker(valkey, cfg.DB.ReadYourWritesTTL, freshness.Prefix),
@@ -58,6 +63,7 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 		Themes:         &theme.Service{DB: cluster},
 		Org:            people,
 		Imports:        &orgcsv.Imports{DB: cluster, Org: people, Queue: jobs.NewQueue(valkey, cfg.Valkey.JobStream)},
+		Webhooks:       hooks,
 	}
 	authorization := &oauth.Service{DB: cluster, Issuer: cfg.Auth.AppURL, Log: log,
 		AccountFor: func(ctx context.Context, id auth.Identity) (auth.Account, error) {
