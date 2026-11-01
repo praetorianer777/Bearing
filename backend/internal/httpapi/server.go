@@ -50,6 +50,9 @@ type Server struct {
 	Org *org.Service
 	// OAuth is the authorization server for partner apps; nil serves none of it and takes no bearer tokens.
 	OAuth OAuth
+
+	// router is what Routes built, which the MCP tools run operations through.
+	router http.Handler
 }
 
 // Routes is the whole HTTP surface, built from the operations table.
@@ -79,6 +82,7 @@ func (s *Server) Routes() http.Handler {
 		}
 	}
 	r.Mount(APIPrefix, api)
+	s.router = r
 	return r
 }
 

@@ -29,6 +29,8 @@ var integrationCapabilities = []capability{
 		operations: []string{"POST /oauth/register", "GET /oauth/authorize", "POST /oauth/token", "POST /oauth/revoke"}},
 	{name: oauth.CapabilityTokenExchange, promise: "A partner trades a person's realm access token, issued to its client with Bearing among the audiences, for a Bearing grant of theirs (RFC 8693).",
 		operations: []string{"POST /oauth/token"}},
+	{name: "mcp@1", promise: "An assistant works with the organisation over MCP as the person whose token it holds: POST /mcp, every tool reading.",
+		operations: []string{"POST /mcp"}},
 	{name: "theme-export@1", promise: "A theme exported and imported as one armature-theme/1 file.",
 		operations: []string{"GET /themes/{themeID}/export", "POST /themes/import"}},
 }

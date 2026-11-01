@@ -2,8 +2,30 @@
 
 Proposed. None of these names is in Dynamo's `docs/compatibility.md` yet;
 each is added there by pull request before Bearing reports it. Bearing serves
-`theme-export@1`, `oauth.partner-tokens@1` and `oauth.token-exchange@1`
-already, in the shape the siblings serve them, and lists them at `/meta`.
+`theme-export@1`, `oauth.partner-tokens@1`, `oauth.token-exchange@1` and
+`mcp@1` already, in the shape the siblings serve them, and lists them at
+`/meta`.
+
+## MCP
+
+`POST /api/v1/mcp` speaks MCP over Streamable HTTP, protocol revisions
+2025-11-25 and 2025-06-18, one JSON-RPC request at a time; it answers with
+JSON and opens no stream. Without a session or a token it answers 401 with
+`WWW-Authenticate` naming the protected resource metadata, where a client
+learns how to connect. Every tool reads, as the person, within their role,
+through the API's own operations; each takes `asOf` for another day than
+today:
+
+| Tool | Answers |
+|---|---|
+| `whoami` | The account the assistant acts for, and the person it is linked to. |
+| `search` | People, positions, units, roles, processes and steps whose name holds a word, with their ids. |
+| `get_person`, `get_unit`, `get_position` | One of them as it stands on a day; a unit with its members. |
+| `management_chain` | Whom a person or position reports to, nearest first. |
+| `reports` | Who reports to a person or position, directly or all below. |
+| `responsibilities_of` | What a person, position, role or unit answers for, by RACI kind. |
+| `who_is_responsible` | The published steps a word names, and who each comes down to. |
+| `get_process` | A process's newest or a numbered version, with who each step comes down to. |
 
 ## Connecting an app
 

@@ -575,6 +575,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/mcp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The MCP endpoint (Streamable HTTP, protocol 2025-11-25 and 2025-06-18): an assistant asks the organisation questions as the person signed in or whose token it holds.
+         * @description JSON-RPC 2.0, one request at a time: initialize, ping, tools/list and tools/call. Every tool reads, as the person, within their role. Without a session or a token the answer is 401, naming the protected resource metadata where a client learns how to connect.
+         */
+        post: operations["mcp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/meta": {
         parameters: {
             query?: never;
@@ -2097,6 +2117,14 @@ export interface components {
             /** Format: uuid */
             unitId: string;
         };
+        McpRequest: {
+            /** @description A JSON value. */
+            id?: unknown;
+            jsonrpc: string;
+            method: string;
+            /** @description A JSON value. */
+            params?: unknown;
+        };
         MemberResponse: {
             headOfUnit: boolean;
             /** Format: uuid */
@@ -2404,6 +2432,18 @@ export interface components {
         RoleRequest: {
             /** @enum {string} */
             role: "administrator" | "editor" | "member" | "reader";
+        };
+        RpcError: {
+            code: number;
+            message: string;
+        };
+        RpcResponse: {
+            error?: components["schemas"]["RpcError"];
+            /** @description A JSON value. */
+            id: unknown;
+            jsonrpc: string;
+            /** @description A JSON value. */
+            result?: unknown;
         };
         SelfEditableBody: {
             fields: string[];
@@ -3890,6 +3930,46 @@ export interface operations {
                         account: components["schemas"]["AccountResponse"];
                     };
                 };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    mcp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["McpRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RpcResponse"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description An error, in the one shape every endpoint uses. */
             default: {

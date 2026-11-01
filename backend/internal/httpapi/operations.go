@@ -386,6 +386,11 @@ var operations = []operation{
 	{method: http.MethodDelete, path: "/people/{personID}/photo", id: "deletePhoto", handle: (*Server).handleDeletePhoto, tag: "people",
 		summary: "Take a person's photo away.", role: editor, responses: map[int]any{http.StatusNoContent: nil}},
 
+	{method: http.MethodPost, path: oauth.MCPPath, id: "mcp", handle: (*Server).handleMCP, tag: "mcp", mcp: true, request: mcpRequest{},
+		summary: "The MCP endpoint (Streamable HTTP, protocol 2025-11-25 and 2025-06-18): an assistant asks the organisation questions as the person signed in or whose token it holds.",
+		description: "JSON-RPC 2.0, one request at a time: initialize, ping, tools/list and tools/call. Every tool reads, as the person, within their role. " +
+			"Without a session or a token the answer is 401, naming the protected resource metadata where a client learns how to connect.",
+		responses: map[int]any{http.StatusOK: rpcResponse{}, http.StatusAccepted: nil}},
 	{method: http.MethodGet, path: oauth.MetadataPath, id: "oauthMetadata", handle: (*Server).handleOAuthMetadata, tag: "oauth",
 		summary: "The authorization server's metadata (RFC 8414), where partners read every address from.", public: true, root: true,
 		responses: map[int]any{http.StatusOK: oauth.Metadata{}}},
