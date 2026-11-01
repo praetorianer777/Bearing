@@ -191,6 +191,8 @@ type Service struct {
 	allow  netguard.Allow
 	log    *slog.Logger
 	now    func() time.Time
+	// Gaps reads the organisation's gaps for capacity.gap_changed; nil announces none.
+	Gaps GapReader
 }
 
 // New returns the service; a nil box refuses to make an endpoint and fails every delivery, since no secret opens.

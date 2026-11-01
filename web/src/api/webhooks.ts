@@ -13,7 +13,18 @@ export type WebhookDelivery = Wire["WebhookDelivery"];
 export type DeliveryState = WebhookDelivery["state"];
 
 /** What an endpoint may take, as webhooks@1 names it in Bearing; * is every one. */
-export const WEBHOOK_TOPICS = ["position.holder_changed", "position.vacated", "reporting_line.changed", "unit.changed", "responsibility.changed"] as const;
+export const WEBHOOK_TOPICS = [
+  "position.holder_changed",
+  "position.vacated",
+  "reporting_line.changed",
+  "unit.changed",
+  "responsibility.changed",
+  "holding.planned",
+  "holding.started",
+  "holding.ended",
+  "person.left",
+  "capacity.gap_changed",
+] as const;
 export type WebhookTopic = (typeof WEBHOOK_TOPICS)[number] | "*";
 
 const webhooksKey = ["webhooks"] as const;

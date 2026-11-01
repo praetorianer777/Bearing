@@ -198,7 +198,18 @@ Every delivery is one envelope:
 | `unit.changed` | A unit is added, renamed, archived or removed (`cause` unit), or moved (`cause` placement). | `unit`, `placement` {parentId, from, to} |
 | `responsibility.changed` | A role is held directly (`role_holder`), carried by a position (`role_carrier`), a deputy is named (`deputy`) or a process version is published (`process_published`). | by `cause`: `role`, `person`, `holding`, `position`, `carried`, `deputy`, `rank`, `process`, `version` |
 
-`change` is `added`, `changed` or `removed`. Dates are days, written
+| `holding.planned` | A holding of a position or a role is given to start after today, or its start is moved there. | `holding`, `person`, `position` or `role` |
+| `holding.started` | A holding starts: when it is given for today or earlier, and otherwise on its first day, by the worker. | the same |
+| `holding.ended` | A holding ends: when it is cut short to today or earlier, and otherwise on its first day no longer held, by the worker. | the same |
+| `person.left` | Somebody is marked as leaving. | `person`, `on` |
+| `capacity.gap_changed` | A gap over the next thirteen weeks opens, closes or changes its size or its end, as `capacity@1` finds gaps. | `gap` {kind, subjectKind, subjectId, name, unitId, from, to, size}, for a change also `before` |
+
+`change` is `added`, `changed` or `removed`, for a gap `opened`, `changed`
+or `closed`; `actor` is null for what the day brought rather than a person.
+A gap's `to` is null when it runs to the end of the thirteen weeks or
+beyond; one that began before today is the same gap as the days go on. Gaps
+are read as the administrator owning an endpoint that takes the topic, and
+compared only while one does. Dates are days, written
 2006-01-02. A payload is read when the change is announced, a moment after
 it is made, so it names things as they stood then.
 

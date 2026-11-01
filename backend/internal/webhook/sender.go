@@ -26,8 +26,16 @@ func (s *Sender) Run(ctx context.Context) {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 	for {
-		if _, err := s.svc.FanOut(ctx); err != nil && ctx.Err() == nil {
+		changes, err := s.svc.FanOut(ctx)
+		if err != nil && ctx.Err() == nil {
 			s.log.Warn("changes could not be announced to webhooks", "error", err)
+		}
+		turned, err := s.svc.Sweep(ctx)
+		if err != nil && ctx.Err() == nil {
+			s.log.Warn("the holdings starting and ending today could not be announced", "error", err)
+		}
+		if _, err := s.svc.CheckGaps(ctx, changes+turned > 0); err != nil && ctx.Err() == nil {
+			s.log.Warn("the gaps could not be compared", "error", err)
 		}
 		if _, err := s.svc.SendDue(ctx); err != nil && ctx.Err() == nil {
 			s.log.Warn("due webhook deliveries could not be claimed", "error", err)
