@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **Themes of one's own:** anybody makes a theme in an editor, starting
+  blank or from Deep-Tech or Constellation: colours by group for light
+  and dark, type, corners and shadows, cursors, icons, a backdrop picture
+  and a moving picture (a constellation or confetti), files and extra
+  CSS, previewed live on the page. A theme is its maker's until shared;
+  an administrator may tidy a shared one and name the one everybody sees.
+  The choice is kept on the server and follows the person between
+  devices; the browser paints the theme it showed last before the page
+  loads. The theme list has My and Shared views with a menu on each row;
+  the sidebar steps through light, dark and the system's.
+  `POST /api/v1/themes`, `GET/PATCH /api/v1/themes/{id}`,
+  `GET/PUT /api/v1/themes/active`, `GET /api/v1/themes/default`,
+  `GET /api/v1/themes/examples`, `POST /api/v1/themes/{id}/assets`,
+  `DELETE /api/v1/themes/{id}/assets/{assetId}` (#84).
+
 - **Graph explorer:** any unit, position, person or role and what is
   around it, opened node by node, following reporting lines, holdings,
   roles, deputies, units and responsibilities as switched on, as of a

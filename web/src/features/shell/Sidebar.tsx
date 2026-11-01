@@ -5,6 +5,7 @@ import { useMe } from "@/api/auth";
 import { FoldIcon, HomeIcon, OrgIcon, PeopleIcon, PlanningIcon, ProcessIcon, SettingsIcon } from "@/components/icons";
 import { Mark } from "@/components/Logo";
 import { t, useLanguage } from "@/i18n";
+import { ThemeButton } from "./ThemeButton";
 
 type Place = {
   to: "/" | "/organisation" | "/people" | "/processes" | "/planning" | "/settings/accounts";
@@ -50,7 +51,8 @@ export function Sidebar({ folded, onToggle }: { folded: boolean; onToggle: () =>
           </Link>
         ))}
       </nav>
-      <div className="px-2 py-2">
+      <div className="flex flex-col gap-0.5 px-2 py-2">
+        <ThemeButton folded={folded} />
         <button
           type="button"
           onClick={onToggle}

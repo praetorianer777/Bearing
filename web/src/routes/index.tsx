@@ -24,6 +24,7 @@ import { ConnectedAppsPage } from "@/features/settings/ConnectedApps";
 import { ProfilePage } from "@/features/settings/Profile";
 import { TokensPage } from "@/features/settings/Tokens";
 import { ThemesPage } from "@/features/settings/Themes";
+import { ThemeEditorPage } from "@/features/themes/ThemeEditor";
 import { UnitTypesPage } from "@/features/settings/UnitTypes";
 import { AppShell } from "@/features/shell/AppShell";
 import { NotFound } from "@/features/shell/Placeholder";
@@ -251,10 +252,16 @@ const accountsRoute = createRoute({
 const themesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings/themes",
-  beforeLoad: ({ context }) => {
-    if (context.me.role !== "administrator") throw redirect({ to: "/" });
-  },
   component: ThemesPage,
+});
+const newThemeRoute = createRoute({ getParentRoute: () => appRoute, path: "/settings/themes/new", component: () => <ThemeEditorPage /> });
+const themeRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/settings/themes/$themeId",
+  component: function ThemeRoute() {
+    const { themeId } = themeRoute.useParams();
+    return <ThemeEditorPage themeId={themeId} />;
+  },
 });
 const unitTypesRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -302,6 +309,8 @@ const routeTree = rootRoute.addChildren([
     roleRoute,
     accountsRoute,
     themesRoute,
+    newThemeRoute,
+    themeRoute,
     unitTypesRoute,
     exampleDataRoute,
     profileRoute,

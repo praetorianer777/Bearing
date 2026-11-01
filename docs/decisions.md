@@ -57,14 +57,23 @@ second list to keep. Somebody let in through a group gets reader as their own
 role. The database decides with `current_actor_role()` and the policies, and
 the API's operation table says the same thing first, with a clearer refusal.
 
-## Themes are the installation's; the look is the browser's
+## Themes are their makers', shared when they say so; the choice is the person's
 
-Administrators import, export and remove themes and name the one everybody
-starts from. Each person chooses light, dark or the system's, and a theme,
-in their account menu, and the browser keeps that choice. Theme files and
-their pictures are stored in PostgreSQL, so Bearing needs no object store.
-That is why files are smaller here (4 MB, 32 per theme) than in the
-siblings.
+As in Exciter and Stator, and ported from Exciter: anybody signed in makes,
+imports and edits themes of their own, and shares one with everybody when
+they want to. Only the owner changes a theme; an administrator may tidy a
+shared one, never take a private one over, and names the shared theme
+everybody sees until they choose. A theme taken private stops being that
+default. Each person's choice is kept on the server, so it follows them
+between devices, and deleting a theme returns whoever chose it to the
+default. Row level security says all of this; the service asks again only
+to tell "not there" from "not yours". The light or dark mode stays the
+browser's own. The browser keeps the compiled theme it showed last and puts
+it on the page before anything renders, so a reload does not flash the
+built-in look. Theme files and their pictures are stored in PostgreSQL, so
+Bearing needs no object store. That is why files are smaller here (4 MB, 32
+per theme) than in the siblings. Following a person's Armature theme waits
+for #85.
 
 ## Where a unit sits is dated; what it is called is not
 
