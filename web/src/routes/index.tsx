@@ -180,6 +180,8 @@ const planningRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): PlanningSearch => ({
     ...(isDay(search.from) ? { from: search.from } : {}),
     ...(isDay(search.to) ? { to: search.to } : {}),
+    ...(search.by === "week" || search.by === "month" ? { by: search.by } : {}),
+    ...(typeof search.unit === "string" && search.unit ? { unit: search.unit } : {}),
   }),
   component: function Planning() {
     const search = planningRoute.useSearch();

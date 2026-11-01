@@ -15,6 +15,11 @@
   nobody or only one person holds, each a run of days, on a new planning
   page for the whole organisation and on unit pages. `GET /api/v1/gaps`
   (#89).
+- **Planning view:** units over weeks or months from the root or a unit,
+  opening into sub-units, positions and their holders, each cell what is
+  held against the target with gaps marked; editors plan a hire or a
+  handover into a position where a gap shows; the grid downloads as CSV
+  (#90).
 - **Search:** one box along the top finds people, positions, units, roles,
   processes and their steps as they are typed, ignoring case and accents
   and forgiving a slip; Enter opens every result on the search page, as of
