@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/praetorianer777/bearing/backend/internal/armature"
 	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/config"
 	"github.com/praetorianer777/bearing/backend/internal/db"
@@ -48,6 +49,10 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 	if err != nil {
 		return nil, err
 	}
+	partner, err := armature.FromConfig(cfg.Outbound, cluster, valkey, log)
+	if err != nil {
+		return nil, err
+	}
 	srv := &httpapi.Server{
 		DB:             cluster,
 		Fresh:          freshness.NewValkeyTracker(valkey, cfg.DB.ReadYourWritesTTL, freshness.Prefix),
@@ -64,6 +69,7 @@ func NewServer(cfg config.Config, cluster *db.Cluster, valkey *redis.Client, log
 		Org:            people,
 		Imports:        &orgcsv.Imports{DB: cluster, Org: people, Queue: jobs.NewQueue(valkey, cfg.Valkey.JobStream)},
 		Webhooks:       hooks,
+		Armature:       partner,
 	}
 	authorization := &oauth.Service{DB: cluster, Issuer: cfg.Auth.AppURL, Log: log,
 		AccountFor: func(ctx context.Context, id auth.Identity) (auth.Account, error) {

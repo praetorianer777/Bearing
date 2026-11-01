@@ -98,3 +98,18 @@ export const usePlanHolding = () => {
     onSuccess: () => Promise.all(["capacity", "gaps", "holdings", "organisation", "people"].map((key) => client.invalidateQueries({ queryKey: [key] }))),
   });
 };
+
+export type Demand = components["schemas"]["DemandResponse"];
+
+/** A unit's capacity against what Armature says the work asks of its people, week by week; partner says why not. */
+export const useDemand = (unitId: string | undefined, range: { from: string; to: string }) =>
+  useQuery({
+    queryKey: ["demand", unitId ?? "", range.from, range.to],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/units/{unitID}/demand", {
+          params: { path: { unitID: unitId ?? "" }, query: { from: range.from, to: range.to, subUnits: "true" } },
+        }),
+      ),
+    enabled: !!unitId,
+  });

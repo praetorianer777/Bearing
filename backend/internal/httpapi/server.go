@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/praetorianer777/bearing/backend/internal/armature"
 	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/db"
 	"github.com/praetorianer777/bearing/backend/internal/org"
@@ -52,6 +53,8 @@ type Server struct {
 	Org *org.Service
 	// Imports previews CSV imports and queues them for the worker.
 	Imports *orgcsv.Imports
+	// Armature is the partner Bearing reads demand from; nil reads none.
+	Armature *armature.Service
 	// Webhooks keeps the endpoints changes are posted to.
 	Webhooks *webhook.Service
 	// OAuth is the authorization server for partner apps; nil serves none of it and takes no bearer tokens.

@@ -3,6 +3,7 @@ package httpapi
 import (
 	"net/http"
 
+	"github.com/praetorianer777/bearing/backend/internal/armature"
 	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/oauth"
 	"github.com/praetorianer777/bearing/backend/internal/openapi"
@@ -189,6 +190,21 @@ var operations = []operation{
 		request: unitTypeRequest{}, responses: map[int]any{http.StatusOK: env{"unitType": unitTypeResponse{}}}},
 	{method: http.MethodDelete, path: "/unit-types/{unitTypeID}", id: "deleteUnitType", handle: (*Server).handleDeleteUnitType, tag: "units",
 		summary: "Remove a kind of unit no unit has.", role: administrator, responses: map[int]any{http.StatusNoContent: nil}},
+	{method: http.MethodGet, path: "/armature/connection", id: "armatureConnection", handle: (*Server).handleArmatureConnection, tag: "armature",
+		summary: "The Armature Bearing reads demand from, and the app it is registered there as; null when none is.", role: administrator,
+		responses: map[int]any{http.StatusOK: env{"connection": &armature.Connection{}}}},
+	{method: http.MethodPut, path: "/armature/connection", id: "connectArmature", handle: (*Server).handleConnectArmature, tag: "armature",
+		summary:     "Name the Armature and the partner app Bearing is registered there as, as Dynamo's connect job does.",
+		description: "The app is one registered at Armature for token exchange, with the realm client Bearing signs people in through. Grants made with another Armature end.",
+		role:        administrator, request: armature.ConnectionInput{}, responses: map[int]any{http.StatusOK: env{"connection": armature.Connection{}}}},
+	{method: http.MethodDelete, path: "/armature/connection", id: "disconnectArmature", handle: (*Server).handleDisconnectArmature, tag: "armature",
+		summary: "Forget the Armature and every grant made there.", role: administrator, responses: map[int]any{http.StatusNoContent: nil}},
+	{method: http.MethodGet, path: "/armature/me", id: "armatureStatus", handle: (*Server).handleArmatureStatus, tag: "armature",
+		summary:     "Whether Bearing reads Armature as you: not_configured, not_connected or connected.",
+		description: "Signing in through the realm trades the sign-in for a grant at Armature, when Armature offers oauth.token-exchange@1.",
+		responses:   map[int]any{http.StatusOK: armatureStatusResponse{}}},
+	{method: http.MethodDelete, path: "/armature/me", id: "forgetArmature", handle: (*Server).handleForgetArmature, tag: "armature",
+		summary: "End your own grant at Armature; the next sign-in through the realm makes a new one.", responses: map[int]any{http.StatusNoContent: nil}},
 	{method: http.MethodGet, path: "/cards/person/by-subject", id: "realmPersonCard", handle: (*Server).handleRealmPersonCard, tag: "directory",
 		summary:     "A person's card, the person named as the realm knows them.",
 		description: cardDescription + " " + subjectQuery, query: []string{"issuer", "subject", "asOf"},
@@ -235,6 +251,9 @@ var operations = []operation{
 	{method: http.MethodGet, path: "/units/{unitID}/audit", id: "unitAudit", handle: (*Server).handleUnitAudit, tag: "audit",
 		summary: auditSummary("unit"), description: auditDescription, role: editor,
 		query: []string{"before", "limit"}, responses: map[int]any{http.StatusOK: auditBody}},
+	{method: http.MethodGet, path: "/units/{unitID}/demand", id: "unitDemand", handle: (*Server).handleUnitDemand, tag: "capacity",
+		summary:     "A unit's capacity against what the work asks of its people, week by week, with Armature.",
+		description: demandDescription, query: []string{"from", "to", "subUnits"}, responses: map[int]any{http.StatusOK: demandResponse{}}},
 	{method: http.MethodGet, path: "/units/{unitID}/members", id: "members", handle: (*Server).handleMembers, tag: "units",
 		summary:     "Who holds a position in a unit on a day, and with subUnits=true, in the units inside it then; the unit's own head first.",
 		description: "asOf is a day written 2006-01-02, today when left out.",

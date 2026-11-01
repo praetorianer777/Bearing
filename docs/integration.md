@@ -91,6 +91,63 @@ GET /api/v1/gaps?from=&to=&unitId=&subUnits=true
   unit, a position or a role are for everybody signed in. Partners name a
   person by the realm's issuer and `sub` with `by-subject`.
 
+## Demand from Armature
+
+With Armature connected, Bearing plans capacity against demand, not only
+against targets. An administrator, or Dynamo's connect job, names the
+Armature and the partner app Bearing is registered there as, an app with
+the realm client Bearing signs people in through:
+
+```
+GET    /api/v1/armature/connection
+PUT    /api/v1/armature/connection   {baseUrl, clientId, clientSecret}
+DELETE /api/v1/armature/connection
+GET    /api/v1/armature/me           {status: not_configured | not_connected | connected}
+DELETE /api/v1/armature/me
+GET    /api/v1/units/{id}/demand?from=&to=&subUnits=true
+```
+
+When somebody signs in through the realm, Bearing trades their realm access
+token at Armature's token endpoint (`oauth.token-exchange@1`, scope
+`read`) for a grant of theirs, sealed with `BEARING_SECRET_KEY` and renewed
+under a lock as Armature rotates refresh tokens. A sign-in never fails for
+it. Bearing then reads Armature as that person, never as itself.
+
+A unit's demand is its capacity and target per week, from the Monday of
+`from`, 13 weeks or up to 26, beside what Armature counts for the people
+holding positions there at each week's start, each at their share in the
+unit: `allocatedFte`, `loadHours`, `nominalHours` and `daysAway`. People
+allocated over 100 percent, or loaded beyond their share, are named to
+editors and counted for everybody; people Armature does not know, or who
+have no realm name, are listed for editors. Without Armature the demand is
+null and `partner` says why: `not_configured`, `not_connected`,
+`rejected`, `unreachable`, or `outdated`, which names the capability and
+asks for Armature to be updated. Answers are kept a minute per reader,
+never as the truth.
+
+### `resource-load@1`, proposed to Armature
+
+Bearing asks, as the reader, and Armature answers only what that reader may
+see:
+
+```
+POST /api/v1/resource-load
+{ "from": "2026-11-02", "to": "2027-01-31",
+  "people": [{ "issuer": "https://...", "subject": "..." }] }
+
+{ "people": [{ "issuer": "https://...", "subject": "...", "found": true,
+    "weeks": [{ "start": "2026-11-02", "allocationPercent": 120, "nominalHours": 40,
+                "loadHours": 30, "daysAway": 1, "away": ["2026-11-03"] }] }] }
+```
+
+A week starts on Monday; `allocationPercent` is the share of the week all
+projects together are given, `nominalHours` the person's working week,
+`loadHours` the estimated work, `daysAway` and `away` the days they are
+away for at least half of, never with a reason. Somebody Armature does not
+know is `found: false`. The weeks build on what `plan@1`'s resources view
+counts per project; the capability is Armature's to add, agreed and filed
+there.
+
 ## Directory and responsibility
 
 `org-directory@1` is who the organisation has and how it hangs together;

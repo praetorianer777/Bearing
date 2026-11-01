@@ -531,3 +531,18 @@ same gap as the window moves, so the calendar alone announces nothing.
 The worker reads them as the administrator owning an endpoint that takes
 the topic, as everybody signed in may, and forgets them while nobody
 listens.
+
+## Armature is read as the reader, and asked by realm names
+
+Bearing reads Armature as the person looking, as Stator does: the realm
+sign-in is traded for a grant of theirs at Armature, so Armature decides
+what that person may see of its projects, and Bearing never holds a
+service account that sees everything. Bearing asks about people by the
+realm's issuer and `sub`, the names both tools share, rather than by
+Armature's own ids or by email. A person counts towards a unit at their
+share in it, so somebody half in Quality brings half their allocation
+and load there; the demand is summed up the tree the same way capacity
+is. What Armature answers is kept a minute and never written down:
+allocations and absences are Armature's facts. `resource-load@1` is
+proposed here and is Armature's to add; until it does, the view says the
+Armature connected is too old and names the capability.

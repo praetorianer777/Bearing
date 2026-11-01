@@ -6,6 +6,7 @@ import { type Position, useOrganisation } from "@/api/org";
 import { Link } from "@tanstack/react-router";
 import { inlineLink, today } from "@/features/org/common";
 import { t, useLanguage } from "@/i18n";
+import { DemandSection } from "./DemandSection";
 import { daysAfter, Gaps } from "./GapList";
 import { PlanForm } from "./PlanForm";
 import { PlanningGrid } from "./PlanningGrid";
@@ -79,6 +80,7 @@ export function PlanningPage({ search, onSearch }: { search: PlanningSearch; onS
           />
         )
       )}
+      {org.data && <DemandSection unitId={search.unit ?? org.data.units.find((u) => !u.parentId)?.id} from={from} />}
       {planning && org.data && <PlanForm key={planning.id} position={planning} people={org.data.people} from={from} onDone={() => setPlanning(null)} />}
       <section aria-labelledby={`${id}-gaps`} className="rounded-xl border border-border bg-surface p-5 text-sm">
         <h2 id={`${id}-gaps`} className="mb-2 text-lg font-semibold">

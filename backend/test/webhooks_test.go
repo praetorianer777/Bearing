@@ -254,11 +254,11 @@ func TestWebhooksAreTheAdministratorsAndPostOnlyOutward(t *testing.T) {
 	}
 	var r refusal
 	for name, body := range map[string]map[string]any{
-		"the server itself": {"name": "Inside", "url": "http://127.0.0.1:9000/hook", "topics": []string{"*"}},
-		"localhost":         {"name": "Inside", "url": "http://localhost/hook", "topics": []string{"*"}},
-		"no topics":         {"name": "Empty", "url": "https://example.com/hook", "topics": []string{}},
-		"an unknown topic":  {"name": "Odd", "url": "https://example.com/hook", "topics": []string{"page.published"}},
-		"no name":           {"name": " ", "url": "https://example.com/hook", "topics": []string{"*"}},
+		"the server's own network": {"name": "Inside", "url": "http://10.0.0.1:9000/hook", "topics": []string{"*"}},
+		"localhost":                {"name": "Inside", "url": "http://localhost/hook", "topics": []string{"*"}},
+		"no topics":                {"name": "Empty", "url": "https://example.com/hook", "topics": []string{}},
+		"an unknown topic":         {"name": "Odd", "url": "https://example.com/hook", "topics": []string{"page.published"}},
+		"no name":                  {"name": " ", "url": "https://example.com/hook", "topics": []string{"*"}},
 	} {
 		if status := admin.do(http.MethodPost, "/webhooks", body, &r); status != http.StatusUnprocessableEntity {
 			t.Errorf("%s answered %d", name, status)

@@ -141,6 +141,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/armature/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The Armature Bearing reads demand from, and the app it is registered there as; null when none is. */
+        get: operations["armatureConnection"];
+        /**
+         * Name the Armature and the partner app Bearing is registered there as, as Dynamo's connect job does.
+         * @description The app is one registered at Armature for token exchange, with the realm client Bearing signs people in through. Grants made with another Armature end.
+         */
+        put: operations["connectArmature"];
+        post?: never;
+        /** Forget the Armature and every grant made there. */
+        delete: operations["disconnectArmature"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/armature/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether Bearing reads Armature as you: not_configured, not_connected or connected.
+         * @description Signing in through the realm trades the sign-in for a grant at Armature, when Armature offers oauth.token-exchange@1.
+         */
+        get: operations["armatureStatus"];
+        put?: never;
+        post?: never;
+        /** End your own grant at Armature; the next sign-in through the realm makes a new one. */
+        delete: operations["forgetArmature"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit": {
         parameters: {
             query?: never;
@@ -2284,6 +2327,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/units/{unitID}/demand": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A unit's capacity against what the work asks of its people, week by week, with Armature.
+         * @description from and to are days written 2006-01-02; the view starts on the Monday of from, this week's when left out, and shows 13 weeks, at most 26. Capacity and targets are Bearing's; allocations, load and days away are Armature's resource-load@1, read as the caller, each person counting at their share in the unit. Without Armature, or without the capability, partner says why and the demand stays null. People allocated over 100 percent, or loaded beyond their share, are named to editors and counted for everybody.
+         */
+        get: operations["unitDemand"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/units/{unitID}/members": {
         parameters: {
             query?: never;
@@ -2513,6 +2576,9 @@ export interface components {
             /** @enum {string} */
             role: "administrator" | "editor" | "member" | "reader";
         };
+        ArmatureStatusResponse: {
+            status: string;
+        };
         ArrowBody: {
             from: string;
             key: string;
@@ -2604,6 +2670,17 @@ export interface components {
             scopes: string[];
             status: string;
         };
+        Connection: {
+            baseUrl: string;
+            clientId: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ConnectionInput: {
+            baseUrl: string;
+            clientId: string;
+            clientSecret: string;
+        };
         Consent: {
             allowsApp: boolean;
             client: components["schemas"]["ConsentClient"];
@@ -2666,6 +2743,38 @@ export interface components {
         DefaultThemeRequest: {
             /** Format: uuid */
             themeId: string | null;
+        };
+        DemandResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from: string;
+            over: components["schemas"]["OverResponse"][];
+            partner: components["schemas"]["PartnerResponse"];
+            subUnits: boolean;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            to: string;
+            unmatched: components["schemas"]["MemberResponse"][];
+            warnings: number;
+            weeks: components["schemas"]["DemandWeekResponse"][];
+        };
+        DemandWeekResponse: {
+            allocatedFte: number | null;
+            daysAway: number | null;
+            fte: number;
+            loadHours: number | null;
+            nominalHours: number | null;
+            people: number;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            start: string;
+            target: number | null;
         };
         DemoPartResponse: {
             empty: boolean;
@@ -3078,10 +3187,29 @@ export interface components {
             name: string;
             positions?: string[];
         };
+        OverResponse: {
+            allocationPercent: number;
+            loadHours: number;
+            name: string;
+            nominalHours: number;
+            /** Format: uuid */
+            personId: string;
+            reason: string;
+            share: number;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            week: string;
+        };
         PartnerRequest: {
             keycloakClientId: string;
             name: string;
             write: boolean;
+        };
+        PartnerResponse: {
+            message?: string;
+            status: string;
         };
         PasswordRequest: {
             password: string;
@@ -3954,6 +4082,155 @@ export interface operations {
                 "application/json": components["schemas"]["RoleRequest"];
             };
         };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    armatureConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        connection: components["schemas"]["Connection"] | null;
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    connectArmature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectionInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        connection: components["schemas"]["Connection"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    disconnectArmature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    armatureStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArmatureStatusResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    forgetArmature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description No Content */
             204: {
@@ -9226,6 +9503,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CapacityResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    unitDemand: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                subUnits?: string;
+            };
+            header?: never;
+            path: {
+                unitID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemandResponse"];
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */
