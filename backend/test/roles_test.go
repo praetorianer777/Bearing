@@ -41,6 +41,7 @@ func roleOf(t *testing.T, b *browser) (role, own string) {
 // once the replica has it.
 func holds(t *testing.T, b *browser, want string) {
 	t.Helper()
+	replicated(t)
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		role, _ := roleOf(t, b)
