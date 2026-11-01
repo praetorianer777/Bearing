@@ -22,6 +22,9 @@
       "name": "capacity"
     },
     {
+      "name": "directory"
+    },
+    {
       "name": "health"
     },
     {
@@ -44,6 +47,9 @@
     },
     {
       "name": "processes"
+    },
+    {
+      "name": "responsibility"
     },
     {
       "name": "roles"
@@ -2827,6 +2833,61 @@
         "x-bearing-role": "editor"
       }
     },
+    "/people/by-subject": {
+      "get": {
+        "operationId": "realmPerson",
+        "summary": "A person named as the realm knows them, with the positions they hold on a day, the units those sit in and the roles they have.",
+        "description": "asOf is a day written 2006-01-02, today when left out. Positions come heads of units first; roles held directly come before those through a position. issuer and subject name the person as the realm knows them.",
+        "tags": [
+          "directory"
+        ],
+        "parameters": [
+          {
+            "name": "issuer",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/people/by-subject/capacity": {
       "get": {
         "operationId": "realmPersonCapacity",
@@ -2879,6 +2940,254 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CapacityResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/people/by-subject/chain": {
+      "get": {
+        "operationId": "realmPersonChain",
+        "summary": "The management chain above a person named as the realm knows them, nearest first, with the holders.",
+        "description": "asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones. issuer and subject name the person as the realm knows them.",
+        "tags": [
+          "directory"
+        ],
+        "parameters": [
+          {
+            "name": "issuer",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dotted",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "positions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LinkResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "positions"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/people/by-subject/managers": {
+      "get": {
+        "operationId": "realmPersonManagers",
+        "summary": "The managers a given number of levels above a person named as the realm knows them, and who stands in where one is vacant.",
+        "description": "levels is how many solid lines up, one when left out, the direct manager; asOf is a day written 2006-01-02, today when left out. A person holding several positions has a manager for each chain. A vacant manager's position comes down to the holders of its first deputy with any; none when the chain ends sooner or nobody is there. issuer and subject name the person as the realm knows them.",
+        "tags": [
+          "responsibility"
+        ],
+        "parameters": [
+          {
+            "name": "issuer",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "levels",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "levels": {
+                      "type": "integer"
+                    },
+                    "managers": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ManagerResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "levels",
+                    "managers"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/people/by-subject/reports": {
+      "get": {
+        "operationId": "realmPersonReports",
+        "summary": "Who reports to a person named as the realm knows them: the direct ones or with all=true every one, nearest first.",
+        "description": "asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones. issuer and subject name the person as the realm knows them.",
+        "tags": [
+          "directory"
+        ],
+        "parameters": [
+          {
+            "name": "issuer",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "all",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dotted",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "positions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LinkResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "positions"
+                  ]
                 }
               }
             }
@@ -3540,6 +3849,56 @@
         }
       }
     },
+    "/people/{personID}/entry": {
+      "get": {
+        "operationId": "personEntry",
+        "summary": "A person with the positions they hold on a day, the units those sit in and the roles they have.",
+        "description": "asOf is a day written 2006-01-02, today when left out. Positions come heads of units first; roles held directly come before those through a position.",
+        "tags": [
+          "directory"
+        ],
+        "parameters": [
+          {
+            "name": "personID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/people/{personID}/leave": {
       "post": {
         "operationId": "leave",
@@ -3599,6 +3958,84 @@
           }
         },
         "x-bearing-role": "editor"
+      }
+    },
+    "/people/{personID}/managers": {
+      "get": {
+        "operationId": "personManagers",
+        "summary": "The managers a given number of levels above a person, and who stands in where one is vacant.",
+        "description": "levels is how many solid lines up, one when left out, the direct manager; asOf is a day written 2006-01-02, today when left out. A person holding several positions has a manager for each chain. A vacant manager's position comes down to the holders of its first deputy with any; none when the chain ends sooner or nobody is there.",
+        "tags": [
+          "responsibility"
+        ],
+        "parameters": [
+          {
+            "name": "personID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "levels",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "levels": {
+                      "type": "integer"
+                    },
+                    "managers": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ManagerResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "levels",
+                    "managers"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/people/{personID}/photo": {
@@ -6062,6 +6499,73 @@
         }
       }
     },
+    "/roles/{roleID}/people": {
+      "get": {
+        "operationId": "rolePeople",
+        "summary": "Who a role comes down to on a day, deputies standing in for vacant positions that carry it.",
+        "description": "asOf is a day written 2006-01-02, today when left out. First those holding the role directly, then for each position carrying it its holders, or when it is vacant the holders of its first deputy with any.",
+        "tags": [
+          "responsibility"
+        ],
+        "parameters": [
+          {
+            "name": "roleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "people": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ResolvedResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "people"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/search": {
       "get": {
         "operationId": "search",
@@ -8036,6 +8540,73 @@
         },
         "x-bearing-role": "editor"
       }
+    },
+    "/units/{unitID}/tree": {
+      "get": {
+        "operationId": "unitTree",
+        "summary": "A unit and every unit inside it on a day, each after the one it is part of, with how deep it sits.",
+        "description": "asOf is a day written 2006-01-02, today when left out.",
+        "tags": [
+          "directory"
+        ],
+        "parameters": [
+          {
+            "name": "unitID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "asOf": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "units": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SubtreeUnitResponse"
+                      }
+                    }
+                  },
+                  "required": [
+                    "asOf",
+                    "units"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -8808,6 +9379,98 @@
           }
         }
       },
+      "EntryPositionResponse": {
+        "type": "object",
+        "properties": {
+          "headOfUnit": {
+            "type": "boolean"
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "share": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unitName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "positionId",
+          "title",
+          "unitId",
+          "unitName",
+          "headOfUnit",
+          "share"
+        ]
+      },
+      "EntryResponse": {
+        "type": "object",
+        "properties": {
+          "asOf": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "person": {
+            "$ref": "#/components/schemas/PersonResponse"
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryPositionResponse"
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryRoleResponse"
+            }
+          }
+        },
+        "required": [
+          "asOf",
+          "person",
+          "positions",
+          "roles"
+        ]
+      },
+      "EntryRoleResponse": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "through": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "roleId",
+          "key",
+          "name",
+          "through"
+        ]
+      },
       "Error": {
         "type": "object",
         "properties": {
@@ -9012,6 +9675,12 @@
       "HolderResponse": {
         "type": "object",
         "properties": {
+          "issuer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "name": {
             "type": "string"
           },
@@ -9021,12 +9690,20 @@
           },
           "share": {
             "type": "integer"
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
           "personId",
           "name",
-          "share"
+          "share",
+          "issuer",
+          "subject"
         ]
       },
       "HoldingRequest": {
@@ -9450,6 +10127,58 @@
           "holders"
         ]
       },
+      "ManagerResponse": {
+        "type": "object",
+        "properties": {
+          "depth": {
+            "type": "integer"
+          },
+          "from": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "holders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HolderResponse"
+            }
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "solid",
+              "dotted"
+            ]
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResolvedResponse"
+            }
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "positionId",
+          "title",
+          "unitId",
+          "from",
+          "kind",
+          "depth",
+          "holders",
+          "people"
+        ]
+      },
       "McpRequest": {
         "type": "object",
         "properties": {
@@ -9481,6 +10210,12 @@
             "type": "string",
             "format": "uuid"
           },
+          "issuer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "name": {
             "type": "string"
           },
@@ -9495,6 +10230,12 @@
           "share": {
             "type": "integer"
           },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "title": {
             "type": "string"
           },
@@ -9506,6 +10247,8 @@
         "required": [
           "personId",
           "name",
+          "issuer",
+          "subject",
           "positionId",
           "title",
           "unitId",
@@ -10481,6 +11224,12 @@
             ],
             "format": "uuid"
           },
+          "issuer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "name": {
             "type": "string"
           },
@@ -10497,12 +11246,20 @@
           },
           "share": {
             "type": "integer"
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
           "personId",
           "name",
           "share",
+          "issuer",
+          "subject",
           "positionId",
           "deputyFor"
         ]
@@ -10912,6 +11669,65 @@
           "name",
           "kind",
           "responsibilities"
+        ]
+      },
+      "SubtreeUnitResponse": {
+        "type": "object",
+        "properties": {
+          "archivedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "depth": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "placements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlacementResponse"
+            }
+          },
+          "shortName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "typeId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "typeId",
+          "name",
+          "shortName",
+          "description",
+          "parentId",
+          "archivedOn",
+          "depth"
         ]
       },
       "TargetRequest": {

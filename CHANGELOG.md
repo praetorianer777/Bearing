@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **`org-directory@1` and `responsibility@1`:** partners look a person
+  up by the realm's issuer and subject, with their positions, units and
+  roles, and walk the chain up and the reports down from them; read a
+  unit's tree; ask who a role comes down to on a day, deputies standing
+  in for vacant positions; and ask for a person's managers a given
+  number of levels up. Every person in an answer carries the realm's
+  issuer and subject. `GET /api/v1/people/by-subject`,
+  `GET /api/v1/people/{id}/entry`, `GET /api/v1/people/by-subject/chain`,
+  `GET /api/v1/people/by-subject/reports`, `GET /api/v1/units/{id}/tree`,
+  `GET /api/v1/roles/{id}/people`, `GET /api/v1/people/{id}/managers`,
+  `GET /api/v1/people/by-subject/managers` (#40).
+
 - **Themes of one's own:** anybody makes a theme in an editor, starting
   blank or from Deep-Tech or Constellation: colours by group for light
   and dark, type, corners and shadows, cursors, icons, a backdrop picture

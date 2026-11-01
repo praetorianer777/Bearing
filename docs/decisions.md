@@ -485,3 +485,16 @@ It reads the organisation of a day already loaded for the chart, and the
 responsibilities only of the nodes opened. Every relation shown is also
 listed as a sentence under the canvas, for the keyboard and screen
 readers.
+
+## Partners ask by the realm's names, and a manager is a level up
+
+The suite knows people by the realm's issuer and `sub`, so every answer
+of `org-directory@1` and `responsibility@1` names its people that way
+too, and each question about a person may name them so. A partner that
+routes an approval to "the manager two levels up" gets the positions
+exactly that many solid lines above the person, with who they come down
+to on the day: their holders, or when one is vacant its first deputy's,
+the same rule a process step follows. Bearing does not skip an empty
+chair to the next one up; whether to climb further is the partner's
+rule, and the answer says the chair is vacant through `deputyFor` or no
+people at all.

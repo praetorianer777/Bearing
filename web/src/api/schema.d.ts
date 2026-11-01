@@ -868,6 +868,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/by-subject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A person named as the realm knows them, with the positions they hold on a day, the units those sit in and the roles they have.
+         * @description asOf is a day written 2006-01-02, today when left out. Positions come heads of units first; roles held directly come before those through a position. issuer and subject name the person as the realm knows them.
+         */
+        get: operations["realmPerson"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/by-subject/capacity": {
         parameters: {
             query?: never;
@@ -880,6 +900,66 @@ export interface paths {
          * @description from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on. The range is at most 731 days. by is day, week (from Monday) or month, week when left out; a week or a month is the mean of its working days in the range. Planned holdings, leavers and archived positions count on their days. issuer and subject name the person. Only the person, those above them in the management chain today and editors see it.
          */
         get: operations["realmPersonCapacity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/by-subject/chain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The management chain above a person named as the realm knows them, nearest first, with the holders.
+         * @description asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones. issuer and subject name the person as the realm knows them.
+         */
+        get: operations["realmPersonChain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/by-subject/managers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The managers a given number of levels above a person named as the realm knows them, and who stands in where one is vacant.
+         * @description levels is how many solid lines up, one when left out, the direct manager; asOf is a day written 2006-01-02, today when left out. A person holding several positions has a manager for each chain. A vacant manager's position comes down to the holders of its first deputy with any; none when the chain ends sooner or nobody is there. issuer and subject name the person as the realm knows them.
+         */
+        get: operations["realmPersonManagers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/by-subject/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who reports to a person named as the realm knows them: the direct ones or with all=true every one, nearest first.
+         * @description asOf is a day written 2006-01-02, today when left out; dotted=true follows dotted lines as well as solid ones. issuer and subject name the person as the realm knows them.
+         */
+        get: operations["realmPersonReports"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1040,6 +1120,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{personID}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A person with the positions they hold on a day, the units those sit in and the roles they have.
+         * @description asOf is a day written 2006-01-02, today when left out. Positions come heads of units first; roles held directly come before those through a position.
+         */
+        get: operations["personEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{personID}/leave": {
         parameters: {
             query?: never;
@@ -1051,6 +1151,26 @@ export interface paths {
         put?: never;
         /** Mark a person as gone from a day; the days before keep them, and their holdings end there. */
         post: operations["leave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{personID}/managers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The managers a given number of levels above a person, and who stands in where one is vacant.
+         * @description levels is how many solid lines up, one when left out, the direct manager; asOf is a day written 2006-01-02, today when left out. A person holding several positions has a manager for each chain. A vacant manager's position comes down to the holders of its first deputy with any; none when the chain ends sooner or nobody is there.
+         */
+        get: operations["personManagers"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1645,6 +1765,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/roles/{roleID}/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who a role comes down to on a day, deputies standing in for vacant positions that carry it.
+         * @description asOf is a day written 2006-01-02, today when left out. First those holding the role directly, then for each position carrying it its holders, or when it is vacant the holders of its first deputy with any.
+         */
+        get: operations["rolePeople"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -2141,6 +2281,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/units/{unitID}/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A unit and every unit inside it on a day, each after the one it is part of, with how deep it sits.
+         * @description asOf is a day written 2006-01-02, today when left out.
+         */
+        get: operations["unitTree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2378,6 +2538,34 @@ export interface components {
              */
             on?: string;
         };
+        EntryPositionResponse: {
+            headOfUnit: boolean;
+            /** Format: uuid */
+            positionId: string;
+            share: number;
+            title: string;
+            /** Format: uuid */
+            unitId: string;
+            unitName: string;
+        };
+        EntryResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            asOf: string;
+            person: components["schemas"]["PersonResponse"];
+            positions: components["schemas"]["EntryPositionResponse"][];
+            roles: components["schemas"]["EntryRoleResponse"][];
+        };
+        EntryRoleResponse: {
+            key: string;
+            name: string;
+            /** Format: uuid */
+            roleId: string;
+            /** Format: uuid */
+            through: string | null;
+        };
         Error: {
             error: string;
             error_description: string;
@@ -2443,10 +2631,12 @@ export interface components {
             grants: components["schemas"]["GroupGrant"][];
         };
         HolderResponse: {
+            issuer: string | null;
             name: string;
             /** Format: uuid */
             personId: string;
             share: number;
+            subject: string | null;
         };
         HoldingRequest: {
             /**
@@ -2595,6 +2785,20 @@ export interface components {
             /** Format: uuid */
             unitId: string;
         };
+        ManagerResponse: {
+            depth: number;
+            /** Format: uuid */
+            from: string;
+            holders: components["schemas"]["HolderResponse"][];
+            /** @enum {string} */
+            kind: "solid" | "dotted";
+            people: components["schemas"]["ResolvedResponse"][];
+            /** Format: uuid */
+            positionId: string;
+            title: string;
+            /** Format: uuid */
+            unitId: string;
+        };
         McpRequest: {
             /** @description A JSON value. */
             id?: unknown;
@@ -2607,12 +2811,14 @@ export interface components {
             headOfUnit: boolean;
             /** Format: uuid */
             holdingId: string;
+            issuer: string | null;
             name: string;
             /** Format: uuid */
             personId: string;
             /** Format: uuid */
             positionId: string;
             share: number;
+            subject: string | null;
             title: string;
             /** Format: uuid */
             unitId: string;
@@ -2884,12 +3090,14 @@ export interface components {
         ResolvedResponse: {
             /** Format: uuid */
             deputyFor: string | null;
+            issuer: string | null;
             name: string;
             /** Format: uuid */
             personId: string;
             /** Format: uuid */
             positionId: string | null;
             share: number;
+            subject: string | null;
         };
         ResolvedResponsibilityResponse: {
             /** @enum {string} */
@@ -2999,6 +3207,24 @@ export interface components {
             kind: "start" | "step" | "decision" | "subprocess" | "end";
             name: string;
             responsibilities: components["schemas"]["ResolvedResponsibilityResponse"][];
+        };
+        SubtreeUnitResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            archivedOn: string | null;
+            depth: number;
+            description: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            parentId: string | null;
+            placements?: components["schemas"]["PlacementResponse"][];
+            shortName: string | null;
+            /** Format: uuid */
+            typeId: string;
         };
         TargetRequest: {
             /**
@@ -5204,6 +5430,39 @@ export interface operations {
             };
         };
     };
+    realmPerson: {
+        parameters: {
+            query?: {
+                issuer?: string;
+                subject?: string;
+                asOf?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     realmPersonCapacity: {
         parameters: {
             query?: {
@@ -5226,6 +5485,131 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CapacityResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    realmPersonChain: {
+        parameters: {
+            query?: {
+                issuer?: string;
+                subject?: string;
+                asOf?: string;
+                dotted?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        positions: components["schemas"]["LinkResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    realmPersonManagers: {
+        parameters: {
+            query?: {
+                issuer?: string;
+                subject?: string;
+                levels?: string;
+                asOf?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        levels: number;
+                        managers: components["schemas"]["ManagerResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    realmPersonReports: {
+        parameters: {
+            query?: {
+                issuer?: string;
+                subject?: string;
+                asOf?: string;
+                all?: string;
+                dotted?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        positions: components["schemas"]["LinkResponse"][];
+                    };
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */
@@ -5662,6 +6046,39 @@ export interface operations {
             };
         };
     };
+    personEntry: {
+        parameters: {
+            query?: {
+                asOf?: string;
+            };
+            header?: never;
+            path: {
+                personID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     leave: {
         parameters: {
             query?: never;
@@ -5685,6 +6102,48 @@ export interface operations {
                 content: {
                     "application/json": {
                         person: components["schemas"]["PersonResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    personManagers: {
+        parameters: {
+            query?: {
+                levels?: string;
+                asOf?: string;
+            };
+            header?: never;
+            path: {
+                personID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        levels: number;
+                        managers: components["schemas"]["ManagerResponse"][];
                     };
                 };
             };
@@ -7188,6 +7647,46 @@ export interface operations {
             };
         };
     };
+    rolePeople: {
+        parameters: {
+            query?: {
+                asOf?: string;
+            };
+            header?: never;
+            path: {
+                roleID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        people: components["schemas"]["ResolvedResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     search: {
         parameters: {
             query?: {
@@ -8473,6 +8972,46 @@ export interface operations {
                 content: {
                     "application/json": {
                         unit: components["schemas"]["UnitResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    unitTree: {
+        parameters: {
+            query?: {
+                asOf?: string;
+            };
+            header?: never;
+            path: {
+                unitID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        units: components["schemas"]["SubtreeUnitResponse"][];
                     };
                 };
             };

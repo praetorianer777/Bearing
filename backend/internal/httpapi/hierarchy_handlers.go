@@ -13,6 +13,9 @@ type holderResponse struct {
 	PersonID uuid.UUID `json:"personId"`
 	Name     string    `json:"name"`
 	Share    int       `json:"share"`
+	// Issuer and Subject are how the realm knows them; null for somebody it does not.
+	Issuer  *string `json:"issuer"`
+	Subject *string `json:"subject"`
 }
 
 type linkResponse struct {
@@ -31,6 +34,8 @@ type linkResponse struct {
 type memberResponse struct {
 	PersonID   uuid.UUID `json:"personId"`
 	Name       string    `json:"name"`
+	Issuer     *string   `json:"issuer"`
+	Subject    *string   `json:"subject"`
 	PositionID uuid.UUID `json:"positionId"`
 	Title      string    `json:"title"`
 	UnitID     uuid.UUID `json:"unitId"`
@@ -43,10 +48,12 @@ type walkFunc func(ctx context.Context, id uuid.UUID, asOf org.Day, w org.Walk) 
 
 // respondWalk answers the positions reached from the one in the path, over the lines the query asks for.
 func (s *Server) respondWalk(w http.ResponseWriter, r *http.Request, param string, walk walkFunc, refusal func(error) error) {
-	id, ok := s.pathID(w, r, param)
-	if !ok {
-		return
+	if id, ok := s.pathID(w, r, param); ok {
+		s.respondWalkFrom(w, r, id, walk, refusal)
 	}
+}
+
+func (s *Server) respondWalkFrom(w http.ResponseWriter, r *http.Request, id uuid.UUID, walk walkFunc, refusal func(error) error) {
 	day, ok := s.asOf(w, r)
 	if !ok {
 		return
@@ -59,13 +66,18 @@ func (s *Server) respondWalk(w http.ResponseWriter, r *http.Request, param strin
 	}
 	out := make([]linkResponse, len(links))
 	for i, l := range links {
-		out[i] = linkResponse{PositionID: l.PositionID, Title: l.Title, UnitID: l.UnitID, From: l.From, Kind: l.Kind, Depth: l.Depth,
-			Holders: make([]holderResponse, len(l.Holders))}
-		for j, h := range l.Holders {
-			out[i].Holders[j] = holderResponse{PersonID: h.PersonID, Name: h.Name, Share: h.Share}
-		}
+		out[i] = toLink(l)
 	}
 	respondJSON(w, http.StatusOK, env{"asOf": day, "positions": out})
+}
+
+func toLink(l org.Link) linkResponse {
+	out := linkResponse{PositionID: l.PositionID, Title: l.Title, UnitID: l.UnitID, From: l.From, Kind: l.Kind, Depth: l.Depth,
+		Holders: make([]holderResponse, len(l.Holders))}
+	for j, h := range l.Holders {
+		out.Holders[j] = holderResponse(h)
+	}
+	return out
 }
 
 func (s *Server) handlePersonChain(w http.ResponseWriter, r *http.Request) {
