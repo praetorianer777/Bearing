@@ -72,9 +72,14 @@ export function UnitPage({ unitId, search, onSearch }: { unitId: string; search:
         </div>
         <AsOfPicker value={asOf} onChange={(day) => onSearch({ asOf: day })} />
       </header>
-      <Link to="/organisation" search={{ focus: `unit:${unit.id}`, asOf: search.asOf }} className="self-start text-sm text-accent hover:underline">
-        {t.unit.onChart}
-      </Link>
+      <div className="flex flex-wrap gap-4">
+        <Link to="/organisation" search={{ focus: `unit:${unit.id}`, asOf: search.asOf }} className="text-sm text-accent hover:underline">
+          {t.unit.onChart}
+        </Link>
+        <Link to="/explore" search={{ node: `unit:${unit.id}`, asOf: search.asOf }} className="text-sm text-accent hover:underline">
+          {t.explore.link}
+        </Link>
+      </div>
       <div className="grid gap-5 md:grid-cols-2">
         <Section title={t.unit.head} empty={t.unit.noHead}>
           {head && (

@@ -8,6 +8,7 @@ import { PositionPage } from "@/features/org/PositionPage";
 import { RolePage } from "@/features/org/RolePage";
 import { RolesPage } from "@/features/org/RolesPage";
 import { ImportPage } from "@/features/importing/ImportPage";
+import { type ExploreSearch, ExplorerPage } from "@/features/explore/Explorer";
 import { type DaySearch, UnitPage } from "@/features/org/UnitPage";
 import { type PeopleSearch, PeoplePage } from "@/features/people/PeoplePage";
 import { type PersonSearch, PersonPage } from "@/features/people/PersonPage";
@@ -191,6 +192,19 @@ const planningRoute = createRoute({
     return <PlanningPage search={search} onSearch={(next) => navigate({ search: next, replace: true })} />;
   },
 });
+const exploreRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/explore",
+  validateSearch: (search: Record<string, unknown>): ExploreSearch => ({
+    ...(typeof search.node === "string" && search.node ? { node: search.node } : {}),
+    ...(isDay(search.asOf) ? { asOf: search.asOf } : {}),
+  }),
+  component: function Explore() {
+    const search = exploreRoute.useSearch();
+    const navigate = exploreRoute.useNavigate();
+    return <ExplorerPage search={search} onSearch={(next) => navigate({ search: next, replace: true })} />;
+  },
+});
 const importRoute = createRoute({ getParentRoute: () => appRoute, path: "/import", component: ImportPage });
 const rolesRoute = createRoute({ getParentRoute: () => appRoute, path: "/roles", component: RolesPage });
 const roleRoute = createRoute({
@@ -284,6 +298,7 @@ const routeTree = rootRoute.addChildren([
     planningRoute,
     rolesRoute,
     importRoute,
+    exploreRoute,
     roleRoute,
     accountsRoute,
     themesRoute,

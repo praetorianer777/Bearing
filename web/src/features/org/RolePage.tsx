@@ -70,9 +70,14 @@ export function RolePage({ roleId, search, onSearch }: { roleId: string; search:
       <TargetSection subject={{ roleId: role.id }} asOf={asOf} />
       <Duties subject={{ roleId: role.id }} asOf={asOf} />
       {editor && <RoleChanges key={role.id} role={role} />}
-      <Link to="/roles" className="self-start text-sm text-accent hover:underline">
-        {t.roleList.all}
-      </Link>
+      <div className="flex flex-wrap gap-4">
+        <Link to="/explore" search={{ node: `role:${role.id}`, asOf: search.asOf }} className="text-sm text-accent hover:underline">
+          {t.explore.link}
+        </Link>
+        <Link to="/roles" className="text-sm text-accent hover:underline">
+          {t.roleList.all}
+        </Link>
+      </div>
     </div>
   );
 }
