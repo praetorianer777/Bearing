@@ -48,6 +48,8 @@ type Server struct {
 	Themes *theme.Service
 	// Org is the organisation model.
 	Org *org.Service
+	// OAuth is the authorization server for partner apps; nil serves none of it and takes no bearer tokens.
+	OAuth OAuth
 }
 
 // Routes is the whole HTTP surface, built from the operations table.
@@ -66,6 +68,9 @@ func (s *Server) Routes() http.Handler {
 	api.NotFound(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrNotFound()) })
 	api.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) { respondError(w, r, s.Log, ErrMethodNotAllowed()) })
 	for _, op := range operations {
+		if op.tag == "oauth" && s.OAuth == nil {
+			continue
+		}
 		h := s.guard(op, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { op.handle(s, w, r) }))
 		if op.root {
 			r.Method(op.method, op.path, h)

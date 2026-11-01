@@ -28,6 +28,15 @@ func (f fakeSessions) Authenticate(_ context.Context, token string) (auth.Accoun
 	return a, "key-" + token, nil
 }
 
+func (f fakeSessions) Account(_ context.Context, id uuid.UUID) (auth.Account, error) {
+	for _, a := range f {
+		if a.ID == id {
+			return a, nil
+		}
+	}
+	return auth.Account{}, auth.ErrNotFound
+}
+
 var (
 	ada  = auth.Account{ID: uuid.New(), Email: "ada@bearing.test", Name: "Ada", Role: auth.RoleAdministrator}
 	bert = auth.Account{ID: uuid.New(), Email: "bert@bearing.test", Name: "Bert", Role: auth.RoleMember}

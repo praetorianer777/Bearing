@@ -283,3 +283,20 @@ where it stood, each node marked added, removed or changed, and the
 changes are listed beside it. A draft set against a version cannot be
 edited until the comparison is put away, as removed nodes stand on the
 canvas among its own.
+
+## Bearing is the siblings' kind of authorization server
+
+Partner apps connect to Bearing as Stator and Armature let them: an app
+registers itself, an administrator allows it by connecting it once, and
+people connect it on a consent page by authorization code with PKCE. The
+schema follows Stator's, so the suite's apps meet one model: a grant is a
+row of the person's `api_token`, the refresh token rotates with the access
+token, and a replayed refresh token or code ends the grant. A grant made on
+the consent page acts at the MCP endpoint alone, so an assistant cannot
+reach further into the API than its tools go; a token holding read only
+may only read anywhere. Bearer tokens are looked up on the primary, as a
+token is used the moment it is issued. The token endpoint and the consent
+page act for nobody and run as `bearing_admin`; a person reads and revokes
+their own grants under row level security, never their hashes. Who
+allowed or connected what is logged rather than written to the
+organisation's audit trail, which records changes to the model.

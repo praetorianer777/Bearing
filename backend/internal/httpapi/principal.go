@@ -5,15 +5,21 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/db"
+	"github.com/praetorianer777/bearing/backend/internal/oauth"
 )
 
-// Authenticator says who a session token signs in; auth.Service is the real one.
+// Authenticator says who a session token signs in, and reads the account a bearer token acts for; auth.Service is
+// the real one.
 type Authenticator interface {
 	Authenticate(ctx context.Context, token string) (auth.Account, string, error)
+	Account(ctx context.Context, id uuid.UUID) (auth.Account, error)
 }
 
 // Principal is who a request acts for.
@@ -21,6 +27,8 @@ type Principal struct {
 	Account auth.Account
 	// SessionKey is what the session is known by, where the request's writes are remembered.
 	SessionKey string
+	// Via is the bearer token the request acts through; nil for a session.
+	Via *oauth.Via
 }
 
 type principalKey struct{}
@@ -38,6 +46,10 @@ func (s *Server) identify(next http.Handler) http.Handler {
 		return next
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok && s.OAuth != nil {
+			s.bearer(w, r, next, strings.TrimSpace(token))
+			return
+		}
 		c, err := r.Cookie(s.cookieName())
 		if err != nil || c.Value == "" {
 			next.ServeHTTP(w, r)
@@ -58,6 +70,49 @@ func (s *Server) identify(next http.Handler) http.Handler {
 	})
 }
 
+// bearer has the request act for whom a bearer token acts for, through the token. A token that acts for nobody is
+// refused outright rather than read as nobody signed in, so a client learns its token is spent.
+func (s *Server) bearer(w http.ResponseWriter, r *http.Request, next http.Handler, token string) {
+	id, via, err := s.OAuth.Bearer(r.Context(), token)
+	if errors.Is(err, oauth.ErrNoToken) {
+		s.challenge(w, r, "invalid_token", "This token is unknown, expired or revoked.")
+		return
+	}
+	if err != nil {
+		respondError(w, r, s.Log, ErrUnavailable("The token cannot be checked right now.", err))
+		return
+	}
+	ctx := db.WithVia(db.WithUser(r.Context(), id), via.ID)
+	account, err := s.Accounts.Account(ctx, id)
+	if errors.Is(err, auth.ErrNotFound) {
+		// An account made a moment ago may not have reached the replica yet; the token was read on the primary.
+		account, err = s.Accounts.Account(db.PinPrimary(ctx), id)
+	}
+	if errors.Is(err, auth.ErrNotFound) || (err == nil && account.Disabled) {
+		s.challenge(w, r, "invalid_token", "This token is unknown, expired or revoked.")
+		return
+	}
+	if err != nil {
+		respondError(w, r, s.Log, ErrUnavailable("The token cannot be checked right now.", err))
+		return
+	}
+	ctx = context.WithValue(ctx, principalKey{}, &Principal{Account: account, Via: &via})
+	next.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// challenge refuses a bearer request as RFC 6750 asks, naming where the protected resource's metadata is.
+func (s *Server) challenge(w http.ResponseWriter, r *http.Request, code, message string) {
+	header := `Bearer realm="bearing"`
+	if s.OAuth != nil {
+		header += `, resource_metadata="` + s.OAuth.ResourceMetadataURL() + `"`
+	}
+	if code != "" {
+		header += `, error="` + code + `"`
+	}
+	w.Header().Set("WWW-Authenticate", header)
+	respondError(w, r, s.Log, &APIError{Status: http.StatusUnauthorized, Code: "unauthorized", Message: message})
+}
+
 // guard holds an operation to who may call it: public ones anybody, the rest somebody signed in with the role the
 // operation needs. The database's policies hold the same line again, for a handler that strays.
 func (s *Server) guard(op operation, h http.Handler) http.Handler {
@@ -68,6 +123,14 @@ func (s *Server) guard(op operation, h http.Handler) http.Handler {
 		p := PrincipalFrom(r.Context())
 		if p == nil {
 			respondError(w, r, s.Log, ErrUnauthorized())
+			return
+		}
+		if p.Via != nil && p.Via.MCPOnly && !op.mcp {
+			respondError(w, r, s.Log, ErrForbidden("This token was given to a connected app for the MCP endpoint, and acts there only."))
+			return
+		}
+		if p.Via != nil && p.Via.ReadOnly && !safeMethod(op.method) && !op.mcp {
+			respondError(w, r, s.Log, ErrForbidden("This token may only read."))
 			return
 		}
 		if op.role != "" && !p.Account.Role.AtLeast(op.role) {
@@ -83,7 +146,7 @@ func (s *Server) guard(op operation, h http.Handler) http.Handler {
 // such as a script, carries no cookie of a browser's.
 func (s *Server) sameSite(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if safeMethod(r.Method) {
+		if safeMethod(r.Method) || crossSiteOK(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -124,4 +187,15 @@ func roleNeeded(role auth.Role) string {
 		return "Only an administrator may do that."
 	}
 	return "That needs the " + string(role) + " role or a higher one."
+}
+
+// crossSiteOK are the endpoints apps elsewhere call by design. None of them reads the session cookie, so a page
+// elsewhere gains nothing by sending it.
+func crossSiteOK(path string) bool {
+	for _, p := range []string{oauth.RegisterPath, oauth.TokenPath, oauth.RevokePath} {
+		if strings.HasSuffix(path, p) {
+			return true
+		}
+	}
+	return false
 }

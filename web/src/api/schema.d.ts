@@ -4,6 +4,57 @@
  */
 
 export interface paths {
+    "/.well-known/oauth-authorization-server": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The authorization server's metadata (RFC 8414), where partners read every address from. */
+        get: operations["oauthMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/.well-known/oauth-protected-resource": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The MCP endpoint's protected resource metadata (RFC 9728). */
+        get: operations["resourceMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/.well-known/oauth-protected-resource/api/v1/mcp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The MCP endpoint's protected resource metadata, under the resource's own path. */
+        get: operations["mcpResourceMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/accounts": {
         parameters: {
             query?: never;
@@ -225,6 +276,40 @@ export interface paths {
         /** End this session. */
         post: operations["signOut"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/connected-apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The apps the person signed in connected. */
+        get: operations["connectedApps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/connected-apps/{grantID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Disconnect an app: its tokens stop working at once. */
+        delete: operations["disconnect"];
         options?: never;
         head?: never;
         patch?: never;
@@ -501,6 +586,126 @@ export interface paths {
         get: operations["meta"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The authorization endpoint: sends the browser to the consent page with the request, authorization code with PKCE S256 only. */
+        get: operations["authorize"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every app that registered itself, allowed or waiting for an administrator. */
+        get: operations["apps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/clients/{clientID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove an app and disconnect it from everybody. */
+        delete: operations["removeApp"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the consent page asks the person signed in, for the authorize request it was opened with; or where the browser goes back to at once. */
+        get: operations["consent"];
+        put?: never;
+        /** Connect the app, or cancel; the answer says where the browser goes back to. An administrator connecting an app nobody allowed allows it for everybody. */
+        post: operations["decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** An app registers itself (RFC 7591). It is pending until an administrator allows it by connecting it once; the secret is shown this once. */
+        post: operations["registerApp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End the grant an access or refresh token belongs to (RFC 7009). */
+        post: operations["revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The token endpoint: an authorization code or a refresh token traded for an access token of an hour and a new refresh token. */
+        post: operations["token"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1587,6 +1792,44 @@ export interface components {
             /** Format: uuid */
             roleId: string;
         };
+        ClientResponse: {
+            clientUri: string;
+            confidential: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            people: number;
+            redirectUris: string[];
+            scopes: string[];
+            status: string;
+        };
+        Consent: {
+            allowsApp: boolean;
+            client: components["schemas"]["ConsentClient"];
+            mayAllow: boolean;
+            pending: boolean;
+            person: string;
+            redirectHost: string;
+            refusal?: string;
+            scopes: string[];
+        };
+        ConsentClient: {
+            clientUri?: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        ConsentRequest: {
+            allow: boolean;
+            query: string;
+            scope?: string;
+        };
+        ConsentResponse: {
+            consent: components["schemas"]["Consent"] | null;
+            redirect: string;
+        };
         CreateAccountRequest: {
             email: string;
             name: string;
@@ -1685,6 +1928,10 @@ export interface components {
              */
             on?: string;
         };
+        Error: {
+            error: string;
+            error_description: string;
+        };
         ErrorEnvelope: {
             error: components["schemas"]["APIError"];
         };
@@ -1704,6 +1951,18 @@ export interface components {
             id: string;
             operation: string;
             table: string;
+        };
+        GrantResponse: {
+            app: string;
+            /** Format: uuid */
+            clientId: string;
+            /** Format: date-time */
+            connectedAt: string;
+            /** Format: uuid */
+            id: string;
+            scopes: string[];
+            /** Format: date-time */
+            until: string;
         };
         GroupGrant: {
             group: string;
@@ -1854,6 +2113,22 @@ export interface components {
             build: components["schemas"]["Info"];
             capabilities: string[];
             product: string;
+        };
+        Metadata: {
+            authorization_endpoint: string;
+            authorization_response_iss_parameter_supported: boolean;
+            code_challenge_methods_supported: string[];
+            grant_types_supported: string[];
+            issuer: string;
+            registration_endpoint: string;
+            response_modes_supported: string[];
+            response_types_supported: string[];
+            revocation_endpoint: string;
+            revocation_endpoint_auth_methods_supported: string[];
+            scopes_supported: string[];
+            service_documentation: string;
+            token_endpoint: string;
+            token_endpoint_auth_methods_supported: string[];
         };
         MoveUnitRequest: {
             /**
@@ -2034,6 +2309,31 @@ export interface components {
             replicas: components["schemas"]["ReplicaStatus"][];
             status: string;
         };
+        RedirectResponse: {
+            redirect: string;
+        };
+        RegistrationRequest: {
+            client_name: string;
+            client_uri?: string;
+            grant_types?: string[];
+            redirect_uris: string[];
+            response_types?: string[];
+            scope?: string;
+            token_endpoint_auth_method?: string;
+        };
+        RegistrationResponse: {
+            client_id: string;
+            client_id_issued_at: number;
+            client_name: string;
+            client_secret?: string;
+            client_secret_expires_at: number;
+            client_uri?: string;
+            grant_types: string[];
+            redirect_uris: string[];
+            response_types: string[];
+            scope: string;
+            token_endpoint_auth_method: string;
+        };
         ReplicaStatus: {
             healthy: boolean;
             lastError?: string;
@@ -2069,6 +2369,14 @@ export interface components {
             /** Format: uuid */
             unitId?: string;
         };
+        ResourceMetadata: {
+            authorization_servers: string[];
+            bearer_methods_supported: string[];
+            resource: string;
+            resource_documentation: string;
+            resource_name: string;
+            scopes_supported: string[];
+        };
         ResponsibilityBody: {
             /** @enum {string} */
             kind: "responsible" | "accountable" | "consulted" | "informed";
@@ -2078,6 +2386,12 @@ export interface components {
             roleId?: string;
             /** Format: uuid */
             unitId?: string;
+        };
+        RevokeForm: {
+            client_id?: string;
+            client_secret?: string;
+            token: string;
+            token_type_hint?: string;
         };
         RoleRequest: {
             /** @enum {string} */
@@ -2192,6 +2506,24 @@ export interface components {
             };
             shape: components["schemas"]["ThemeShape"];
         };
+        TokenForm: {
+            client_id?: string;
+            client_secret?: string;
+            code?: string;
+            code_verifier?: string;
+            grant_type: string;
+            redirect_uri?: string;
+            refresh_token?: string;
+            resource?: string;
+            scope?: string;
+        };
+        TokenResponse: {
+            access_token: string;
+            expires_in: number;
+            refresh_token: string;
+            scope: string;
+            token_type: string;
+        };
         UnitRequest: {
             description?: string;
             name?: string;
@@ -2251,6 +2583,93 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    oauthMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Metadata"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    resourceMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResourceMetadata"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    mcpResourceMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResourceMetadata"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     accounts: {
         parameters: {
             query?: never;
@@ -2707,6 +3126,66 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    connectedApps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        grants: components["schemas"]["GrantResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    disconnect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                grantID: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -3426,6 +3905,288 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetaResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    authorize: {
+        parameters: {
+            query?: {
+                response_type?: string;
+                client_id?: string;
+                redirect_uri?: string;
+                state?: string;
+                scope?: string;
+                code_challenge?: string;
+                code_challenge_method?: string;
+                resource?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Found */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    apps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        clients: components["schemas"]["ClientResponse"][];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    removeApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    consent: {
+        parameters: {
+            query?: {
+                response_type?: string;
+                client_id?: string;
+                redirect_uri?: string;
+                state?: string;
+                scope?: string;
+                code_challenge?: string;
+                code_challenge_method?: string;
+                resource?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedirectResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    registerApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["RevokeForm"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    token: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["TokenForm"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             /** @description An error, in the one shape every endpoint uses. */

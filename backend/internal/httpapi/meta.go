@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/praetorianer777/bearing/backend/internal/oauth"
 	"github.com/praetorianer777/bearing/backend/internal/version"
 )
 
@@ -24,6 +25,8 @@ type capability struct {
 // integrationCapabilities are what this build promises partners. A capability is listed only once every
 // operation it names is served.
 var integrationCapabilities = []capability{
+	{name: oauth.CapabilityPartnerTokens, promise: "An app registers itself, and a person connects it on a consent page by authorization code with PKCE; its grant acts at the MCP endpoint.",
+		operations: []string{"POST /oauth/register", "GET /oauth/authorize", "POST /oauth/token", "POST /oauth/revoke"}},
 	{name: "theme-export@1", promise: "A theme exported and imported as one armature-theme/1 file.",
 		operations: []string{"GET /themes/{themeID}/export", "POST /themes/import"}},
 }

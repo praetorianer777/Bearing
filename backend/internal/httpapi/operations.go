@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/praetorianer777/bearing/backend/internal/auth"
+	"github.com/praetorianer777/bearing/backend/internal/oauth"
 	"github.com/praetorianer777/bearing/backend/internal/openapi"
 	"github.com/praetorianer777/bearing/backend/internal/org"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
@@ -39,6 +40,11 @@ type operation struct {
 	role   auth.Role
 	// root operations are served outside APIPrefix, where a probe expects them.
 	root bool
+	// form is the form-encoded body type the handler reads, as OAuth's endpoints take it; nil is none.
+	form any
+	// mcp is the MCP endpoint, the one a grant made on the consent page acts at, and which answers a token that may
+	// only read itself.
+	mcp bool
 }
 
 // operations is the table. Order is by area, then by path; paths are relative to APIPrefix except the root ones.
@@ -379,6 +385,46 @@ var operations = []operation{
 		summary: "Replace a person's photo.", role: editor, request: photoRequest{}, responses: map[int]any{http.StatusNoContent: nil}},
 	{method: http.MethodDelete, path: "/people/{personID}/photo", id: "deletePhoto", handle: (*Server).handleDeletePhoto, tag: "people",
 		summary: "Take a person's photo away.", role: editor, responses: map[int]any{http.StatusNoContent: nil}},
+
+	{method: http.MethodGet, path: oauth.MetadataPath, id: "oauthMetadata", handle: (*Server).handleOAuthMetadata, tag: "oauth",
+		summary: "The authorization server's metadata (RFC 8414), where partners read every address from.", public: true, root: true,
+		responses: map[int]any{http.StatusOK: oauth.Metadata{}}},
+	{method: http.MethodGet, path: oauth.ResourceMetadataPath, id: "resourceMetadata", handle: (*Server).handleResourceMetadata, tag: "oauth",
+		summary: "The MCP endpoint's protected resource metadata (RFC 9728).", public: true, root: true,
+		responses: map[int]any{http.StatusOK: oauth.ResourceMetadata{}}},
+	{method: http.MethodGet, path: oauth.ResourceMetadataPath + APIPrefix + oauth.MCPPath, id: "mcpResourceMetadata", handle: (*Server).handleResourceMetadata,
+		tag: "oauth", summary: "The MCP endpoint's protected resource metadata, under the resource's own path.", public: true, root: true,
+		responses: map[int]any{http.StatusOK: oauth.ResourceMetadata{}}},
+	{method: http.MethodPost, path: oauth.RegisterPath, id: "registerApp", handle: (*Server).handleRegister, tag: "oauth",
+		summary: "An app registers itself (RFC 7591). It is pending until an administrator allows it by connecting it once; the secret is shown this once.",
+		public:  true, request: oauth.RegistrationRequest{},
+		responses: map[int]any{http.StatusCreated: oauth.RegistrationResponse{}, http.StatusBadRequest: oauth.Error{}}},
+	{method: http.MethodGet, path: oauth.AuthorizePath, id: "authorize", handle: (*Server).handleAuthorize, tag: "oauth",
+		summary: "The authorization endpoint: sends the browser to the consent page with the request, authorization code with PKCE S256 only.",
+		public:  true, query: []string{"response_type", "client_id", "redirect_uri", "state", "scope", "code_challenge", "code_challenge_method", "resource"},
+		responses: map[int]any{http.StatusFound: nil}},
+	{method: http.MethodGet, path: "/oauth/consent", id: "consent", handle: (*Server).handleConsent, tag: "oauth",
+		summary:   "What the consent page asks the person signed in, for the authorize request it was opened with; or where the browser goes back to at once.",
+		query:     []string{"response_type", "client_id", "redirect_uri", "state", "scope", "code_challenge", "code_challenge_method", "resource"},
+		responses: map[int]any{http.StatusOK: consentResponse{}}},
+	{method: http.MethodPost, path: "/oauth/consent", id: "decide", handle: (*Server).handleDecide, tag: "oauth",
+		summary: "Connect the app, or cancel; the answer says where the browser goes back to. An administrator connecting an app nobody allowed allows it for everybody.",
+		request: consentRequest{}, responses: map[int]any{http.StatusOK: redirectResponse{}}},
+	{method: http.MethodPost, path: oauth.TokenPath, id: "token", handle: (*Server).handleToken, tag: "oauth",
+		summary: "The token endpoint: an authorization code or a refresh token traded for an access token of an hour and a new refresh token.",
+		public:  true, form: tokenForm{}, responses: map[int]any{http.StatusOK: oauth.TokenResponse{}, http.StatusBadRequest: oauth.Error{}}},
+	{method: http.MethodPost, path: oauth.RevokePath, id: "revoke", handle: (*Server).handleRevoke, tag: "oauth",
+		summary: "End the grant an access or refresh token belongs to (RFC 7009).", public: true, form: revokeForm{},
+		responses: map[int]any{http.StatusOK: nil}},
+	{method: http.MethodGet, path: "/connected-apps", id: "connectedApps", handle: (*Server).handleGrants, tag: "oauth",
+		summary: "The apps the person signed in connected.", responses: map[int]any{http.StatusOK: env{"grants": []grantResponse{}}}},
+	{method: http.MethodDelete, path: "/connected-apps/{grantID}", id: "disconnect", handle: (*Server).handleDisconnect, tag: "oauth",
+		summary: "Disconnect an app: its tokens stop working at once.", responses: map[int]any{http.StatusNoContent: nil}},
+	{method: http.MethodGet, path: "/oauth/clients", id: "apps", handle: (*Server).handleClients, tag: "oauth",
+		summary: "Every app that registered itself, allowed or waiting for an administrator.", role: administrator,
+		responses: map[int]any{http.StatusOK: env{"clients": []clientResponse{}}}},
+	{method: http.MethodDelete, path: "/oauth/clients/{clientID}", id: "removeApp", handle: (*Server).handleRemoveClient, tag: "oauth",
+		summary: "Remove an app and disconnect it from everybody.", role: administrator, responses: map[int]any{http.StatusNoContent: nil}},
 }
 
 // The document's own row joins at init: it is built from the table, so the table cannot name it in its initialiser.
