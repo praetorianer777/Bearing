@@ -805,6 +805,11 @@ export const de: Messages = {
     namedToEditors: "Wer, sehen Bearbeitende.",
     unmatched: (names: string) => `Armature kennt nicht: ${names}.`,
   },
+  nobodyThere: {
+    title: "Niemand da",
+    none: "An jedem Arbeitstag ist jemand da.",
+    step: (step: string, party: string, kind: string) => `${step}: ${party}, ${kind}`,
+  },
   planning: {
     title: "Planung",
     intro: "Wo der Organisation Leute fehlen oder sie mehr hat als ihr Soll, aus Besetzungen, Plätzen und Soll.",
