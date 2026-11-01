@@ -1,13 +1,15 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { applyAppearance, BUILT_IN_THEME, INSTALLATION_THEME, reloadAppearance, shownTheme } from "./appearance";
-import { type CompilableTheme, compileTheme, TOKEN_NAMES } from "./theme";
+import { THEME_STYLE_ID } from "@/config";
+import { applyAppearance, applyThemeCSS, cachedThemeCSS, cacheThemeCSS, nextMode, reloadAppearance } from "./appearance";
+import { type CompilableTheme, compileTheme, emptySpec, TOKEN_GROUPS, TOKEN_NAMES } from "./theme";
 
 const harbour = JSON.parse(readFileSync(resolve(__dirname, "../../../backend/internal/theme/testdata/harbour.armature-theme.json"), "utf8"));
 
 afterEach(() => {
-  applyAppearance({ mode: "system", theme: INSTALLATION_THEME });
+  applyAppearance({ mode: "system" });
+  applyThemeCSS(null);
   localStorage.clear();
 });
 
@@ -16,6 +18,12 @@ describe("a theme", () => {
     const css = readFileSync(resolve(__dirname, "../styles/index.css"), "utf8");
     const declared = new Set([...css.matchAll(/--color-([a-z0-9-]+):/g)].map((m) => m[1]));
     expect(new Set(TOKEN_NAMES)).toEqual(declared);
+    expect(TOKEN_NAMES).toHaveLength(new Set(TOKEN_NAMES).size);
+    expect(TOKEN_GROUPS.every((group) => group.tokens.length > 0)).toBe(true);
+  });
+
+  it("asks for its moving picture outside the stylesheet, and an empty one compiles to nothing", () => {
+    expect(compileTheme({ id: "t", spec: { ...emptySpec(), effect: "constellation" }, assets: [] })).toBe("");
   });
 
   it("compiles to only what it names, its files served from Bearing", () => {
@@ -70,21 +78,28 @@ describe("the appearance", () => {
     expect(document.documentElement.dataset.theme).toBe("dark");
     applyAppearance({ mode: "system" });
     expect(document.documentElement.dataset.theme).toBeUndefined();
-    applyAppearance({ mode: "light", theme: "t2" });
+    applyAppearance({ mode: "light" });
     reloadAppearance();
     expect(document.documentElement.dataset.theme).toBe("light");
   });
 
-  it("shows the chosen theme while it exists, else the installation's, unless Bearing's own was chosen", () => {
-    const themes = [
-      { id: "t1", default: true },
-      { id: "t2", default: false },
-    ];
-    expect(shownTheme(themes, "t2")?.id).toBe("t2");
-    expect(shownTheme(themes, "gone")?.id).toBe("t1");
-    expect(shownTheme(themes, INSTALLATION_THEME)?.id).toBe("t1");
-    expect(shownTheme(themes, BUILT_IN_THEME)).toBeUndefined();
-    expect(shownTheme([{ id: "t2", default: false }], INSTALLATION_THEME)).toBeUndefined();
+  it("steps from the system to light to dark and round again", () => {
+    expect(nextMode("system")).toBe("light");
+    expect(nextMode("light")).toBe("dark");
+    expect(nextMode("dark")).toBe("system");
+  });
+
+  it("puts one theme stylesheet on the page and remembers it for the next load", () => {
+    applyThemeCSS(".a {}");
+    applyThemeCSS(".b {}");
+    expect(document.querySelectorAll(`#${THEME_STYLE_ID}`)).toHaveLength(1);
+    expect(document.getElementById(THEME_STYLE_ID)?.textContent).toBe(".b {}");
+    cacheThemeCSS({ key: "t1:1", css: ".b {}" });
+    expect(cachedThemeCSS()).toEqual({ key: "t1:1", css: ".b {}" });
+    cacheThemeCSS(null);
+    expect(cachedThemeCSS()).toBeNull();
+    applyThemeCSS(null);
+    expect(document.getElementById(THEME_STYLE_ID)).toBeNull();
   });
 
   it("still applies in a browser that keeps nothing", () => {

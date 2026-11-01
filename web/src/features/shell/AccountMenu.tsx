@@ -1,11 +1,11 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
 import { useMe, useSignOut } from "@/api/auth";
-import { useThemes } from "@/api/themes";
+import { useActiveTheme, useChooseTheme, useThemes } from "@/api/themes";
 import { APP_VERSION } from "@/config";
 import { applyLanguage, LANGUAGES, type LanguageChoice, t, useLanguage } from "@/i18n";
 import { LANGUAGE_STORAGE_KEY } from "@/config";
-import { applyAppearance, BUILT_IN_THEME, INSTALLATION_THEME, MODES, useAppearance } from "@/lib/appearance";
+import { applyAppearance, MODES, useAppearance } from "@/lib/appearance";
 
 function storedChoice(): LanguageChoice {
   try {
@@ -15,6 +15,10 @@ function storedChoice(): LanguageChoice {
     return "";
   }
 }
+
+// The select's values for the two choices that are not a theme of their own.
+const EVERYBODYS = "";
+const BUILT_IN = "built-in";
 
 function initials(name: string): string {
   return name
@@ -37,6 +41,11 @@ export function AccountMenu() {
   const themeId = useId();
   const appearance = useAppearance();
   const themes = useThemes(open);
+  const active = useActiveTheme(open);
+  const chooseTheme = useChooseTheme();
+  const everybodys = themes.data?.some((each) => each.default) ?? false;
+  const chosen =
+    active.data?.source === "chosen" && active.data.theme ? active.data.theme.id : active.data?.source === "" && everybodys ? BUILT_IN : EVERYBODYS;
   const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -86,6 +95,9 @@ export function AccountMenu() {
               <Link to="/settings/tokens" onClick={() => setOpen(false)} className="mt-1 block text-sm text-accent hover:underline">
                 {t.account.tokens}
               </Link>
+              <Link to="/settings/themes" onClick={() => setOpen(false)} className="mt-1 block text-sm text-accent hover:underline">
+                {t.account.themes}
+              </Link>
             </div>
           )}
           <fieldset>
@@ -112,12 +124,15 @@ export function AccountMenu() {
             </label>
             <select
               id={themeId}
-              value={appearance.theme}
-              onChange={(event) => applyAppearance({ theme: event.target.value })}
+              value={chosen}
+              onChange={(event) => {
+                const next = event.target.value;
+                chooseTheme.mutate(next === EVERYBODYS ? null : next === BUILT_IN ? { builtIn: true } : next);
+              }}
               className="h-8 rounded-md border border-border-strong bg-surface px-2 text-sm text-ink"
             >
-              <option value={INSTALLATION_THEME}>{t.account.themeInstallation}</option>
-              <option value={BUILT_IN_THEME}>{t.account.themeBuiltIn}</option>
+              <option value={EVERYBODYS}>{t.account.themeInstallation}</option>
+              <option value={BUILT_IN}>{t.account.themeBuiltIn}</option>
               {themes.data?.map((each) => (
                 <option key={each.id} value={each.id}>
                   {each.name}

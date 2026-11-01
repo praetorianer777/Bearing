@@ -51,7 +51,7 @@ The same as the siblings, so code, tooling and operations carry over.
   the graph explorer and the process canvas, i18n from the start.
 - **Identity**: local accounts with passwords, and OIDC single sign-on with
   PKCE through the realm `dynamo`, the suite's realm, with a client `bearing`.
-- **Themes**: the suite's `armature-theme/1` files, imported and exported.
+- **Themes**: the suite's `armature-theme/1` files, imported and exported; made in an editor, each person's own, shared with everybody when they say so.
 - **API**: OpenAPI document checked in; `GET /api/v1/meta` lists the
   capabilities, as every sibling's does.
 - **Tooling**: everything in containers behind a `Makefile`, ports derived

@@ -1,0 +1,49 @@
+import { act, render } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { withAlpha } from "@/lib/constellation";
+import { BackdropEffect } from "./BackdropEffect";
+import { setThemePreview } from "./ThemeLoader";
+
+const active = vi.fn();
+vi.mock("@/api/themes", () => ({ useActiveTheme: () => ({ data: active() }) }));
+
+describe("the moving picture behind the page", () => {
+  afterEach(() => act(() => setThemePreview(null)));
+
+  it("is not drawn for the built-in look nor for a theme that asks for nothing", () => {
+    active.mockReturnValue({ theme: null });
+    expect(render(<BackdropEffect />).container.querySelector("[data-backdrop-effect]")).toBeNull();
+    active.mockReturnValue({ theme: { spec: { effect: undefined } } });
+    expect(render(<BackdropEffect />).container.querySelector("[data-backdrop-effect]")).toBeNull();
+  });
+
+  it("is mounted, with its canvas, when the chosen theme asks for the constellation", () => {
+    active.mockReturnValue({ theme: { spec: { effect: "constellation" } } });
+    const mount = render(<BackdropEffect />).container.querySelector('[data-backdrop-effect="constellation"]');
+    expect(mount?.querySelector("canvas")).not.toBeNull();
+    expect(mount?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("lays the confetti over the page, taking no clicks, when the chosen theme asks for it", () => {
+    active.mockReturnValue({ theme: { spec: { effect: "confetti" } } });
+    const mount = render(<BackdropEffect />).container.querySelector('[data-backdrop-effect="confetti"]');
+    expect(mount?.querySelector("canvas")).not.toBeNull();
+    expect(mount?.className).toContain("pointer-events-none");
+  });
+
+  it("follows the editor's draft while one is previewed", () => {
+    active.mockReturnValue({ theme: { spec: { effect: "confetti" } } });
+    const { container } = render(<BackdropEffect />);
+    act(() => setThemePreview("", "constellation"));
+    expect(container.querySelector('[data-backdrop-effect="constellation"]')).not.toBeNull();
+    act(() => setThemePreview("", null));
+    expect(container.querySelector("[data-backdrop-effect]")).toBeNull();
+  });
+
+  it("turns the theme's colours into what a canvas takes", () => {
+    expect(withAlpha("#5cc8ff", 0.5)).toBe("rgb(92 200 255 / 0.5)");
+    expect(withAlpha("#abc", 1)).toBe("rgb(170 187 204 / 1)");
+    expect(withAlpha("rgb(1 2 3 / 0.9)", 0.2)).toBe("rgb(1 2 3 / 0.2)");
+    expect(withAlpha("hotpink", 0.3)).toBe("rgb(128 128 128 / 0.3)");
+  });
+});

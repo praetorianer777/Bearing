@@ -1,4 +1,4 @@
-import type { SVGProps } from "react";
+import type { JSX, SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
@@ -22,13 +22,13 @@ function Icon({ children, ...props }: IconProps) {
 }
 
 export const HomeIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="home" {...p}>
     <path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" />
   </Icon>
 );
 
 export const OrgIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="org" {...p}>
     <rect x="9" y="3" width="6" height="5" rx="1" />
     <rect x="3" y="16" width="6" height="5" rx="1" />
     <rect x="15" y="16" width="6" height="5" rx="1" />
@@ -37,7 +37,7 @@ export const OrgIcon = (p: IconProps) => (
 );
 
 export const PeopleIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="people" {...p}>
     <circle cx="9" cy="8" r="3.5" />
     <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
     <circle cx="17" cy="9" r="2.5" />
@@ -46,7 +46,7 @@ export const PeopleIcon = (p: IconProps) => (
 );
 
 export const ProcessIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="process" {...p}>
     <circle cx="5" cy="12" r="2.5" />
     <rect x="10" y="4" width="5" height="5" rx="1" />
     <rect x="10" y="15" width="5" height="5" rx="1" />
@@ -56,7 +56,7 @@ export const ProcessIcon = (p: IconProps) => (
 );
 
 export const PlanningIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="planning" {...p}>
     <rect x="3" y="4" width="18" height="16" rx="1.5" />
     <path d="M3 9h18M9 4v16" />
     <path d="M12 14h3M12 17h6" />
@@ -64,51 +64,90 @@ export const PlanningIcon = (p: IconProps) => (
 );
 
 export const SearchIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="search" {...p}>
     <circle cx="11" cy="11" r="6.5" />
     <path d="m20 20-4.2-4.2" />
   </Icon>
 );
 
 export const FoldIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="fold" {...p}>
     <rect x="3" y="4" width="18" height="16" rx="2" />
     <path d="M9 4v16" />
   </Icon>
 );
 
 export const SettingsIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="settings" {...p}>
     <circle cx="12" cy="12" r="3" />
     <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" />
   </Icon>
 );
 
 export const UnitIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="unit" {...p}>
     <rect x="4" y="4" width="16" height="16" rx="2" />
   </Icon>
 );
 
 export const DivisionIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="division" {...p}>
     <path d="m12 3 9 5-9 5-9-5z" />
     <path d="m3 13 9 5 9-5" />
   </Icon>
 );
 
 export const DepartmentIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="department" {...p}>
     <rect x="5" y="3" width="14" height="18" rx="1" />
     <path d="M9 7h2M13 7h2M9 11h2M13 11h2M10 21v-4h4v4" />
   </Icon>
 );
 
 export const ProjectIcon = (p: IconProps) => (
-  <Icon {...p}>
+  <Icon data-icon="project" {...p}>
     <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
   </Icon>
 );
+
+export const SunIcon = (p: IconProps) => (
+  <Icon data-icon="sun" {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+  </Icon>
+);
+
+export const MoonIcon = (p: IconProps) => (
+  <Icon data-icon="moon" {...p}>
+    <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />
+  </Icon>
+);
+
+export const MonitorIcon = (p: IconProps) => (
+  <Icon data-icon="monitor" {...p}>
+    <rect x="3" y="4" width="18" height="12" rx="1.5" />
+    <path d="M8 20h8M12 16v4" />
+  </Icon>
+);
+
+/** Every icon by the name a theme redraws it under, as data-icon carries it. */
+export const ICONS: Record<string, (p: IconProps) => JSX.Element> = {
+  department: DepartmentIcon,
+  division: DivisionIcon,
+  fold: FoldIcon,
+  home: HomeIcon,
+  monitor: MonitorIcon,
+  moon: MoonIcon,
+  org: OrgIcon,
+  people: PeopleIcon,
+  planning: PlanningIcon,
+  process: ProcessIcon,
+  project: ProjectIcon,
+  search: SearchIcon,
+  settings: SettingsIcon,
+  sun: SunIcon,
+  unit: UnitIcon,
+};
 
 /** The icons a unit type may have, by the name the API keeps. */
 export const UNIT_ICONS = {

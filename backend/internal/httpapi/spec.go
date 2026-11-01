@@ -42,7 +42,7 @@ func specBuilder() *openapi.Builder {
 	b.Enums[reflect.TypeOf(org.RACI(""))] = raci
 	b.Overrides[reflect.TypeOf(org.Day{})] = &openapi.Schema{Type: "string", Format: "date", Description: "A calendar day, written 2006-01-02."}
 	// The theme file's parts have names too plain to stand alone among the API's.
-	for _, v := range []any{theme.Package{}, theme.PackagedAsset{}, theme.Spec{}, theme.Palette{}, theme.Fonts{}, theme.Font{},
+	for _, v := range []any{theme.Package{}, theme.PackagedAsset{}, theme.Input{}, theme.Spec{}, theme.Palette{}, theme.Fonts{}, theme.Font{},
 		theme.Shape{}, theme.Cursor{}, theme.Icon{}, theme.Backdrop{}} {
 		t := reflect.TypeOf(v)
 		b.Names[t] = "Theme" + t.Name()

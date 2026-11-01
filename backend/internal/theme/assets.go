@@ -17,6 +17,8 @@ var (
 	ErrAssetTooLarge = errors.New("that file is too large: a theme's files are up to 4 MB each")
 	// ErrTooManyAssets is returned at the limit of files per theme.
 	ErrTooManyAssets = errors.New("a theme holds at most 32 files")
+	// ErrAssetInUse is returned when removing a file the theme still names.
+	ErrAssetInUse = errors.New("the theme still uses that file; take it out of the theme first")
 )
 
 // What an SVG must not carry to be drawn as a mask, a cursor or a backdrop.

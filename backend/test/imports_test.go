@@ -89,6 +89,9 @@ func runJob(t *testing.T, b *browser, id string, actor uuid.UUID) importJSON {
 func TestTheOrganisationGoesOutAndComesBackUnchanged(t *testing.T) {
 	admin := signedIn(t, adminEmail, adminPassword)
 	editor, _ := withRole(t, admin, "editor")
+	// The tests before clean up after themselves; an export read before the replica has that would name what the
+	// preview, read after, no longer finds.
+	replicated(t)
 	files := map[string]any{}
 	for _, kind := range orgcsv.Kinds {
 		files[kind] = exported(t, editor, kind)
