@@ -11,6 +11,10 @@
   audited; editors set one for a span on the subject's page, which shows
   it against what the subject has on the day. Capacity answers carry the
   target. `GET/POST /api/v1/targets`, `DELETE /api/v1/targets/{id}` (#88).
+- **Gaps:** seats nobody fills, capacity under or over target, and roles
+  nobody or only one person holds, each a run of days, on a new planning
+  page for the whole organisation and on unit pages. `GET /api/v1/gaps`
+  (#89).
 - **Search:** one box along the top finds people, positions, units, roles,
   processes and their steps as they are typed, ignoring case and accents
   and forgiving a slip; Enter opens every result on the search page, as of

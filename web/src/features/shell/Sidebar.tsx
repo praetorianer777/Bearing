@@ -2,17 +2,22 @@ import { Link } from "@tanstack/react-router";
 import type { ComponentType, SVGProps } from "react";
 import { APP_NAME, SIDEBAR_RAIL_WIDTH, SIDEBAR_WIDTH } from "@/config";
 import { useMe } from "@/api/auth";
-import { FoldIcon, HomeIcon, OrgIcon, PeopleIcon, ProcessIcon, SettingsIcon } from "@/components/icons";
+import { FoldIcon, HomeIcon, OrgIcon, PeopleIcon, PlanningIcon, ProcessIcon, SettingsIcon } from "@/components/icons";
 import { Mark } from "@/components/Logo";
 import { t, useLanguage } from "@/i18n";
 
-type Place = { to: "/" | "/organisation" | "/people" | "/processes" | "/settings/accounts"; label: () => string; icon: ComponentType<SVGProps<SVGSVGElement>> };
+type Place = {
+  to: "/" | "/organisation" | "/people" | "/processes" | "/planning" | "/settings/accounts";
+  label: () => string;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+};
 
 const places: Place[] = [
   { to: "/", label: () => t.nav.overview, icon: HomeIcon },
   { to: "/organisation", label: () => t.nav.organisation, icon: OrgIcon },
   { to: "/people", label: () => t.nav.people, icon: PeopleIcon },
   { to: "/processes", label: () => t.nav.processes, icon: ProcessIcon },
+  { to: "/planning", label: () => t.nav.planning, icon: PlanningIcon },
 ];
 
 const settings: Place = { to: "/settings/accounts", label: () => t.nav.settings, icon: SettingsIcon };

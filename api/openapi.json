@@ -951,6 +951,91 @@
         "x-bearing-role": "administrator"
       }
     },
+    "/gaps": {
+      "get": {
+        "operationId": "gaps",
+        "summary": "Where people are missing, or too many, over a range: vacant seats, capacity under or over target, and roles nobody or only one person holds, earliest first.",
+        "description": "from and to are days written 2006-01-02, both counted; from is today when left out and to thirteen weeks on, at most 731 days. unitId keeps to a unit, with subUnits=true to the units placed under it on some day of the range too; left out, the whole organisation. Each gap is a run of days of one size; a unit's target is compared with the unit counted with its sub-units.",
+        "tags": [
+          "capacity"
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subUnits",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    },
+                    "gaps": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GapResponse"
+                      }
+                    },
+                    "to": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar day, written 2006-01-02."
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "gaps",
+                    "to"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/group-grants": {
       "get": {
         "operationId": "groupGrants",
@@ -8043,6 +8128,54 @@
           "operation",
           "before",
           "after"
+        ]
+      },
+      "GapResponse": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subjectKind": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "unitId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "kind",
+          "subjectKind",
+          "subjectId",
+          "name",
+          "unitId",
+          "from",
+          "to",
+          "size"
         ]
       },
       "GrantResponse": {

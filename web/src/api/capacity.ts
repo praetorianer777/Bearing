@@ -4,6 +4,7 @@ import type { components } from "./schema";
 
 export type Target = components["schemas"]["TargetResponse"];
 export type CapacityPeriod = components["schemas"]["CapacityPeriodResponse"];
+export type Gap = components["schemas"]["GapResponse"];
 
 /** Whose capacity or targets: a unit (with everything inside it), a position or a role. */
 export type TargetSubject = { unitId: string } | { positionId: string } | { roleId: string };
@@ -41,6 +42,7 @@ function useTargetMutation<T, R>(fn: (input: T) => Promise<R>) {
       Promise.all([
         client.invalidateQueries({ queryKey: ["targets"] }),
         client.invalidateQueries({ queryKey: ["capacity"] }),
+        client.invalidateQueries({ queryKey: ["gaps"] }),
         client.invalidateQueries({ queryKey: ["audit"] }),
       ]),
   });
@@ -51,3 +53,13 @@ export const useSetTarget = (subject: TargetSubject) =>
 
 export const useRemoveTarget = () =>
   useTargetMutation(async (targetID: string) => unwrap(await api.DELETE("/targets/{targetID}", { params: { path: { targetID } } })));
+
+/** Where people are missing, or too many, over a range: in a unit (with its sub-units) or the whole organisation. */
+export const useGaps = (range: { from: string; to: string; unitId?: string }) =>
+  useQuery({
+    queryKey: ["gaps", range.unitId ?? "", range.from, range.to],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/gaps", { params: { query: { from: range.from, to: range.to, ...(range.unitId ? { unitId: range.unitId, subUnits: "true" } : {}) } } }),
+      ).gaps,
+  });
