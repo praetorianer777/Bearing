@@ -121,11 +121,16 @@ func (s *Server) guard(op operation, h http.Handler) http.Handler {
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := PrincipalFrom(r.Context())
+		if p == nil && op.mcp {
+			s.challenge(w, r, "", "Sign in to Bearing, or connect this app to it, to use the MCP endpoint.")
+			return
+		}
 		if p == nil {
 			respondError(w, r, s.Log, ErrUnauthorized())
 			return
 		}
-		if p.Via != nil && p.Via.MCPOnly && !op.mcp {
+		// A tool reads through the API's own operations, which a token held to the MCP endpoint reaches that way.
+		if p.Via != nil && p.Via.MCPOnly && !op.mcp && !(fromMCP(r.Context()) && safeMethod(op.method)) {
 			respondError(w, r, s.Log, ErrForbidden("This token was given to a connected app for the MCP endpoint, and acts there only."))
 			return
 		}

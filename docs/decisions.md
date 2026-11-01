@@ -318,3 +318,18 @@ from an app's own grant lets the app hand a run less than it holds. The
 stack's realm carries `bearing-partner`, a client of Bearing's own that
 stands in for a partner in the tests; real partners need an audience
 mapper for `bearing` in Dynamo's realm when Bearing joins the suite.
+
+## MCP tools read through the API's own operations
+
+Each MCP tool runs the API's own GET operations in the process, as the
+person the assistant acts for, rather than querying the model itself.
+What a tool answers is then exactly what the API answers that person:
+their role, the database's policies and the "as of" day all hold without
+being written again for MCP, and a new rule in the API reaches the tools
+at once. A token given on the consent page acts at the MCP endpoint only,
+yet reaches these reads, as they are what its tools are made of. Every
+tool reads; changing the organisation stays with the web client and the
+API. `search` filters the lists the API answers by name, as the web
+client's search does, so it finds what the person may see. Answers are
+cut at 64 KiB so a large organisation cannot flood an assistant's
+context.

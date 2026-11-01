@@ -25,6 +25,9 @@
       "name": "holdings"
     },
     {
+      "name": "mcp"
+    },
+    {
       "name": "oauth"
     },
     {
@@ -1823,6 +1826,51 @@
           }
         },
         "x-bearing-role": "administrator"
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "The MCP endpoint (Streamable HTTP, protocol 2025-11-25 and 2025-06-18): an assistant asks the organisation questions as the person signed in or whose token it holds.",
+        "description": "JSON-RPC 2.0, one request at a time: initialize, ping, tools/list and tools/call. Every tool reads, as the person, within their role. Without a session or a token the answer is 401, naming the protected resource metadata where a client learns how to connect.",
+        "tags": [
+          "mcp"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RpcResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/meta": {
@@ -7655,6 +7703,27 @@
           "holders"
         ]
       },
+      "McpRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "A JSON value."
+          },
+          "jsonrpc": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "description": "A JSON value."
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method"
+        ]
+      },
       "MemberResponse": {
         "type": "object",
         "properties": {
@@ -8761,6 +8830,42 @@
         },
         "required": [
           "role"
+        ]
+      },
+      "RpcError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "RpcResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/RpcError"
+          },
+          "id": {
+            "description": "A JSON value."
+          },
+          "jsonrpc": {
+            "type": "string"
+          },
+          "result": {
+            "description": "A JSON value."
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "id"
         ]
       },
       "SelfEditableBody": {
