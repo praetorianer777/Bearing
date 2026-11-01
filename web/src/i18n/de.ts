@@ -485,6 +485,18 @@ export const de: Messages = {
     heldByNobody: "An diesem Tag hat sie niemand.",
     unreachable: "Diese Rolle konnte nicht gelesen werden. Vielleicht wurde sie entfernt.",
   },
+  search: {
+    title: "Suche",
+    intro: "Personen, Stellen, Einheiten, Rollen, Prozesse und ihre Schritte finden, nach dem Namen oder einem Wort der Beschreibung.",
+    field: "Suchen nach",
+    hint: "Mindestens zwei Buchstaben eingeben.",
+    none: "Nichts gefunden.",
+    unreachable: "Die Suche konnte nicht laufen. Bitte gleich noch einmal versuchen.",
+    suggestions: "Vorschläge",
+    everything: (q: string) => `Alle Treffer für "${q}"`,
+    kind: { person: "Person", position: "Stelle", unit: "Einheit", role: "Rolle", process: "Prozess", step: "Schritt" },
+    groups: { people: "Personen", positions: "Stellen", units: "Einheiten", roles: "Rollen", processes: "Prozesse", steps: "Schritte" },
+  },
   whoDoes: {
     title: "Wer macht was",
     intro:

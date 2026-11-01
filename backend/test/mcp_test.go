@@ -69,7 +69,7 @@ func TestEveryMCPToolAnswersFromTheDemoOrganisation(t *testing.T) {
 
 	hits := found(t, admin, "search", map[string]any{"query": "finance"})
 	unit := named(list(hits["units"]), "name", "Finance and People")
-	head := named(list(hits["positions"]), "title", "Head of Finance and People")
+	head := named(list(hits["positions"]), "name", "Head of Finance and People")
 	if unit == nil || head == nil {
 		t.Fatalf("search for finance: %v", hits)
 	}

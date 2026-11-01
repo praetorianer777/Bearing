@@ -1468,6 +1468,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search people, positions, units, roles, processes and the steps of processes, grouped by kind, best first.
+         * @description q needs two letters or more; every word is found as the start of a word, ignoring case and accents, a description's words also stemmed in English and German, and a name typed with a slip by its likeness. A name that is what was typed comes first. asOf, a day written 2006-01-02, today when left out, keeps to the people, positions and units there on that day; steps are those of the newest published version, or of the draft of a process not published yet. limit caps each kind, 10 when left out, at most 50. A step's id is its process's, with stepKey and version naming it there.
+         */
+        get: operations["search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search/quick": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The best few hits of any kind for a search box being typed in.
+         * @description As search finds, in one list ordered best first; limit is 8 when left out, at most 20.
+         */
+        get: operations["quickSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/steps": {
         parameters: {
             query?: never;
@@ -2497,6 +2537,29 @@ export interface components {
             jsonrpc: string;
             /** @description A JSON value. */
             result?: unknown;
+        };
+        SearchHitResponse: {
+            detail: string;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            name: string;
+            stepKey?: string;
+            version?: number;
+        };
+        SearchResponse: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            asOf: string;
+            people: components["schemas"]["SearchHitResponse"][];
+            positions: components["schemas"]["SearchHitResponse"][];
+            processes: components["schemas"]["SearchHitResponse"][];
+            query: string;
+            roles: components["schemas"]["SearchHitResponse"][];
+            steps: components["schemas"]["SearchHitResponse"][];
+            units: components["schemas"]["SearchHitResponse"][];
         };
         SelfEditableBody: {
             fields: string[];
@@ -6316,6 +6379,80 @@ export interface operations {
                         events: components["schemas"]["EventResponse"][];
                         /** Format: uuid */
                         next: string | null;
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    search: {
+        parameters: {
+            query?: {
+                q?: string;
+                asOf?: string;
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResponse"];
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    quickSearch: {
+        parameters: {
+            query?: {
+                q?: string;
+                asOf?: string;
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description A calendar day, written 2006-01-02.
+                         */
+                        asOf: string;
+                        hits: components["schemas"]["SearchHitResponse"][];
+                        query: string;
                     };
                 };
             };

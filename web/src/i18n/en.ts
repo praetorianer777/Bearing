@@ -484,6 +484,18 @@ export const en = {
     heldByNobody: "Nobody has it on this day.",
     unreachable: "This role could not be read. It may have been removed.",
   },
+  search: {
+    title: "Search",
+    intro: "Find people, positions, units, roles, processes and their steps by name or by a word of their description.",
+    field: "Search for",
+    hint: "Type two letters or more.",
+    none: "Nothing matches.",
+    unreachable: "The search could not be run. Try again in a moment.",
+    suggestions: "Suggestions",
+    everything: (q: string) => `Every result for "${q}"`,
+    kind: { person: "Person", position: "Position", unit: "Unit", role: "Role", process: "Process", step: "Step" } as Record<string, string>,
+    groups: { people: "People", positions: "Positions", units: "Units", roles: "Roles", processes: "Processes", steps: "Steps" },
+  },
   whoDoes: {
     title: "Who does what",
     intro: "Find a step of a published process by its name or its process's, and see who is responsible, accountable, consulted and informed for it.",

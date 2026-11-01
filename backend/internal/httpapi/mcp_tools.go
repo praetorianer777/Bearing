@@ -139,31 +139,6 @@ func (c *toolCall) oneOf(names ...string) (string, string, error) {
 // searchLimit bounds the hits of each kind search answers.
 const searchLimit = 20
 
-// matching keeps the items of a list whose field holds the query, at most searchLimit of them, each cut to the
-// fields worth naming.
-func matching(list any, field, query string, keep ...string) []map[string]any {
-	items, _ := list.([]any)
-	out := []map[string]any{}
-	for _, raw := range items {
-		item, _ := raw.(map[string]any)
-		value, _ := item[field].(string)
-		if !strings.Contains(strings.ToLower(value), query) {
-			continue
-		}
-		cut := map[string]any{}
-		for _, k := range append([]string{"id", field}, keep...) {
-			if v, ok := item[k]; ok {
-				cut[k] = v
-			}
-		}
-		out = append(out, cut)
-		if len(out) == searchLimit {
-			break
-		}
-	}
-	return out
-}
-
 var mcpTools = []mcpTool{
 	{name: "whoami", title: "Who am I",
 		description: "The account the assistant acts for, with its role, and the person in the organisation it is linked to, with what they hold.",
@@ -188,64 +163,21 @@ var mcpTools = []mcpTool{
 			return map[string]any{"account": me["account"], "person": entry}, nil
 		}},
 	{name: "search", title: "Search the organisation",
-		description: "Find people, positions, units, roles, processes and process steps whose name holds a word, with their ids for the other tools.",
-		params:      []toolParam{{name: "query", kind: "string", description: "A word or part of a name, such as invoice or Müller.", required: true}, asOfParam},
+		description: "Find people, positions, units, roles, processes and process steps by the start of their words, ignoring case and accents, best first, with their ids for the other tools. A step's id is its process's, with its stepKey.",
+		params:      []toolParam{{name: "query", kind: "string", description: "A word or the start of one, such as invoice or Müller.", required: true}, asOfParam},
 		run: func(c *toolCall) (any, error) {
 			query, err := c.str("query")
 			if err != nil {
 				return nil, err
 			}
-			if len([]rune(query)) < 2 {
+			if len([]rune(strings.TrimSpace(query))) < 2 {
 				return nil, errors.New("search for two letters or more")
 			}
 			asOf, err := c.str("asOf")
 			if err != nil {
 				return nil, err
 			}
-			lower := strings.ToLower(query)
-			day := map[string]string{"asOf": asOf}
-			people, err := c.get("/people", map[string]string{"asOf": asOf, "q": query})
-			if err != nil {
-				return nil, err
-			}
-			positions, err := c.get("/positions", day)
-			if err != nil {
-				return nil, err
-			}
-			units, err := c.get("/units", day)
-			if err != nil {
-				return nil, err
-			}
-			roles, err := c.get("/roles", nil)
-			if err != nil {
-				return nil, err
-			}
-			processes, err := c.get("/processes", nil)
-			if err != nil {
-				return nil, err
-			}
-			steps, err := c.get("/steps", map[string]string{"asOf": asOf, "q": query})
-			if err != nil {
-				return nil, err
-			}
-			stepList, _ := steps["steps"].([]any)
-			found := []map[string]any{}
-			for _, raw := range stepList {
-				step, _ := raw.(map[string]any)
-				found = append(found, map[string]any{"processId": step["processId"], "processName": step["processName"], "stepKey": step["key"], "stepName": step["name"]})
-				if len(found) == searchLimit {
-					break
-				}
-			}
-			return map[string]any{
-				"asOf":      people["asOf"],
-				"people":    matching(people["people"], "name", "", "email"),
-				"positions": matching(positions["positions"], "title", lower, "unitId"),
-				"units":     matching(units["units"], "name", lower, "parentId"),
-				"roles":     matching(roles["roles"], "name", lower, "key"),
-				"processes": matching(processes["processes"], "name", lower, "key", "area"),
-				"steps":     found,
-			}, nil
+			return c.get("/search", map[string]string{"q": query, "asOf": asOf, "limit": strconv.Itoa(searchLimit)})
 		}},
 	{name: "get_person", title: "A person",
 		description: "One person, with the positions and roles they hold on a day.",

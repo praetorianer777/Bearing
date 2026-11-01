@@ -329,8 +329,8 @@ being written again for MCP, and a new rule in the API reaches the tools
 at once. A token given on the consent page acts at the MCP endpoint only,
 yet reaches these reads, as they are what its tools are made of. Every
 tool reads; changing the organisation stays with the web client and the
-API. `search` filters the lists the API answers by name, as the web
-client's search does, so it finds what the person may see. Answers are
+API. `search` answers what the API's own search answers that person.
+Answers are
 cut at 64 KiB so a large organisation cannot flood an assistant's
 context.
 
@@ -344,3 +344,19 @@ token ends, a year at the latest, and a person holds twenty at most.
 Making a token and connecting an app need a session, not a token: a token
 that leaks then cannot be turned into a lasting one, and revoking it ends
 what it could do. Read only is the default, as most scripts only read.
+
+## Search is Postgres full text, with trigrams for slips
+
+Search runs in Postgres, as the siblings' does, with no search engine
+beside it. Each kind keeps a generated search vector: its name weighted
+A, its other words B, read with a configuration that ignores case and
+accents and stems nothing, so a name is found as written in any language.
+Descriptions are read once more with the English and the German stemmer,
+weighted D, so "approves" finds "approve" without ranking a sentence
+above a name. Every word typed matches as the start of a word, which
+lets one query serve the box being typed in and the search page, and a
+name typed with a slip is found by trigram likeness. A name that is what
+was typed comes first, then one that starts so, then the words' weights.
+One statement searches every kind, so the "as of" day, the newest
+published version of a process and the database's policies hold for
+each the same way.

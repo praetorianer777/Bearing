@@ -136,6 +136,8 @@ var mayCall = map[string]auth.Role{
 	"stepPeople":           "",
 	"duties":               "",
 	"whoDoes":              "",
+	"search":               "",
+	"quickSearch":          "",
 	"demo":                 auth.RoleAdministrator,
 	"loadDemo":             auth.RoleAdministrator,
 	"oauthMetadata":        anybody,
