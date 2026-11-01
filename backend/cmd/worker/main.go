@@ -20,6 +20,7 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/org"
 	"github.com/praetorianer777/bearing/backend/internal/orgcsv"
 	"github.com/praetorianer777/bearing/backend/internal/version"
+	"github.com/praetorianer777/bearing/backend/internal/webhook"
 )
 
 func main() {
@@ -67,6 +68,11 @@ func run() error {
 	}
 	people := &org.Service{DB: cluster}
 	worker.Handle(orgcsv.Job, (&orgcsv.Imports{DB: cluster, Org: people}).Handler())
+	hooks, err := webhook.FromConfig(cfg.Outbound, cluster, log)
+	if err != nil {
+		return err
+	}
+	go webhook.NewSender(hooks, log).Run(ctx)
 	log.Info("reading jobs", "stream", cfg.Valkey.JobStream)
 	return worker.Run(ctx)
 }

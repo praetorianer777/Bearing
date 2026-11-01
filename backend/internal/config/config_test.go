@@ -119,3 +119,17 @@ func TestSingleSignOnNeedsAClient(t *testing.T) {
 		t.Errorf("%+v", cfg.OIDC)
 	}
 }
+
+func TestTheSecretKeyIsThirtyTwoBytesInBase64(t *testing.T) {
+	t.Setenv("BEARING_DB_PRIMARY_URL", "postgres://p")
+	t.Setenv("BEARING_SECRET_KEY", "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=")
+	t.Setenv("BEARING_OUTBOUND_ALLOW", "receiver")
+	cfg, err := Load()
+	if err != nil || len(cfg.Outbound.SecretKey) != 32 || cfg.Outbound.Allow != "receiver" {
+		t.Fatalf("%v %+v", err, cfg.Outbound)
+	}
+	t.Setenv("BEARING_SECRET_KEY", "c2hvcnQ=")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "BEARING_SECRET_KEY") {
+		t.Errorf("a short key: %v", err)
+	}
+}

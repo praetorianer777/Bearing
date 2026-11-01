@@ -64,3 +64,6 @@ export const CONSTELLATION_LINK_PX = 150;
 export const CONSTELLATION_SPEED_PX_PER_S = 14;
 /** The grey a point or a line is drawn in when the theme's colour cannot be read. */
 export const CONSTELLATION_FALLBACK_COLOUR = "#808080";
+
+/** How many attempts a webhook's log shows, newest first; the API keeps them for 30 days. */
+export const WEBHOOK_DELIVERIES_PAGE_SIZE = 50;

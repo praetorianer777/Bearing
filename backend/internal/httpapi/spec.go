@@ -13,6 +13,7 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/openapi"
 	"github.com/praetorianer777/bearing/backend/internal/org"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
+	"github.com/praetorianer777/bearing/backend/internal/webhook"
 )
 
 // ProductName is the API's title in its document.
@@ -47,6 +48,15 @@ func specBuilder() *openapi.Builder {
 		t := reflect.TypeOf(v)
 		b.Names[t] = "Theme" + t.Name()
 	}
+	for _, v := range []any{webhook.Webhook{}, webhook.Delivery{}, webhook.Input{}, webhook.Owner{}} {
+		t := reflect.TypeOf(v)
+		b.Names[t] = "Webhook" + strings.TrimPrefix(t.Name(), "Webhook")
+	}
+	states := make([]string, len(webhook.States))
+	for i, st := range webhook.States {
+		states[i] = string(st)
+	}
+	b.Enums[reflect.TypeOf(webhook.DeliveryState(""))] = states
 	return b
 }
 

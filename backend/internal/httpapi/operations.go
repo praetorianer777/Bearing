@@ -8,6 +8,7 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/openapi"
 	"github.com/praetorianer777/bearing/backend/internal/org"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
+	"github.com/praetorianer777/bearing/backend/internal/webhook"
 )
 
 const (
@@ -558,7 +559,38 @@ var operations = []operation{
 		role:    administrator, request: partnerRequest{}, responses: map[int]any{http.StatusCreated: env{"client": clientResponse{}, "secret": ""}}},
 	{method: http.MethodDelete, path: "/oauth/clients/{clientID}", id: "removeApp", handle: (*Server).handleRemoveClient, tag: "oauth",
 		summary: "Remove an app and disconnect it from everybody.", role: administrator, responses: map[int]any{http.StatusNoContent: nil}},
+	{method: http.MethodGet, path: "/webhooks", id: "webhooks", handle: (*Server).handleWebhooks, tag: "webhooks",
+		summary: "The addresses changes to the organisation are posted to, by name.", role: administrator,
+		responses: map[int]any{http.StatusOK: env{"webhooks": []webhook.Webhook{}}}},
+	{method: http.MethodPost, path: "/webhooks", id: "createWebhook", handle: (*Server).handleCreateWebhook, tag: "webhooks",
+		summary:     "Post the topics named to an address, signed with a secret shown this once.",
+		description: webhookDescription, role: administrator, request: webhook.Input{},
+		responses: map[int]any{http.StatusCreated: env{"webhook": webhook.Webhook{}}}},
+	{method: http.MethodPatch, path: "/webhooks/{webhookID}", id: "updateWebhook", handle: (*Server).handleUpdateWebhook, tag: "webhooks",
+		summary:     "Change a webhook's name, address, topics or whether it is on; whoever saves it owns it.",
+		description: "Name, url and topics are given again; enabled and version left out stay as they are.", role: administrator,
+		request: webhook.Input{}, responses: map[int]any{http.StatusOK: env{"webhook": webhook.Webhook{}}}},
+	{method: http.MethodDelete, path: "/webhooks/{webhookID}", id: "deleteWebhook", handle: (*Server).handleDeleteWebhook, tag: "webhooks",
+		summary: "Remove a webhook and its log.", role: administrator, responses: map[int]any{http.StatusNoContent: nil}},
+	{method: http.MethodGet, path: "/webhooks/{webhookID}/deliveries", id: "webhookDeliveries", handle: (*Server).handleWebhookDeliveries, tag: "webhooks",
+		summary: "A webhook's log: every attempt, newest first.", description: "limit is at most 200, 50 when left out.", role: administrator,
+		query: []string{"limit"}, responses: map[int]any{http.StatusOK: env{"deliveries": []webhook.Delivery{}}}},
+	{method: http.MethodPost, path: "/webhooks/{webhookID}/deliveries/{deliveryID}/redeliver", id: "redeliverWebhook", handle: (*Server).handleRedeliverWebhook, tag: "webhooks",
+		summary: "Send a logged event again, now, with the same event id.", role: administrator,
+		responses: map[int]any{http.StatusOK: env{"delivery": webhook.Delivery{}}}},
+	{method: http.MethodPost, path: "/webhooks/{webhookID}/rotate-secret", id: "rotateWebhookSecret", handle: (*Server).handleRotateWebhookSecret, tag: "webhooks",
+		summary: "Give a webhook a new secret, shown this once; the old one stops working at once.", role: administrator,
+		responses: map[int]any{http.StatusOK: env{"webhook": webhook.Webhook{}}}},
+	{method: http.MethodPost, path: "/webhooks/{webhookID}/test", id: "testWebhook", handle: (*Server).handleTestWebhook, tag: "webhooks",
+		summary: "Post a ping to a webhook now, even while it is off, and answer how it went.", role: administrator,
+		responses: map[int]any{http.StatusOK: env{"delivery": webhook.Delivery{}}}},
 }
+
+// webhookDescription is what a receiver's author needs from the operations' side.
+const webhookDescription = "topics are the events to post, or * for every one. Each delivery is the versioned envelope, " +
+	"signed in X-Bearing-Signature-256 over the body and X-Bearing-Signature-Timestamped-256 over X-Bearing-Timestamp, a dot and the body. " +
+	"A failed attempt is tried again after 1, 5 and 30 minutes, 2 and 12 hours; a webhook failing for a day is turned off. " +
+	"An address inside the server's own network is refused unless BEARING_OUTBOUND_ALLOW names it."
 
 // The document's own row joins at init: it is built from the table, so the table cannot name it in its initialiser.
 func init() {
