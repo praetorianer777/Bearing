@@ -7,6 +7,7 @@ import { Home } from "@/features/home/Home";
 import { PositionPage } from "@/features/org/PositionPage";
 import { RolePage } from "@/features/org/RolePage";
 import { RolesPage } from "@/features/org/RolesPage";
+import { ImportPage } from "@/features/importing/ImportPage";
 import { type DaySearch, UnitPage } from "@/features/org/UnitPage";
 import { type PeopleSearch, PeoplePage } from "@/features/people/PeoplePage";
 import { type PersonSearch, PersonPage } from "@/features/people/PersonPage";
@@ -190,6 +191,7 @@ const planningRoute = createRoute({
     return <PlanningPage search={search} onSearch={(next) => navigate({ search: next, replace: true })} />;
   },
 });
+const importRoute = createRoute({ getParentRoute: () => appRoute, path: "/import", component: ImportPage });
 const rolesRoute = createRoute({ getParentRoute: () => appRoute, path: "/roles", component: RolesPage });
 const roleRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -281,6 +283,7 @@ const routeTree = rootRoute.addChildren([
     searchRoute,
     planningRoute,
     rolesRoute,
+    importRoute,
     roleRoute,
     accountsRoute,
     themesRoute,

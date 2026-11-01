@@ -336,6 +336,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/export/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One file of the organisation as CSV: units, positions, people or holdings, as it stands on a day.
+         * @description kind is units, positions, people or holdings; asOf is a day written 2006-01-02, today when left out. Rows name each other by ref, the id; units come parents first; holdings are those of the positions exported that have not ended by then, planned ones too.
+         */
+        get: operations["exportCSV"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/gaps": {
         parameters: {
             query?: never;
@@ -451,6 +471,63 @@ export interface paths {
         put?: never;
         /** End a holding from a day; the days before keep it. */
         post: operations["endHolding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview an import of CSV files: what each row would create, update or leave, and the rows that cannot be imported.
+         * @description The files are the texts export writes, with the same columns in any order; a row names another by its ref, an id or any name the files give. People are matched by address too. Nothing changes until the import is run.
+         */
+        post: operations["previewImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{importID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** An import: its preview, and once run, what it did. */
+        get: operations["import"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{importID}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a previewed import without errors in the worker, all of it in one transaction or nothing.
+         * @description The worker plans the files again against the organisation as it is then; a row that no longer goes, or a refusal, leaves everything as it was and is recorded in the result.
+         */
+        post: operations["runImport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2085,6 +2162,12 @@ export interface components {
             /** Format: uuid */
             roleId: string;
         };
+        Change: {
+            action: string;
+            file: string;
+            name: string;
+            row: number;
+        };
         ClientResponse: {
             clientUri: string;
             confidential: boolean;
@@ -2333,6 +2416,37 @@ export interface components {
              */
             to: string | null;
         };
+        ImportRequest: {
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from?: string;
+            holdings?: string;
+            people?: string;
+            positions?: string;
+            units?: string;
+        };
+        ImportResponse: {
+            changes: components["schemas"]["Change"][];
+            counts: {
+                [key: string]: number;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            errors: components["schemas"]["RowError"][];
+            /** Format: date-time */
+            finishedAt: string | null;
+            /**
+             * Format: date
+             * @description A calendar day, written 2006-01-02.
+             */
+            from: string;
+            /** Format: uuid */
+            id: string;
+            result: components["schemas"]["Result"] | null;
+            status: string;
+        };
         Info: {
             builtAt?: string;
             commit?: string;
@@ -2567,6 +2681,10 @@ export interface components {
              */
             to: string | null;
         };
+        Plan: {
+            changes: components["schemas"]["Change"][];
+            errors: components["schemas"]["RowError"][];
+        };
         PositionRequest: {
             description?: string;
             headOfUnit?: boolean;
@@ -2730,6 +2848,10 @@ export interface components {
             /** Format: uuid */
             unitId?: string;
         };
+        Result: {
+            error?: components["schemas"]["RowError"];
+            plan: components["schemas"]["Plan"];
+        };
         RevokeForm: {
             client_id?: string;
             client_secret?: string;
@@ -2739,6 +2861,11 @@ export interface components {
         RoleRequest: {
             /** @enum {string} */
             role: "administrator" | "editor" | "member" | "reader";
+        };
+        RowError: {
+            file: string;
+            message: string;
+            row: number;
         };
         RpcError: {
             code: number;
@@ -3689,6 +3816,37 @@ export interface operations {
             };
         };
     };
+    exportCSV: {
+        parameters: {
+            query?: {
+                asOf?: string;
+            };
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     gaps: {
         parameters: {
             query?: {
@@ -4019,6 +4177,107 @@ export interface operations {
                 content: {
                     "application/json": {
                         holding: components["schemas"]["HoldingResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    previewImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        import: components["schemas"]["ImportResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        import: components["schemas"]["ImportResponse"];
+                    };
+                };
+            };
+            /** @description An error, in the one shape every endpoint uses. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    runImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        import: components["schemas"]["ImportResponse"];
                     };
                 };
             };

@@ -12,6 +12,7 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/auth"
 	"github.com/praetorianer777/bearing/backend/internal/db"
 	"github.com/praetorianer777/bearing/backend/internal/org"
+	"github.com/praetorianer777/bearing/backend/internal/orgcsv"
 	"github.com/praetorianer777/bearing/backend/internal/theme"
 )
 
@@ -48,6 +49,8 @@ type Server struct {
 	Themes *theme.Service
 	// Org is the organisation model.
 	Org *org.Service
+	// Imports previews CSV imports and queues them for the worker.
+	Imports *orgcsv.Imports
 	// OAuth is the authorization server for partner apps; nil serves none of it and takes no bearer tokens.
 	OAuth OAuth
 

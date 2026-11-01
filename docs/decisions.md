@@ -442,3 +442,22 @@ a unit's head, the unit moves into the other's unit, from a day the
 editor confirms; the card goes back until then, as a dropped card on its
 own only keeps where it was put. The chart is for the pointer; every
 change it offers is also a form on the page, for the keyboard.
+
+## The organisation goes out and comes back as four CSV files
+
+Organisations keep their structure in spreadsheets, so Bearing reads and
+writes four files of one kind each, units, positions, people and
+holdings, with the columns a spreadsheet shows and in any order. Rows
+name each other by ref: export writes the id there, so a file edited and
+imported again changes the rows it names, and a file written by hand may
+use any name for the rows it makes; people are found by address as
+well. An import is previewed first, every row checked against the
+organisation as it stands, with what each would add or change and the
+rows that cannot go, by the line the spreadsheet shows. Running it is
+the worker's job: it claims the import, so a job delivered twice runs
+once, plans the files again against the organisation as it is then, and
+applies all of it in one transaction as the editor who sent it, or
+nothing, recording the row a refusal met. Export is the organisation of
+one day and the holdings not ended by then, not its history, and leaves
+out roles held directly; the change log and the dated relations keep
+the history.

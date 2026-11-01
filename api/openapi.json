@@ -28,6 +28,9 @@
       "name": "holdings"
     },
     {
+      "name": "import"
+    },
+    {
       "name": "mcp"
     },
     {
@@ -951,6 +954,49 @@
         "x-bearing-role": "administrator"
       }
     },
+    "/export/{kind}": {
+      "get": {
+        "operationId": "exportCSV",
+        "summary": "One file of the organisation as CSV: units, positions, people or holdings, as it stands on a day.",
+        "description": "kind is units, positions, people or holdings; asOf is a day written 2006-01-02, today when left out. Rows name each other by ref, the id; units come parents first; holdings are those of the positions exported that have not ended by then, planned ones too.",
+        "tags": [
+          "import"
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
     "/gaps": {
       "get": {
         "operationId": "gaps",
@@ -1454,6 +1500,160 @@
                   },
                   "required": [
                     "holding"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/imports": {
+      "post": {
+        "operationId": "previewImport",
+        "summary": "Preview an import of CSV files: what each row would create, update or leave, and the rows that cannot be imported.",
+        "description": "The files are the texts export writes, with the same columns in any order; a row names another by its ref, an id or any name the files give. People are matched by address too. Nothing changes until the import is run.",
+        "tags": [
+          "import"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "import": {
+                      "$ref": "#/components/schemas/ImportResponse"
+                    }
+                  },
+                  "required": [
+                    "import"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/imports/{importID}": {
+      "get": {
+        "operationId": "import",
+        "summary": "An import: its preview, and once run, what it did.",
+        "tags": [
+          "import"
+        ],
+        "parameters": [
+          {
+            "name": "importID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "import": {
+                      "$ref": "#/components/schemas/ImportResponse"
+                    }
+                  },
+                  "required": [
+                    "import"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An error, in the one shape every endpoint uses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-bearing-role": "editor"
+      }
+    },
+    "/imports/{importID}/run": {
+      "post": {
+        "operationId": "runImport",
+        "summary": "Run a previewed import without errors in the worker, all of it in one transaction or nothing.",
+        "description": "The worker plans the files again against the organisation as it is then; a row that no longer goes, or a refusal, leaves everything as it was and is recorded in the result.",
+        "tags": [
+          "import"
+        ],
+        "parameters": [
+          {
+            "name": "importID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "import": {
+                      "$ref": "#/components/schemas/ImportResponse"
+                    }
+                  },
+                  "required": [
+                    "import"
                   ]
                 }
               }
@@ -7654,6 +7854,29 @@
           "roleId"
         ]
       },
+      "Change": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "row": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "file",
+          "row",
+          "action",
+          "name"
+        ]
+      },
       "ClientResponse": {
         "type": "object",
         "properties": {
@@ -8423,6 +8646,95 @@
           "share",
           "from",
           "to"
+        ]
+      },
+      "ImportRequest": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "holdings": {
+            "type": "string"
+          },
+          "people": {
+            "type": "string"
+          },
+          "positions": {
+            "type": "string"
+          },
+          "units": {
+            "type": "string"
+          }
+        }
+      },
+      "ImportResponse": {
+        "type": "object",
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            }
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RowError"
+            }
+          },
+          "finishedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar day, written 2006-01-02."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Result"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "from",
+          "counts",
+          "changes",
+          "errors",
+          "result",
+          "createdAt",
+          "finishedAt"
         ]
       },
       "Info": {
@@ -9223,6 +9535,27 @@
           "to"
         ]
       },
+      "Plan": {
+        "type": "object",
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            }
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RowError"
+            }
+          }
+        },
+        "required": [
+          "changes",
+          "errors"
+        ]
+      },
       "PositionRequest": {
         "type": "object",
         "properties": {
@@ -9813,6 +10146,20 @@
           "kind"
         ]
       },
+      "Result": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/RowError"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/Plan"
+          }
+        },
+        "required": [
+          "plan"
+        ]
+      },
       "RevokeForm": {
         "type": "object",
         "properties": {
@@ -9848,6 +10195,25 @@
         },
         "required": [
           "role"
+        ]
+      },
+      "RowError": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "row": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "file",
+          "row",
+          "message"
         ]
       },
       "RpcError": {

@@ -18,9 +18,16 @@ export function PeoplePage({ search, onSearch }: { search: PeopleSearch; onSearc
     <div className="mx-auto flex max-w-4xl flex-col gap-4 px-6 py-8">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-2xl font-semibold">{t.people.title}</h1>
-        <Link to="/roles" className="text-sm text-accent hover:underline">
-          {t.roleList.all}
-        </Link>
+        <span className="flex gap-4">
+          <Link to="/roles" className="text-sm text-accent hover:underline">
+            {t.roleList.all}
+          </Link>
+          {editor && (
+            <Link to="/import" className="text-sm text-accent hover:underline">
+              {t.importing.link}
+            </Link>
+          )}
+        </span>
       </div>
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex min-w-64 flex-1 flex-col gap-1 text-sm">

@@ -17,6 +17,8 @@ import (
 	"github.com/praetorianer777/bearing/backend/internal/jobs"
 	"github.com/praetorianer777/bearing/backend/internal/logging"
 	"github.com/praetorianer777/bearing/backend/internal/mail"
+	"github.com/praetorianer777/bearing/backend/internal/org"
+	"github.com/praetorianer777/bearing/backend/internal/orgcsv"
 	"github.com/praetorianer777/bearing/backend/internal/version"
 )
 
@@ -63,6 +65,8 @@ func run() error {
 	if cfg.Mail.SMTPAddr != "" {
 		worker.Handle(auth.MailJob, mail.Handler(mail.SMTPMailer{Addr: cfg.Mail.SMTPAddr, From: cfg.Mail.From}))
 	}
+	people := &org.Service{DB: cluster}
+	worker.Handle(orgcsv.Job, (&orgcsv.Imports{DB: cluster, Org: people}).Handler())
 	log.Info("reading jobs", "stream", cfg.Valkey.JobStream)
 	return worker.Run(ctx)
 }
